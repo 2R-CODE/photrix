@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "firebase deploy --only functions,hosting": "eternal-memories-wedding",
+    "default": "eternal-memories-wedding"
+  },
+  "targets": {},
+  "etags": {}
+}

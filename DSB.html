@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PHOTRIX - Photographer Studio</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="DSB.css">
+</head>
+<body>
+
+    <div class="studio-app-container">
+        
+        <aside class="studio-sidebar" id="testSidebar">
+            <div class="sidebar-brand-node-new">
+                <div class="brand-left-content">
+                    <i class="fas fa-camera-retro fa-lg" style="color: #00ccb4;"></i>
+                    <span class="brand-title-text">PHOTRIX</span>
+                </div>
+                <button class="sidebar-toggle-btn" id="testToggleBtn">
+                    <i class="fas fa-chevron-left" id="testToggleIcon"></i>
+                </button>
+            </div>
+            
+            <nav class="sidebar-navigation-menu">
+                <a href="#" class="nav-item active" data-target="view-overview"><i class="fas fa-chart-pie"></i><span class="nav-text">Overview</span></a>
+                <a href="#" class="nav-item" data-target="view-clients"><i class="fas fa-folder-open"></i><span class="nav-text">Client Projects</span></a>
+                <a href="#" class="nav-item" data-target="view-palette"><i class="fas fa-palette"></i><span class="nav-text">Gallery Themes</span></a>
+                <a href="#" class="nav-item" data-target="view-subscription"><i class="fas fa-credit-card"></i><span class="nav-text">Subscription</span></a>
+            </nav>
+        </aside>
+
+        <main class="studio-workspace-arena">
+            
+            <header class="workspace-top-navbar">
+                <div class="nav-title">
+                    <h2>Dashboard</h2>
+                </div>
+                <div class="profile-menu-container">
+    <div class="profile-avatar-circle" id="profileToggleBtn">P</div>
+    
+    <div class="profile-dropdown-menu" id="profileDropdownMenu" style="display: none;">
+        <div class="dropdown-item" onclick="window.location.href='billing.html'">
+            <i class="fas fa-credit-card"></i> Billing & Subscription
+        </div>
+        <div class="dropdown-divider"></div>
+        <div class="dropdown-item" id="signOutMasterBtn">
+            <i class="fas fa-sign-out-alt"></i> Logout
+        </div>
+    </div>
+</div>
+            
+            </header>
+
+            <div class="workspace-scroll-viewport">
+                
+                <div id="view-overview" class="view-section active-view">
+                    
+                    <section class="dashboard-module metrics-grid">
+    <div class="metric-card">
+        <div class="metric-header">
+            <i class="fas fa-link color-blue"></i>
+            <h4>Active Links</h4>
+        </div>
+        <div class="metric-body">
+            <h2 id="activeLinksCount">0 <span class="metric-label">Live</span></h2>
+        </div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-header">
+            <i class="fas fa-check-circle color-green"></i>
+            <h4>Ready to Deliver</h4>
+        </div>
+        <div class="metric-body">
+            <h2 id="readyToDeliverCount">0 <span class="metric-label">Pending Galleries</span></h2>
+        </div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-header">
+            <i class="fas fa-database color-orange"></i>
+            <h4>Project Storage</h4>
+        </div>
+        <div class="metric-body">
+            <div class="storage-stats">
+                <span id="storageTextSpan">Select a client to view usage</span>
+            </div>
+            <div class="progress-bar-bg">
+                <div class="progress-bar-fill" style="width: 0%;"></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+                    <section class="dashboard-module upload-section">
+                        <div class="section-heading">
+<span id="activeClientIndicator" style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">
+    No client selected — click a row in the table above
+</span>
+                            <h3>Secure Cloud Upload</h3>
+                        </div>
+                        
+                        <div class="dropzone-area" id="mainDropzone">
+                            <input type="file" id="realFileInput" multiple hidden accept="image/*">
+                            <i class="fas fa-cloud-upload-alt dropzone-icon"></i>
+                            <h3>Drag & Drop high-res photos here</h3>
+                            <p>or click to browse files from your computer (Max 500 photos at once)</p>
+                            
+                            <div class="watermark-toggle">
+                                <input type="checkbox" id="watermarkCheck" checked>
+                                <label for="watermarkCheck">Apply Studio Watermark</label>
+                            </div>
+
+                            <div class="category-select-wrapper">
+    <label for="photoCategorySelect">Photos belong to:</label>
+    <select id="photoCategorySelect" class="form-control">
+        <option value="Engagement">💍 Engagement</option>
+        <option value="Pre-Wedding">🌸 Pre-Wedding</option>
+        <option value="Wedding" selected>💒 Wedding Day</option>
+    </select>
+</div>
+                            
+                            <button class="btn-primary" id="browseFilesBtn">Browse Files</button>
+                            <button class="btn-green" id="startCloudUploadBtn" style="display: none; margin-left: 10px;">Start Cloud Upload</button>
+                            
+                            <div id="globalProgressWrapper" class="global-progress-wrapper" style="display: none;">
+                                <div class="progress-info">
+                                    <span id="uploadStatusText">Uploading 3 of 45 photos...</span>
+                                    <span id="globalPercentage">42%</span>
+                                </div>
+                                <div class="progress-bar-container">
+                                    <div id="globalProgressBarFill" class="progress-bar-fill" style="width: 42%;"></div>
+                                </div>
+                            </div>
+
+                            <div id="filePreviewList" class="file-preview-list"></div>
+                        </div>
+                    </section>
+
+                    
+                    <section class="dashboard-module link-tracker-section">
+                        <div class="section-heading">
+                            <h3>Client Gallery Link & Live Selection</h3>
+                        </div>
+
+                        <div class="link-generator-box">
+    <button class="btn-primary-small" id="generateClientLinkBtn">
+        <i class="fas fa-link"></i> Generate Client Link
+    </button>
+    <button class="action-btn text-btn" id="regenerateLinkBtn" style="display:none;">
+        <i class="fas fa-rotate"></i> Regenerate (Extend 24hrs)
+    </button>
+
+<div class="generated-link-row">
+    <input type="text" id="clientGeneratedUrlDisplayField" class="form-control" readonly placeholder="Link generate karne ke baad yahan dikhega...">
+    <button class="action-btn text-btn" id="copySecureLinkBtn">
+        <i class="far fa-copy"></i> Copy
+    </button>
+    <button class="action-btn text-btn whatsapp-btn" id="whatsappShareBtn">
+        <i class="fab fa-whatsapp"></i> Share
+    </button>
+</div>
+<p id="clientGalleryPinDisplay" style="display:none; margin:12px 0 0; color:var(--primary-blue); font-weight:700;"></p>
+</div>
+
+                        <div class="live-tracker-status-row">
+                            <span id="paymentStatusBadgeIndicator" class="status-badge pending">Awaiting Client Action</span>
+                            <span id="selectionStatsStatusSummaryCounter" class="selection-stats-text">Awaiting client selection pipeline...</span>
+                            <button class="action-btn btn-green" id="unlockPremiumGalleryBtn">
+                                <i class="fas fa-unlock"></i> Unlock Premium Gallery
+                            </button>
+                        </div>
+
+                        <div id="liveClientSelectionThumbnailsGrid" class="live-thumbnails-grid"></div>
+                    </section>
+                
+                </div>
+
+                <!--CLIENT PROJECTS TAB-->
+                <div id="view-clients" class="view-section">
+                    <div class="section-heading">
+                        <h2>Client Projects</h2>
+                        <p>Manage all your clients and their galleries here.</p>
+                    </div>
+
+                    <div class="search-bar-wrapper">
+                        <input type="text" id="clientSearchInput" class="form-control" placeholder="Search client by name.">
+                    </div>
+
+                    <section class="dashboard-module tracker-section">
+                        <div class="section-heading">
+                            <h3>Real-Time Client Tracker</h3>
+                            <button class="btn-primary-small"><i class="fas fa-plus"></i> New Client</button>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="client-table">
+                                <thead>
+                                    <tr>
+                                        <th>Client Name</th>
+                                        <th>Event Type</th>
+                                        <th>Selection Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                
+<tbody id="clientTrackerTableBody"> </tbody>
+                            </table>
+                        </div>
+                    </section>
+                </div>
+
+                <div id="view-palette" class="view-section">
+                    <div class="section-heading">
+                        <h2>Gallery Themes</h2>
+                        <p>Select beautiful layouts for client delivery.</p>
+                    </div>
+                </div>
+
+                <!--SUBSCRIPTION TAB -->
+                <div id="view-subscription" class="view-section">
+    <div class="section-heading">
+        <h2>Subscription & Storage</h2>
+        <p>Manage your plan and billing.</p>
+    </div>
+
+    <div id="trialStatusBanner" class="trial-banner">
+        ⏳ Your 7-day free trial has ended. Upgrade to keep adding new clients.
+    </div>
+
+    <div class="subscription-card">
+        <span class="subscription-label">Current Plan</span>
+        <h2 id="currentPlanName">Free Trial</h2>
+        <p id="subscriptionStatusText" class="subscription-status-text">Checking your account status...</p>
+    </div>
+
+    <div class="plans-grid">
+    <div class="plan-card">
+        <h3>Starter</h3>
+        <p class="plan-price">₹700 <span>/ 6 months</span></p>
+        <ul class="plan-features">
+            <li><i class="fas fa-check"></i> Up to 50 client galleries</li>
+            <li><i class="fas fa-check"></i> 20 GB storage</li>
+            <li><i class="fas fa-check"></i> Secure client links</li>
+            <li><i class="fas fa-check"></i> ZIP downloads</li>
+        </ul>
+        <a href="https://wa.me/919265536548?text=Hi%20PHOTRIX%2C%20I%20want%20to%20subscribe%20to%20the%20Starter%20plan." target="_blank" rel="noopener noreferrer" class="btn-primary-small plan-subscribe-btn" data-plan-name="Starter" data-plan-storage="20">
+            <i class="fas fa-crown"></i> Subscribe Now
+        </a>
+    </div>
+
+    <div class="plan-card featured">
+        <span class="plan-badge">Most Popular</span>
+        <h3>Growth</h3>
+        <p class="plan-price">₹1400 <span>/ 6 months</span></p>
+        <ul class="plan-features">
+            <li><i class="fas fa-check"></i> Up to 150 client galleries</li>
+            <li><i class="fas fa-check"></i> 50 GB storage</li>
+            <li><i class="fas fa-check"></i> Secure client links</li>
+            <li><i class="fas fa-check"></i> ZIP downloads</li>
+            <li><i class="fas fa-check"></i> Priority support</li>
+        </ul>
+        <a href="https://wa.me/919265536548?text=Hi%20PHOTRIX%2C%20I%20want%20to%20subscribe%20to%20the%20Growth%20plan." target="_blank" rel="noopener noreferrer" class="btn-primary-small plan-subscribe-btn" data-plan-name="Growth" data-plan-storage="50">
+            <i class="fas fa-crown"></i> Subscribe Now
+        </a>
+    </div>
+</div>
+
+    <div class="payment-instructions">
+        <h4>After payment:</h4>
+        <p>Your account will be activated after payment verification. If it takes longer than 24 hours, contact us on WhatsApp: <a href="https://wa.me/919265536548" target="_blank" rel="noopener noreferrer">+91 9265536548</a></p>
+    </div>
+</div>
+
+            </div> </main>
+    </div>
+
+    <div class="modal-overlay" id="newClientModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Create New Client Project</h3>
+                <button class="close-modal-btn" id="closeModalBtn"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Client / Couple Name</label>
+                    <input type="text" id="clientNameInput" placeholder="e.g., Rohan & Shruti" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>Event Type</label>
+                    <select id="eventTypeInput" class="form-control">
+                        <option value="Wedding">Wedding</option>
+                        <option value="Pre-Wedding">Pre-Wedding</option>
+                        <option value="Engagement">Engagement</option>
+                        <option value="Birthday">Birthday / Portfolio</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-text" id="cancelModalBtn">Cancel</button>
+                <button class="btn-primary-small" id="createClientBtn">Create & Go to Upload</button>
+            </div>
+        </div>
+    </div>
+    
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>    
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-functions.js"></script>
+    
+    
+    
+    
+    
+    
+    
+    
+    <script src="DSBstyle.js"></script>
+    <script src="DSB.js"></script>
+</body>
+</html>

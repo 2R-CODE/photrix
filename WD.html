@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <title>PHOTRIX | Premium Wedding Showcase Platform</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300&family=Montserrat:wght@200;300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="WD.css">
+</head>
+<body>
+
+    <header class="hero-container" id="home">
+        <video class="hero-video" autoplay loop muted playsinline>
+            <source src="https://firebasestorage.googleapis.com/v0/b/eternal-memories-wedding.firebasestorage.app/o/website-assets%2F6270955-hd_1920_1080_25fps.mp4?alt=media&token=c969091b-037b-47dc-a1aa-b281bc10239e" type="video/mp4">
+        </video>
+        <div class="video-overlay"></div>
+
+        <nav class="navbar">
+            <div class="nav-logo">PHOTRIX</div>
+            
+            <input type="checkbox" id="menu-toggle" class="menu-toggle-cb">
+            <label for="menu-toggle" class="hamburger-icon">
+                <span></span>
+                <span></span>
+                <span></span>
+            </label>
+
+            <div class="nav-container">
+                <div class="nav-links">
+                    <div class="nav-dropdown">
+                        <a href="#services" class="dropdown-trigger">FEATURES <i class="fas fa-chevron-down drop-arrow"></i></a>
+                        <div class="dropdown-menu">
+                            <a href="#services"><i class="fas fa-images"></i> Wedding Gallery</a>
+                            <a href="#leaderboard"><i class="fas fa-camera"></i> Photography Studios</a>
+                            <a href="#book"><i class="fas fa-magic"></i> Makeup Artists</a>
+                        </div>
+                    </div>
+                    <a href="#leaderboard">TOP CREATORS</a>
+                </div>
+                
+               <div class="nav-actions">
+    <a href="login.html" class="get-started-btn">Get Started</a>
+</div>
+            </div>
+        </nav>
+
+        <div class="hero-content">
+    <p class="hero-tagline">FOR WEDDING PHOTOGRAPHERS & CREATORS</p>
+    <h1 class="hero-title">The Digital Museum<br>For India's Top Wedding Creators.</h1>
+    <p class="hero-description">
+        Deliver high-fidelity, password-protected interactive cloud galleries that couples can stream anywhere in the world.
+    </p>
+    <!-- Is button ko direct Dashboard Registration/Signup se jodhenge -->
+    <a href="#" id="heroCreateBtn" class="hero-action-btn">Get Started</a>
+</div>
+    </header>
+
+    <section class="product-showcase-section">
+        <div class="showcase-container">
+            
+            <div class="showcase-header">
+                <h2 class="showcase-main-title">The Ultimate Digital Canvas For Modern Weddings</h2>
+                <p class="showcase-subtitle">Deliver every premium moment into an unforgettable, high-end private brand experience.</p>
+            </div>
+
+            <div class="showcase-tabs-wrapper">
+                <button class="showcase-tab-btn active" onclick="switchShowcaseTab(this, 'client-gallery')">
+                    Premium Client Gallery
+                </button>
+                <button class="showcase-tab-btn" onclick="switchShowcaseTab(this, 'instant-delivery')">
+                    Instant Digital Delivery
+                </button>
+                <button class="showcase-tab-btn" onclick="switchShowcaseTab(this, 'cloud-storage')">
+                    Zero-Compression Cloud
+                </button>
+                <button class="showcase-tab-btn" onclick="switchShowcaseTab(this, 'secure-passcode')">
+                    Secure Passcode
+                </button>
+            </div>
+
+            <div class="showcase-mockup-frame">
+                <div class="mockup-browser-header">
+                    <div class="browser-dots">
+                        <span class="dot"></span>
+                        <span class="dot"></span>
+                        <span class="dot"></span>
+                    </div>
+                    <div class="browser-address-bar">eternalmemories.cloud/gallery/premium-client</div>
+                </div>
+
+                <div class="mockup-content-window">
+                    
+                    <div id="client-gallery" class="tab-content-panel active">
+                        <div class="wedding-gallery-grid">
+                            <div class="grid-item tall"><img src="https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=600&q=80" alt="Wedding Couple"></div>
+                            <div class="grid-item"><img src="https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&w=600&q=80" alt="Wedding Ring"></div>
+                            <div class="grid-item"><img src="https://images.unsplash.com/photo-1583939003579-730e3918a45a?auto=format&fit=crop&w=600&q=80" alt="Wedding Dance"></div>
+                            <div class="grid-item wide"><img src="https://images.unsplash.com/photo-1532712938310-34cb3982ef74?auto=format&fit=crop&w=800&q=80" alt="Wedding Banquet"></div>
+                        </div>
+                    </div>
+
+                    <div id="instant-delivery" class="tab-content-panel">
+                        <div class="showcase-placeholder-card">
+                            <div class="delivery-status-box">
+                                <span class="pulse-icon">⚡</span>
+                                <h3>High-Speed Delivery Active</h3>
+                                <p>WhatsApp & Cloud integration delivers high-res memories to couples instantly.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="cloud-storage" class="tab-content-panel">
+                        <div class="showcase-placeholder-card">
+                            <div class="cloud-status-box">
+                                <h3>100% Original Resolution</h3>
+                                <!-- <p>Say goodbye to compressed images. Every megapixel, shade, and detail is preserved exactly as captured.</p> -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="secure-passcode" class="tab-content-panel">
+                        <div class="showcase-placeholder-card">
+                            <div class="secure-lock-box">
+                                <h3>🔒 Military-Grade Protection</h3>
+                                <p>Password-protected interactive cloud galleries that couples can securely access anywhere in the world.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </section>
+<!--Our Ecosystem-->
+    <section class="section-wrapper" id="services">
+        <h2 class="section-title">Our Ecosystem</h2>
+        <p class="section-subtitle">Revolutionizing how wedding stories are preserved and shared</p>
+        
+        <div class="grid-3">
+            <div class="service-card">
+                <i class="fas fa-crown service-icon"></i>
+                <h3>Premium Client Galleries</h3>
+                <p>Deliver beautiful, custom-built animated albums to your couples. Zero compression, fully private, and protected with a lifetime secure passcode.</p>
+            </div>
+            <div class="service-card">
+                <i class="fas fa-bolt service-icon"></i>
+                <h3>Spotlight Marketplace</h3>
+                <p>Join as a partner photographer. Show your top wedding portfolios to elite clients and step into a competitive leaderboard to get direct premium bookings.</p>
+            </div>
+            <div class="service-card">
+                <i class="fas fa-paper-plane service-icon"></i>
+                <h3>Digital Invites & Teasers</h3>
+                <p>Provide add-on value like interactive pre-wedding RSVP links and fast same-day cinematic teaser streams directly embedded into your couple's gallery.</p>
+            </div>
+        </div>
+    </section>
+<!--luxury-grid-section-->
+    <section class="premium-triple-showcase">
+    <div class="triple-grid-container">
+        
+        <div class="triple-header-row">
+            <span class="triple-main-brand">Tailored for Scale</span>
+            <h2 id="triple-showcase-title" class="triple-dynamic-heading">Luxury Weddings</h2>
+        </div>
+
+        <div id="triple-media-wrapper" class="triple-media-wrapper-grid">
+            
+            <div class="triple-luxury-card-frame">
+                <div class="triple-card-ratio-box">
+                    <img id="triple-img-1" src="https://images.unsplash.com/photo-1519741497674-611481863552?w=600&auto=format&fit=crop&q=80" alt="Showcase Frame 1">
+                </div>
+            </div>
+
+            <div class="triple-luxury-card-frame">
+                <div class="triple-card-ratio-box">
+                    <img id="triple-img-2" src="https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=600&auto=format&fit=crop&q=80" alt="Showcase Frame 2">
+                </div>
+            </div>
+
+            <div class="triple-luxury-card-frame">
+                <div class="triple-card-ratio-box">
+                    <img id="triple-img-3" src="https://images.unsplash.com/photo-1606800052052-a08af7148866?w=600&auto=format&fit=crop&q=80" alt="Showcase Frame 3">
+                </div>
+            </div>
+
+        </div>
+
+        <div class="triple-navigation-deck">
+    <button class="deck-arrow-btn prev-triple" aria-label="Previous slide">
+        <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    
+    <div class="triple-pagination-dots-container">
+        <span class="triple-dot active" data-index="0"></span>
+        <span class="triple-dot" data-index="1"></span>
+        <span class="triple-dot" data-index="2"></span>
+    </div>
+
+    <button class="deck-arrow-btn next-triple" aria-label="Next slide">
+        <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M9 5l6 6-6 6"/></svg>
+    </button>
+</div>
+</section>
+<!--Leaderboard-->
+    <section class="section-wrapper bg-dark-leaderboard" id="leaderboard">
+        <h2 class="section-title text-white">Trending Wedding Creators</h2>
+        <p class="section-subtitle text-muted">The top-voted professionals making waves this month</p>
+        
+        <div class="leaderboard-slider">
+            <div class="slider-track">
+                <div class="creator-card">
+                    <div class="badge">#1 Ranked</div>
+                    <h4>Sharma Productions</h4>
+                    <p class="creator-meta"><i class="far fa-eye"></i> 12.5k views</p>
+                    <div class="creator-tags"><span>Royal Wedding</span><span>Candid</span></div>
+                </div>
+                <div class="creator-card">
+                    <div class="badge">#2 Ranked</div>
+                    <h4>The Frame Stories</h4>
+                    <p class="creator-meta"><i class="far fa-eye"></i> 9.8k views</p>
+                    <div class="creator-tags"><span>Cinematic</span><span>Pre-Wedding</span></div>
+                </div>
+                <div class="creator-card">
+                    <div class="badge">#3 Ranked</div>
+                    <h4>Vows & Frames</h4>
+                    <p class="creator-meta"><i class="far fa-eye"></i> 8.4k views</p>
+                    <div class="creator-tags"><span>Traditional</span><span>Luxury</span></div>
+                </div>
+                <div class="creator-card">
+                    <div class="badge">#1 Ranked</div>
+                    <h4>Sharma Productions</h4>
+                    <p class="creator-meta"><i class="far fa-eye"></i> 12.5k views</p>
+                    <div class="creator-tags"><span>Royal Wedding</span><span>Candid</span></div>
+                </div>
+                <div class="creator-card">
+                    <div class="badge">#2 Ranked</div>
+                    <h4>The Frame Stories</h4>
+                    <p class="creator-meta"><i class="far fa-eye"></i> 9.8k views</p>
+                    <div class="creator-tags"><span>Cinematic</span><span>Pre-Wedding</span></div>
+                </div>
+            </div>
+        </div>
+    </section>
+<!--The Dynamic Workflow-->
+
+<section class="showcase-section" id="process">
+    <div class="showcase-container">
+        
+        <!-- Left Side: Simple Steps Text -->
+        <div class="showcase-left">
+            <div class="showcase-header">
+                <h2 class="showcase-main-title">How It Works</h2>
+                <p class="showcase-subtitle">Simple, automated, and built to scale your business.</p>
+            </div>
+
+            <div class="steps-list">
+                <!-- Step 1 -->
+                <div class="step-item active" data-step="1">
+                    <div class="step-number">01</div>
+                    <div class="step-text">
+                        <h3>Upload & Try Free</h3>
+                        <p>Upload high-res photos instantly. Share a beautiful gallery with your clients on a <strong>7-Day Free Trial</strong> with zero risk.</p>
+                    </div>
+                    <!-- Mobile View Visual (Desktop par hide rahega) -->
+                    <div class="mobile-visual-box visual-s1">
+                        <div class="mock-upload-anim">☁️ Uploading High-Res...</div>
+                    </div>
+                </div>
+
+                <!-- Step 2 -->
+                <div class="step-item" data-step="2">
+                    <div class="step-number">02</div>
+                    <div class="step-text">
+                        <h3>Client Lookbook Review</h3>
+                        <p>Clients get a premium, password-protected interactive gallery. Perfect for smooth selection and before/after sliders for artists.</p>
+                    </div>
+                    <!-- Mobile View Visual (Desktop par hide rahega) -->
+                    <div class="mobile-visual-box visual-s2">
+                        <div class="mock-slider-anim">↔️ Interactive Gallery Preview</div>
+                    </div>
+                </div>
+
+                <!-- Step 3 -->
+                <div class="step-item" data-step="3">
+                    <div class="step-number">03</div>
+                    <div class="step-text">
+                        <h3>Pocket Pricing Unlock</h3>
+                        <p>Once your client approves, unlock the live gallery for <strong>6 Months</strong> at just <strong>₹700 INR</strong>. Keep 100% of your profit.</p>
+                    </div>
+                    <!-- Mobile View Visual (Desktop par hide rahega) -->
+                    <div class="mobile-visual-box visual-s3">
+                        <div class="mock-price-anim">✨ Premium Gallery Activated</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Side: Live Visual Window (Desktop Only) -->
+        <div class="showcase-right">
+            <div class="visual-window">
+                <!-- Visual for Step 1 -->
+                <div class="visual-content active" id="visual-1">
+                    <div class="premium-mockup-card glass-v1">
+                        <span class="mock-tag">Step 1: Live Demo</span>
+                        <h4>⚡ Fast Drag & Drop Cloud Upload</h4>
+                        <p>No compression. Your original photography quality stays protected.</p>
+                    </div>
+                </div>
+                <!-- Visual for Step 2 -->
+                <div class="visual-content" id="visual-2">
+                    <div class="premium-mockup-card glass-v2">
+                        <span class="mock-tag">Step 2: Client View</span>
+                        <h4>🔒 Password Protected Lookbook</h4>
+                        <p>Beautiful client interface with immersive layout & music options.</p>
+                    </div>
+                </div>
+                <!-- Visual for Step 3 -->
+                <div class="visual-content" id="visual-3">
+                    <div class="premium-mockup-card glass-v3">
+                        <span class="mock-tag">Step 3: Business Activation</span>
+                        <h4>💰 Pay ₹700 / Keep 100% Profit</h4>
+                        <p>No monthly heavy bills. Pay per gallery, only when your client is happy.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</section>
+<!--Partner With Us-->
+    <section class="section-wrapper" id="book">
+    <h2 class="section-title">Partner With Us</h2>
+    <p class="section-subtitle">Whether you are a couple or a professional studio, let’s upgrade your delivery</p>
+    
+    <div class="form-container">
+        <form id="orderForm">
+            <div class="form-group">
+                <label for="name">Full Name / Studio Name</label>
+                <input type="text" id="name" placeholder="Enter name or studio name" required>
+            </div>
+
+            <div class="form-group">
+                <label for="phone">WhatsApp Number</label>
+                <input type="tel" id="phone" placeholder="Enter contact number" required>
+            </div>
+
+            <div class="form-group">
+                <label>I Am A:</label>
+                <div class="custom-luxury-dropdown" id="luxuryDropdown">
+                    <div class="dropdown-selected-val">Professional Photographer / Studio</div>
+                    
+                    <div class="dropdown-custom-options">
+                        <div class="luxury-option active" data-value="photographer">Professional Photographer / Studio</div>
+                        <div class="luxury-option" data-value="couple">Wedding Couple (Direct Booking)</div>
+                    </div>
+                    
+                    <input type="hidden" id="role" name="user_role" value="photographer">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="message">Message / Requirements</label>
+                <textarea id="message" placeholder="Tell us how we can help you scale..." required></textarea>
+            </div>
+
+            <button type="submit" class="submit-btn">Submit Application</button>
+        </form>
+    </div>
+</section>
+
+<!--FOOTER SECTION -->
+<footer class="footer-premium">
+    <div class="footer-container" style="display: flex; flex-direction: column; gap: 32px;">
+        
+        <div class="footer-brand-side" style="width: 100%; max-width: 100%;">
+            <h3 class="footer-logo-text">PHOTRIX</h3>
+            <p class="footer-brand-desc">An all-in-one platform for modern photographers, delivering premium password-protected digital galleries and custom interactive wedding ecosystems.</p>
+        </div>
+
+        <div class="footer-links-grid" style="display: flex; flex-wrap: wrap; gap: 24px; justify-content: space-between; width: 100%;">
+            
+            <div class="footer-link-col" style="flex: 1 1 140px; min-width: 130px;">
+                <h4>Platform</h4>
+                <ul>
+                    <li><a href="#features">Digital Canvas</a></li>
+                    <li><a href="#features">Client Galleries</a></li>
+                    <li><a href="#process">Dynamic Workflow</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-link-col" style="flex: 1 1 140px; min-width: 130px;">
+                <h4>Support</h4>
+                <ul>
+                    <li><a href="#book">Partner With Us</a></li>
+                    <li><a href="https://wa.me/919265536548" target="_blank">Contact Support</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-link-col" style="flex: 1 1 140px; min-width: 130px;">
+                <h4>Legal</h4>
+                <ul>
+                    <li><a href="terms.html">Terms Of Service</a></li>
+                    <li><a href="privacy-policy.html">Privacy Policy</a></li>
+                    <li><a href="refund.html">Refund Policy</a></li>
+                </ul>
+            </div>
+
+        </div>
+
+        <div class="footer-social-deck" style="width: 100%; display: flex; flex-direction: column; gap: 16px; align-items: flex-start;">
+            <div class="footer-social-icons">
+                <a href="https://www.instagram.com/photrix.in?igsh=MXA1NGFmNWFoOXc4Yg%3D%3D&utm_source=qr" target="_blank"><i class="fab fa-instagram"></i></a>
+                <a href="https://youtube.com/YOUR_CHANNEL" target="_blank"><i class="fab fa-youtube"></i></a>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="footer-bottom">
+        <p>&copy; 2026 PHOTRIX. Built for modern creators.</p>
+    </div>
+</footer>
+
+    <script src="Whatsapp.js"></script>
+    <script type="module" src="WDhp.js"></script>
+    <script type="module" src="WDfire.js"></script>
+</body>
+</html>

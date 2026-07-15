@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PHOTRIX</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="lookbook.css">
+</head>
+<body class="theme-royal">
+
+    <header class="gallery-header">
+        <div class="brand-logo">PHOTRIX</div>
+
+        <button class="theme-toggle-mobile-btn" id="themeToggleMobileBtn">
+    <i class="fas fa-palette"></i>
+</button>
+        
+        <div class="theme-selector-panel" id="theme-panel">
+            <span>✨ Change Theme:</span>
+            <button class="theme-btn active" data-theme="theme-royal">Royal Gold</button>
+            <button class="theme-btn" data-theme="theme-dark">Minimal Dark</button>
+            <button class="theme-btn" data-theme="theme-pastel">Pastel Bloom</button>
+        </div>
+    </header>
+
+    <section class="gallery-hero">
+        <div class="hero-overlay"></div>
+        <div class="hero-content">
+            <h1 id="couple-names">Loading Memories...</h1>
+            <p id="gallery-sub-status">Please wait while we arrange your digital album</p>
+        </div>
+    </section>
+
+    <main class="gallery-wrapper">
+        <section id="gallery-pin-gate" class="selection-counter-bar" style="display:none; max-width:460px; margin:24px auto;">
+            <p style="margin-bottom:12px;">Enter the 6-digit gallery PIN shared by your photographer.</p>
+            <input id="gallery-pin-input" type="password" inputmode="numeric" maxlength="6" placeholder="Gallery PIN" style="width:100%; padding:12px; border-radius:8px; border:1px solid #c9a54b;">
+        </section>
+        <div class="selection-counter-bar" id="counter-zone" style="display: none;">
+            <p><i class="fa-solid fa-heart-half-stroke"></i> Selected Photos: <span id="selected-count">0</span> / 40</p>
+        </div>
+
+        <div class="masonry-grid" id="main-photo-grid">
+            </div>
+    </main>
+
+    <footer class="action-dock" id="action-footer" style="display: none;">
+        <button id="submit-selection-btn" class="dock-btn primary-btn" style="display: none;">
+            <i class="fa-solid fa-cloud-arrow-up"></i> Submit Selected Previews
+        </button>
+
+        <a id="download-zip-btn" class="dock-btn success-btn" style="display: none;" download>
+            <i class="fa-solid fa-file-zipper"></i> Download Full Gallery (HD Zip)
+        </a>
+    </footer>
+
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-functions-compat.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+<script src="lookbook.js"></script>
+</body>
+</html>

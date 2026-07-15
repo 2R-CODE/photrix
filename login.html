@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | PHOTRIX</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="login.css">
+</head>
+<body>
+
+    <div class="login-container">
+        <div class="login-box">
+            <h2>PHOTRIX</h2>
+            <p class="form-subtitle">Don't have an account? <a href="#" id="switchToSignUpBtn" style="color: #00cca3; text-decoration: none; font-weight: 600;">Sign up</a></p>
+            
+            <div id="loginSection">
+                <p class="subtitle">Login to manage your studio dashboard</p>
+                
+                <button id="google-signin-btn" class="google-btn" type="button">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google Logo">
+                    Continue with Google
+                </button>
+
+                <div class="divider">
+                    <span>or use email</span>
+                </div>
+
+                <form id="loginForm">
+                    <div class="input-group">
+                        <label for="loginEmail">Email Address</label>
+                        <input type="email" id="loginEmail" placeholder="you@example.com" required>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="loginPassword">Password</label>
+                        <input type="password" id="loginPassword" placeholder="Enter Password" required>
+                    </div>
+                    <div class="form-helper-row" style="display: flex; justify-content: flex-end; margin-top: 5px; margin-bottom: 15px;">
+                        <a href="#" id="forgotPasswordBtn" style="color: #7e7e86; font-size: 0.85rem; text-decoration: none;">Lost Password?</a>
+                    </div>
+                    
+                    <button type="submit" class="submit-btn">Log In</button>
+                </form>
+            </div>
+
+            <div id="setupSection" style="display: none;">
+                <h3 class="setup-title">Create your free account</h3>
+                <p class="subtitle" style="margin-bottom: 20px;">Already have an account? <a href="#" id="backToLogin" class="link-teal">Log in</a></p>
+                
+                <form id="setupForm">
+                    <!-- Ye group sirf MANUAL signup ke liye dikhega, Google signup me hidden rahega -->
+                    <div id="manualCredentialsGroup">
+                        <div class="input-group">
+                            <input type="email" id="signupEmail" placeholder="Email Address" required>
+                        </div>
+                        <div class="input-group">
+                            <input type="password" id="signupPassword" placeholder="Create Password (min 6 characters)" required minlength="6">
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <select id="userRole" required style="width: 100%; padding: 12px; border: 1px solid #cccccc; border-radius: 4px; background-color: white; font-family: 'Montserrat', sans-serif; font-size: 14px; color: #555555; margin-bottom: 5px;">
+                            <option value="" disabled selected>Select Your Role / Profession</option>
+                            <option value="photographer">Photographer / Studio</option>
+                            <option value="makeup_artist">Makeup Artist</option>
+                            <option value="normal_user">Normal User / Client</option>
+                        </select>
+                    </div>
+
+                    <div class="input-group">
+                        <input type="text" id="businessName" placeholder="Business / Studio Name" required>
+                    </div>
+                    
+                    <div class="input-group">
+                        <input type="text" id="websiteUrl" placeholder="Website (optional)">
+                    </div>
+                    
+                    <button type="submit" class="setup-submit-btn">CREATE FREE ACCOUNT</button>
+                </form>
+            </div>
+
+            <div class="login-footer">
+                <a href="WD.html">Back to Home</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+
+    <script src="login.js"></script>
+
+</body>
+</html>

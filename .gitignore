@@ -1,0 +1,14 @@
+# Node modules (Ye kabhi upload nahi hote)
+node_modules/
+functions/node_modules/
+
+# Firebase local files
+.firebase/
+.runtimeconfig.json
+
+# Environment files (Isme tumhare secrets hote hain)
+.env
+
+# System files
+.DS_Store
+Thumbs.db

@@ -1,0 +1,294 @@
+/* ============================================================
+   🎨 PHOTRIX GALLERY — FINAL PREMIUM VERSION
+   Masonry grid + 3 themes + category sections + polish
+   ============================================================ */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Poppins', sans-serif;
+    min-height: 100vh;
+    transition: background 0.4s ease, color 0.4s ease;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* ============================================================
+   🌈 THEME VARIABLES
+   ============================================================ */
+body.theme-royal {
+    --gallery-bg: #0d0b08;
+    --gallery-bg-elevated: #17140f;
+    --gallery-text: #f5f0e6;
+    --gallery-text-muted: #b8ac96;
+    --gallery-accent: #d4af37;
+    --gallery-accent-soft: rgba(212, 175, 55, 0.15);
+    --gallery-card-bg: #1a1712;
+    --gallery-heading-font: 'Cinzel', serif;
+    --gallery-border: rgba(212, 175, 55, 0.2);
+}
+
+body.theme-dark {
+    --gallery-bg: #0a0a0a;
+    --gallery-bg-elevated: #141414;
+    --gallery-text: #ffffff;
+    --gallery-text-muted: #8a8a8a;
+    --gallery-accent: #ffffff;
+    --gallery-accent-soft: rgba(255, 255, 255, 0.08);
+    --gallery-card-bg: #121212;
+    --gallery-heading-font: 'Poppins', sans-serif;
+    --gallery-border: rgba(255, 255, 255, 0.1);
+}
+
+body.theme-pastel {
+    --gallery-bg: #fdf6f3;
+    --gallery-bg-elevated: #ffffff;
+    --gallery-text: #4a3f3a;
+    --gallery-text-muted: #a8968e;
+    --gallery-accent: #e8a0a0;
+    --gallery-accent-soft: rgba(232, 160, 160, 0.15);
+    --gallery-card-bg: #ffffff;
+    --gallery-heading-font: 'Cinzel', serif;
+    --gallery-border: rgba(232, 160, 160, 0.25);
+}
+
+body {
+    background: var(--gallery-bg);
+    color: var(--gallery-text);
+}
+
+/* ============================================================
+   🎵 MUSIC CONTROLLER
+   ============================================================ */
+.music-controller {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: var(--gallery-accent);
+    color: var(--gallery-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    cursor: pointer;
+    z-index: 500;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    transition: transform 0.2s ease;
+}
+.music-controller:hover { transform: scale(1.08); }
+
+/* ============================================================
+   🏷️ HEADER
+   ============================================================ */
+.gallery-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 22px 40px;
+    position: relative;
+    z-index: 100;
+}
+.brand-logo {
+    font-family: var(--gallery-heading-font);
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--gallery-accent);
+}
+
+.theme-selector-panel {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.85rem;
+    color: var(--gallery-text-muted);
+}
+.theme-btn {
+    background: transparent;
+    border: 1px solid var(--gallery-border);
+    color: var(--gallery-text-muted);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.theme-btn.active, .theme-btn:hover {
+    background: var(--gallery-accent);
+    color: var(--gallery-bg);
+    border-color: var(--gallery-accent);
+}
+
+.theme-toggle-mobile-btn {
+    display: none;
+    background: var(--gallery-accent-soft);
+    border: 1px solid var(--gallery-border);
+    color: var(--gallery-accent);
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+/* ============================================================
+   🖼️ HERO SECTION
+   ============================================================ */
+.gallery-hero {
+    position: relative;
+    height: 60vh;
+    min-height: 380px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(180deg, var(--gallery-bg-elevated) 0%, var(--gallery-bg) 100%);
+    overflow: hidden;
+}
+.hero-overlay {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 50% 40%, transparent 0%, var(--gallery-bg) 90%);
+}
+.hero-content {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    padding: 0 20px;
+    animation: heroFadeIn 0.8s ease both;
+}
+.hero-content h1 {
+    font-family: var(--gallery-heading-font);
+    font-size: 3rem;
+    font-weight: 700;
+    color: var(--gallery-accent);
+    margin-bottom: 16px;
+    letter-spacing: 1px;
+}
+.hero-content p {
+    font-size: 1rem;
+    color: var(--gallery-text-muted);
+    font-weight: 300;
+    letter-spacing: 0.3px;
+}
+@keyframes heroFadeIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================
+   📊 SELECTION COUNTER BAR — glass effect, premium feel
+   ============================================================ */
+.selection-counter-bar {
+    max-width: 1400px;
+    margin: 0 auto 24px;
+    padding: 16px 24px;
+    background: var(--gallery-card-bg);
+    border: 1px solid var(--gallery-border);
+    border-radius: 12px;
+    backdrop-filter: blur(10px);
+}
+.selection-counter-bar p {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--gallery-text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+.selection-counter-bar i { color: var(--gallery-accent); }
+#selected-count { color: var(--gallery-accent); font-weight: 700; }
+
+/* ============================================================
+   🧱 GALLERY WRAPPER + CATEGORY SECTIONS
+   #main-photo-grid ab sirf ek wrapper hai — asli masonry columns
+   har .category-photo-group apna khud banata hai (nesting-safe)
+   ============================================================ */
+.gallery-wrapper {
+    padding: 0 40px 60px;
+}
+
+#main-photo-grid {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: block;
+}
+
+.category-section-heading {
+    font-family: var(--gallery-heading-font);
+    color: var(--gallery-accent);
+    font-size: 1.6rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-align: center;
+    margin: 56px 0 8px;
+}
+.category-section-heading:first-child { margin-top: 4px; }
+
+.category-section-heading::after {
+    content: '';
+    display: block;
+    width: 60px;
+    height: 2px;
+    background: var(--gallery-accent);
+    margin: 14px auto 0;
+    opacity: 0.5;
+}
+
+/* ============================================================
+   🎨 EDITORIAL MIX GRID — rhythm ke saath (kabhi badi, kabhi chhoti)
+   ============================================================ */
+.category-photo-group {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    grid-auto-rows: 140px;
+    gap: 14px;
+    column-count: unset; /* purana masonry column hataya */
+}
+
+.grid-item {
+    grid-column: span 2;
+    grid-row: span 2;
+    break-inside: unset;
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    transition: box-shadow 0.3s ease;
+}
+
+/* Har 6 photos me se 1 badi hoti hai — rhythm banata hai */
+.grid-item:nth-child(6n+1) {
+    grid-column: span 4;
+    grid-row: span 3;
+}
+
+.grid-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.5s ease;
+}
+.grid-item:hover img { transform: scale(1.05); }
+.grid-item:hover { box-shadow: 0 10px 28px rgba(0, 0, 0, 0.3); }
+
+/* Mobile: chhota grid, kam variation */
+@media (max-width: 768px) {
+    .category-photo-group {
+        grid-template-columns: repeat(4, 1fr);
+        grid-auto-rows: 100px;
+        gap: 8px;
+    }
+    .grid-item { grid-column: span 2; grid-row: span 2; }
+    .grid-item:nth-child(6n+1) { grid-column: span 4; grid-row: span 2; }
+}
+
