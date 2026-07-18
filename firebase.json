@@ -9,5 +9,12 @@
   },
   "functions": {
     "source": "functions"
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "storage": {
+    "bucket": "eternal-memories-wedding.firebasestorage.app",
+    "rules": "storage.rules"
   }
 }

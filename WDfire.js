@@ -1,9 +1,9 @@
 // ==========================================================================
-// 🔥 FIREBASE LIGHTWEIGHT INITIALIZATION FOR HOME PAGE STATUS (v11 MODULAR)
+// 🔥 FIREBASE LIGHTWEIGHT INITIALIZATION FOR HOME PAGE STATUS
+// 🛠️ Standardized to the same compat SDK (v12.15.0) and firebase.auth()
+// style used by every other page — was previously the only page using the
+// newer modular import syntax at a different SDK version (v11.0.1).
 // ==========================================================================
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
-
 const firebaseConfig = {
     apiKey: "AIzaSyDQFAJH5_V1-qApDKg1I9RcDi3eVMcWAWg", 
     authDomain: "eternal-memories-wedding.firebaseapp.com",
@@ -14,9 +14,9 @@ const firebaseConfig = {
     measurementId: "G-M16V77Z2QS" 
 };
 
-// Initialize Firebase Node
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
+if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+}
 
 // ==========================================================================
 // 🌐 LIVE NAVBAR USER STATE MANAGER (Clean & Synchronized)
@@ -57,7 +57,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.body.classList.add('loaded');
 
     // 🚀 STEP 2: SILENT BACKEND AUTH WATCHDOG SYNC
-    onAuthStateChanged(auth, (user) => {
+    firebase.auth().onAuthStateChanged((user) => {
         if (user) {
             console.log("🟢 Firebase Auth Session Active:", user.email);
             

@@ -78,7 +78,13 @@ pinInput.addEventListener("input", async () => {
     }
   } catch (error) {
     console.error("Firebase Function Error:", error);
-    alert(error.code === "functions/permission-denied" ? "Incorrect gallery PIN." : "Verification failed: " + error.message);
+    if (error.code === "functions/resource-exhausted") {
+      alert("Too many incorrect attempts. Please wait a few minutes and try again.");
+    } else if (error.code === "functions/permission-denied") {
+      alert("Incorrect gallery PIN.");
+    } else {
+      alert("Verification failed: " + error.message);
+    }
     pinInput.value = "";
   }
 });

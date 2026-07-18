@@ -1,0 +1,96 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedInOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+    function profile(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data;
+    }
+    // 🛠️ FIX: "active" used to mean active forever, with no time limit — a
+    // 6-month plan would never expire on its own. Now it also requires
+    // subscriptionExpiresAt to still be in the future (if that field isn't
+    // set at all, access is still allowed — see subscription activation
+    // steps for how to set it going forward).
+    function hasStudioAccess(uid) {
+      let user = profile(uid);
+      return (
+        user.subscriptionStatus == "active"
+        && (!("subscriptionExpiresAt" in user) || request.time < user.subscriptionExpiresAt)
+      )
+        || (
+          user.subscriptionStatus == "trial"
+          && request.time < user.trialStartDate + duration.value(7, "d")
+        );
+    }
+
+    match /users/{uid} {
+      // Photographer sirf apni profile dekh sakta hai
+      allow read: if signedInOwner(uid);
+
+      // New signup sirf trial account create kar sakta hai
+      allow create: if signedInOwner(uid)
+        && request.resource.data.uid == uid
+        && request.resource.data.accountStatus == "trial"
+        && request.resource.data.subscriptionStatus == "trial"
+        && request.resource.data.planName == "7-day Free Trial";
+
+      // Photographer business details edit kar sakta hai, lekin
+      // billing/trial fields browser se change nahi kar sakta —
+      // wo sirf Firebase Console (Admin SDK) se manually update honge
+      // jab WhatsApp par payment confirm ho jaye.
+      allow update: if signedInOwner(uid)
+        && request.resource.data.subscriptionStatus == resource.data.subscriptionStatus
+        && request.resource.data.subscriptionExpiresAt == resource.data.subscriptionExpiresAt
+        && request.resource.data.planName == resource.data.planName
+        && request.resource.data.accountStatus == resource.data.accountStatus
+        && request.resource.data.trialStartDate == resource.data.trialStartDate
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.galleryLimit == resource.data.galleryLimit
+        && request.resource.data.storageLimitBytes == resource.data.storageLimitBytes
+        && request.resource.data.storageUsedBytes == resource.data.storageUsedBytes;
+
+      allow delete: if false;
+
+      match /clientProjects/{projectId} {
+        // Original project data only photographer ko milega
+        allow read: if signedInOwner(uid);
+
+        // Trial/subscribed, verified photographer hi project create kar sake
+        allow create: if signedInOwner(uid)
+          && request.auth.token.email_verified == true
+          && hasStudioAccess(uid)
+          && request.resource.data.status == "created";
+
+        // Owner hi status/link/unlock/change kare
+        allow update: if signedInOwner(uid)
+          && request.auth.token.email_verified == true
+          && hasStudioAccess(uid);
+
+        allow delete: if signedInOwner(uid)
+          && request.auth.token.email_verified == true;
+      }
+    }
+
+    // Public gallery document: only a direct, known shareId link can `get` it.
+    // Listing is always blocked so a client can never enumerate other galleries.
+    match /publicGalleries/{shareId} {
+      allow get: if resource != null && request.time < resource.data.expiresAt;
+      allow list: if false;
+      allow write: if false; // Cloud Functions write this via Admin SDK, which bypasses rules — this is correct as-is.
+    }
+
+    // PIN hash etc. — browser/client kabhi read nahi karega.
+    match /gallerySecrets/{shareId} {
+      allow read, write: if false;
+    }
+
+    // Not referenced anywhere in the app currently (actual data lives at
+    // users/{uid}/clientProjects). Left locked down in case it's legacy —
+    // confirm with your own data model whether this can be removed.
+    match /clients/{workspaceId} {
+      allow read, write: if false;
+    }
+  }
+}

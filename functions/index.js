@@ -1,4 +1,6 @@
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { onSchedule } = require("firebase-functions/v2/scheduler");
+const { onObjectFinalized, onObjectDeleted } = require("firebase-functions/v2/storage");
 const { logger } = require("firebase-functions");
 const admin = require("firebase-admin");
 const crypto = require("crypto");
@@ -18,15 +20,66 @@ function hashPin(pin, salt) {
   return crypto.scryptSync(pin, salt, 32).toString("hex");
 }
 
+const MAX_PIN_ATTEMPTS = 8;
+const LOCKOUT_MINUTES = 15;
+
+// 🆕 A 6-digit PIN only has 1,000,000 combinations — without this, a script
+// could just try all of them against verifyGalleryPin/submitGallerySelection
+// in minutes and get into someone's private gallery. This tracks failed
+// attempts per shareId (on gallerySecrets, which is already fully locked
+// from any client read/write) and locks that shareId out for 15 minutes
+// after 8 wrong tries. Both PIN-checking functions call this — one place,
+// so the rule can't drift out of sync between them.
+async function checkGalleryPin(shareId, pin) {
+  const secretRef = db.doc(`gallerySecrets/${shareId}`);
+  const secret = await secretRef.get();
+  if (!secret.exists) return false;
+  const secretData = secret.data();
+
+  const now = Date.now();
+  if (secretData.lockedUntil && secretData.lockedUntil.toMillis() > now) {
+    throw new HttpsError("resource-exhausted", "Too many incorrect attempts. Please try again in a few minutes.");
+  }
+
+  const isCorrect = hashPin(pin, secretData.pinSalt) === secretData.pinHash;
+
+  if (isCorrect) {
+    if (secretData.failedAttempts) {
+      await secretRef.update({ failedAttempts: 0, lockedUntil: admin.firestore.FieldValue.delete() });
+    }
+    return true;
+  }
+
+  const failedAttempts = (secretData.failedAttempts || 0) + 1;
+  const update = { failedAttempts };
+  if (failedAttempts >= MAX_PIN_ATTEMPTS) {
+    update.failedAttempts = 0;
+    update.lockedUntil = admin.firestore.Timestamp.fromMillis(now + LOCKOUT_MINUTES * 60 * 1000);
+  }
+  await secretRef.update(update);
+  return false;
+}
+
 // Mirrors the trial/subscription logic in firestore.rules. Admin SDK calls
 // (which every function below makes) BYPASS Firestore security rules
 // entirely, so this check has to be re-implemented here — the rules alone
 // do not protect this function.
+//
+// 🛠️ FIX: subscriptionStatus === "active" used to be treated as permanently
+// active, with no time limit. A 6-month plan set to "active" in the Console
+// would stay "active" forever unless someone remembered to revert it by
+// hand. Now access also requires subscriptionExpiresAt to be in the future
+// (if that field isn't set yet on an older/manually-activated account, we
+// still allow it — see the subscription activation steps below for how to
+// set it going forward).
 async function hasStudioAccess(uid) {
   const userDoc = await db.doc(`users/${uid}`).get();
   if (!userDoc.exists) return false;
   const data = userDoc.data();
-  if (data.subscriptionStatus === "active") return true;
+  if (data.subscriptionStatus === "active") {
+    if (!data.subscriptionExpiresAt) return true;
+    return data.subscriptionExpiresAt.toMillis() > Date.now();
+  }
   const start = data.trialStartDate;
   if (!start || typeof start.toMillis !== "function") return false;
   return Date.now() - start.toMillis() < TRIAL_DAYS * 24 * 60 * 60 * 1000;
@@ -61,7 +114,7 @@ exports.createGalleryShare = onCall({ region: REGION, enforceAppCheck: false }, 
       status: "sent_to_client", selectionLimit: 40,
       createdAt: admin.firestore.FieldValue.serverTimestamp()
     });
-    transaction.set(db.doc(`gallerySecrets/${shareId}`), { pinSalt, pinHash: hashPin(pin, pinSalt) });
+    transaction.set(db.doc(`gallerySecrets/${shareId}`), { pinSalt, pinHash: hashPin(pin, pinSalt), pin });
     transaction.update(projectRef, {
       status: "sent_to_client",
       shareId,
@@ -91,8 +144,7 @@ exports.submitGallerySelection = onCall({ region: REGION, enforceAppCheck: false
   if (data.expiresAt.toMillis() < Date.now() || data.status !== "sent_to_client") {
     throw new HttpsError("failed-precondition", "Gallery is no longer accepting selections.");
   }
-  const secret = await db.doc(`gallerySecrets/${shareId}`).get();
-  if (!secret.exists || hashPin(pin, secret.data().pinSalt) !== secret.data().pinHash) {
+  if (!(await checkGalleryPin(shareId, pin))) {
     throw new HttpsError("permission-denied", "Incorrect PIN.");
   }
   const allowed = new Set(data.previewFiles || []);
@@ -115,11 +167,10 @@ exports.verifyGalleryPin = onCall({ region: REGION, enforceAppCheck: false }, as
     throw new HttpsError("invalid-argument", "Invalid PIN.");
   }
   const gallery = await db.doc(`publicGalleries/${shareId}`).get();
-  const secret = await db.doc(`gallerySecrets/${shareId}`).get();
-  if (!gallery.exists || !secret.exists || gallery.data().expiresAt.toMillis() < Date.now()) {
+  if (!gallery.exists || gallery.data().expiresAt.toMillis() < Date.now()) {
     throw new HttpsError("not-found", "Gallery unavailable.");
   }
-  if (hashPin(pin, secret.data().pinSalt) !== secret.data().pinHash) {
+  if (!(await checkGalleryPin(shareId, pin))) {
     throw new HttpsError("permission-denied", "Incorrect PIN.");
   }
   return { ok: true };
@@ -147,4 +198,147 @@ exports.publishGalleryPreviews = onCall({ region: REGION, enforceAppCheck: false
     previewCategories: previews.map(item => String(item.category || "Wedding"))
   });
   return { ok: true };
+});
+
+// 🆕 Lets a photographer look up the PIN for their own client's still-active
+// link, instead of being forced to click "Generate Client Link" again (which
+// used to create a whole new shareId + duplicate preview photos just because
+// the original PIN wasn't written down anywhere retrievable).
+exports.getGalleryPin = onCall({ region: REGION, enforceAppCheck: false }, async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Please sign in.");
+  const projectId = String(request.data?.projectId || "");
+  if (!/^[A-Za-z0-9_-]{8,128}$/.test(projectId)) throw new HttpsError("invalid-argument", "Invalid project.");
+
+  const uid = request.auth.uid;
+  const projectRef = db.doc(`users/${uid}/clientProjects/${projectId}`);
+  const project = await projectRef.get();
+  if (!project.exists) throw new HttpsError("not-found", "Project not found.");
+
+  const data = project.data();
+  if (!data.shareId) throw new HttpsError("failed-precondition", "No link has been generated for this client yet.");
+
+  const galleryRef = db.doc(`publicGalleries/${data.shareId}`);
+  const gallery = await galleryRef.get();
+  if (!gallery.exists || gallery.data().expiresAt.toMillis() < Date.now()) {
+    throw new HttpsError("failed-precondition", "This client's link has expired.");
+  }
+
+  const secret = await db.doc(`gallerySecrets/${data.shareId}`).get();
+  if (!secret.exists || !secret.data().pin) {
+    throw new HttpsError("not-found", "PIN not available for this link.");
+  }
+
+  return { shareId: data.shareId, pin: secret.data().pin, expiresAt: gallery.data().expiresAt.toMillis() };
+});
+
+// 🆕 SCHEDULED CLEANUP — publicGalleries/gallerySecrets only ever get created,
+// never deleted, and every "Generate Client Link" click re-uploads a fresh
+// set of watermarked previews under a brand-new shareId. Without this, every
+// test link and every re-generated link sits in Storage/Firestore forever,
+// quietly eating into paid storage quota. This runs every 6 hours, finds any
+// gallery whose 24-hour window has passed, and removes:
+//   1. its watermarked preview files in Storage (gallery-previews/{shareId}/)
+//   2. its gallerySecrets/{shareId} document (the PIN hash)
+//   3. its publicGalleries/{shareId} document
+// The original HD photos in client-albums/{uid}/{projectId}/ are NEVER
+// touched by this — only the disposable, already-expired share/preview data.
+exports.cleanupExpiredGalleries = onSchedule({ region: REGION, schedule: "every 6 hours" }, async () => {
+  const now = admin.firestore.Timestamp.now();
+  const expiredSnap = await db.collection("publicGalleries").where("expiresAt", "<=", now).get();
+
+  if (expiredSnap.empty) {
+    logger.info("cleanupExpiredGalleries: nothing to clean up.");
+    return;
+  }
+
+  const bucket = admin.storage().bucket();
+
+  for (const doc of expiredSnap.docs) {
+    const shareId = doc.id;
+    try {
+      const [files] = await bucket.getFiles({ prefix: `gallery-previews/${shareId}/` });
+      await Promise.all(files.map(file => file.delete().catch(err => {
+        logger.warn("Could not delete a preview file", { shareId, file: file.name, error: err.message });
+      })));
+      await db.doc(`gallerySecrets/${shareId}`).delete().catch(() => {});
+      await doc.ref.delete();
+      logger.info("Cleaned up expired gallery", { shareId, previewFilesDeleted: files.length });
+    } catch (err) {
+      logger.error("Cleanup failed for a gallery", { shareId, error: err.message });
+    }
+  }
+});
+
+// 🆕 QUOTA ENFORCEMENT — gallery count
+// Moves client-project creation server-side (was a direct client-side
+// Firestore write in DSB.js before, with no limit check at all). Checks the
+// photographer's own users/{uid}.galleryLimit field against how many
+// clientProjects they already have.
+exports.createClientProject = onCall({ region: REGION, enforceAppCheck: false }, async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Please sign in.");
+  if (!request.auth.token.email_verified) {
+    throw new HttpsError("permission-denied", "Please verify your email address first.");
+  }
+  const uid = request.auth.uid;
+  const coupleName = String(request.data?.coupleName || "").trim();
+  const eventType = String(request.data?.eventType || "Wedding");
+  if (!coupleName) throw new HttpsError("invalid-argument", "Client name is required.");
+
+  if (!(await hasStudioAccess(uid))) {
+    throw new HttpsError("permission-denied", "Your trial has ended. Please subscribe to add new clients.");
+  }
+
+  const userDoc = await db.doc(`users/${uid}`).get();
+  const rawLimit = userDoc.exists ? userDoc.data().galleryLimit : undefined;
+  const coercedLimit = Number(rawLimit);
+  const galleryLimit = Number.isFinite(coercedLimit) && coercedLimit > 0 ? coercedLimit : 10;
+
+  const countSnap = await db.collection(`users/${uid}/clientProjects`).count().get();
+  if (countSnap.data().count >= galleryLimit) {
+    throw new HttpsError(
+      "resource-exhausted",
+      `You've reached your plan's limit of ${galleryLimit} client galleries. Upgrade to add more.`
+    );
+  }
+
+  const projectRef = await db.collection(`users/${uid}/clientProjects`).add({
+    coupleName,
+    eventType,
+    status: "created",
+    selectedPhotoIds: [],
+    createdAt: admin.firestore.FieldValue.serverTimestamp()
+  });
+
+  return { projectId: projectRef.id };
+});
+
+// 🆕 QUOTA ENFORCEMENT — storage counter
+// These two run automatically on every file added/removed anywhere in the
+// bucket, filtered down to client-albums/{uid}/... (a photographer's own HD
+// originals — NOT gallery-previews, which are disposable and already
+// cleaned up by cleanupExpiredGalleries). They keep users/{uid}.storageUsedBytes
+// accurate in real time, which storage.rules then checks against
+// storageLimitBytes before allowing any new upload.
+const CLIENT_ALBUM_PATH = /^client-albums\/([^/]+)\//;
+
+exports.onPhotoUploaded = onObjectFinalized({ region: REGION }, async (event) => {
+  const filePath = event.data.name || "";
+  const match = filePath.match(CLIENT_ALBUM_PATH);
+  if (!match) return;
+  const uid = match[1];
+  const size = Number(event.data.size || 0);
+  await db.doc(`users/${uid}`).update({
+    storageUsedBytes: admin.firestore.FieldValue.increment(size)
+  }).catch(err => logger.warn("Could not increment storageUsedBytes", { uid, error: err.message }));
+});
+
+exports.onPhotoDeleted = onObjectDeleted({ region: REGION }, async (event) => {
+  const filePath = event.data.name || "";
+  const match = filePath.match(CLIENT_ALBUM_PATH);
+  if (!match) return;
+  const uid = match[1];
+  const size = Number(event.data.size || 0);
+  await db.doc(`users/${uid}`).update({
+    storageUsedBytes: admin.firestore.FieldValue.increment(-size)
+  }).catch(err => logger.warn("Could not decrement storageUsedBytes", { uid, error: err.message }));
 });

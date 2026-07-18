@@ -1,3 +1,9 @@
+// 🏷️ BUILD MARKER — update this string every time you deploy a new DSB.js.
+// Open DevTools Console after deploying and confirm THIS exact line prints —
+// if it doesn't (or shows an older date), the browser/CDN is still serving
+// a stale cached copy, not your latest edit.
+console.log("PHOTRIX DSB.js build: 2026-07-18-d");
+
 const firebaseConfig = {
     apiKey: "AIzaSyDQFAJH5_V1-qApDKg1I9RcDi3eVMcWAWg",
     authDomain: "eternal-memories-wedding.firebaseapp.com",
@@ -67,6 +73,50 @@ async function canManageStudio() {
     return false;
 }
 
+function findLoadedProject(projectId) {
+    // allClientDocs is populated by the client tracker listener before any
+    // row can be clicked, so this is always available without a fresh read.
+    return allClientDocs.find(item => item.id === projectId)?.data || null;
+}
+
+// 🆕 FIX: switching clients used to always leave the link field blank, even
+// when that client already had a valid (not-yet-expired) link — so
+// photographers kept hitting "Generate Client Link" again "just to be
+// safe," which silently created a brand new shareId + duplicate preview
+// photos in Storage every time. Now the existing link AND its original PIN
+// are both restored automatically (via getGalleryPin) — no need to ever
+// regenerate just because the PIN wasn't written down somewhere.
+async function restoreExistingLinkIfValid(projectId) {
+    const data = findLoadedProject(projectId);
+    const pinDisplay = document.getElementById("clientGalleryPinDisplay");
+    const stillValid = data?.shareId && data?.expiresAt?.toMillis && data.expiresAt.toMillis() > Date.now();
+
+    if (!stillValid) {
+        if (clientGeneratedUrlDisplayField) clientGeneratedUrlDisplayField.value = "";
+        if (pinDisplay) { pinDisplay.style.display = "none"; pinDisplay.textContent = ""; }
+        return;
+    }
+
+    const securePath = `${window.location.origin}${window.location.pathname.replace("DSB.html", "lookbook.html")}?gallery=${encodeURIComponent(data.shareId)}`;
+    if (clientGeneratedUrlDisplayField) clientGeneratedUrlDisplayField.value = securePath;
+
+    try {
+        const getPin = firebase.app().functions("asia-south1").httpsCallable("getGalleryPin");
+        const result = await getPin({ projectId });
+        if (pinDisplay) {
+            pinDisplay.textContent = `Gallery PIN: ${result.data.pin} — same PIN as before, active until ${new Date(result.data.expiresAt).toLocaleString()}.`;
+            pinDisplay.style.display = "block";
+        }
+    } catch (err) {
+        console.warn("Could not fetch existing PIN:", err);
+        if (pinDisplay) {
+            pinDisplay.textContent = `Active link exists (expires ${new Date(data.expiresAt.toMillis()).toLocaleString()}), but the PIN could not be loaded — try reselecting this client.`;
+            pinDisplay.style.display = "block";
+        }
+    }
+}
+
+
 function setActiveProject(projectId, coupleName) {
     activeProjectId = projectId;
     activeProjectName = coupleName;
@@ -76,6 +126,7 @@ function setActiveProject(projectId, coupleName) {
     }
     // Jab client badle, uska tracker data + storage bhi reload karo
     listenLiveClientPipeline();
+    restoreExistingLinkIfValid(projectId);
     calculateCloudStorageMetrics();
 }
 
@@ -187,6 +238,20 @@ if (generateClientLinkBtn) {
         if (!activeProjectId) return alert("⚠️ Please select a client from the table first!");
 
         if (!(await canManageStudio())) return;
+
+        // 🆕 FIX: don't silently create a second gallery + duplicate preview
+        // photos if this client already has a link that hasn't expired yet.
+        const existing = findLoadedProject(activeProjectId);
+        const existingStillValid = existing?.shareId && existing?.expiresAt?.toMillis && existing.expiresAt.toMillis() > Date.now();
+        if (existingStillValid) {
+            const proceed = confirm(
+                `This client already has an active link (expires ${new Date(existing.expiresAt.toMillis()).toLocaleString()}).\n\n` +
+                `Generating a new one creates a second copy of the preview photos in storage and a new PIN — the old link will keep working until it expires on its own.\n\n` +
+                `Continue anyway?`
+            );
+            if (!proceed) return;
+        }
+
         generateClientLinkBtn.disabled = true;
         generateClientLinkBtn.innerText = "Preparing secure gallery...";
 
@@ -417,28 +482,24 @@ if (createClientBtn) {
         createClientBtn.innerText = "Creating...";
         createClientBtn.disabled = true;
 
-        // Naya project document banate hain (Firestore khud unique ID generate karega)
-        db.collection("users").doc(currentUid).collection("clientProjects").add({
-            coupleName: coupleName,
-            eventType: eventType,
-            status: "created",              // abhi tak link generate nahi hua
-            selectedPhotoIds: [],           // 🛠️ FIX: naam "selectedPhotos" tha, jo kahin padha nahi jaata — schema ke saath match kiya
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        })
-        .then((docRef) => {
-            console.log("✅ New client project created:", docRef.id);
+        // 🆕 Goes through a Cloud Function now instead of writing to Firestore
+        // directly — the function checks the plan's gallery-count limit
+        // before creating anything (see createClientProject in index.js).
+        try {
+            const createProject = firebase.app().functions("asia-south1").httpsCallable("createClientProject");
+            const result = await createProject({ coupleName, eventType });
+            console.log("✅ New client project created:", result.data.projectId);
             closeNewClientModal();
             createClientBtn.innerText = "Create & Go to Upload";
             createClientBtn.disabled = false;
             // Naya client banate hi usko automatically "active" bhi bana do
-            setActiveProject(docRef.id, coupleName);
-        })
-        .catch((err) => {
+            setActiveProject(result.data.projectId, coupleName);
+        } catch (err) {
             console.error("Error creating client project:", err);
-            alert("❌ Failed to create client: " + err.message);
+            alert(err.code === "functions/resource-exhausted" ? `⚠️ ${err.message}` : "❌ Failed to create client: " + err.message);
             createClientBtn.innerText = "Create & Go to Upload";
             createClientBtn.disabled = false;
-        });
+        }
     });
 }
 

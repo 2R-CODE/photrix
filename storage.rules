@@ -1,0 +1,37 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Original HD uploads — owner-only. Size + type limits live on `create`
+    // only (not on a separate `write` rule) so they can never be bypassed —
+    // any single matching `allow` clause grants the request in Storage rules.
+    // 🆕 Also enforces the plan's storage quota: storageUsedBytes is kept
+    // accurate by the onPhotoUploaded/onPhotoDeleted Cloud Functions, so this
+    // is just a fresh read + comparison, not a separate counter to maintain.
+    match /client-albums/{uid}/{projectId}/{fileName} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow create: if request.auth != null && request.auth.uid == uid
+                    && request.resource.size < 30 * 1024 * 1024
+                    && request.resource.contentType.matches("image/.*")
+                    && request.resource.size <= (
+                         firestore.get(/databases/(default)/documents/users/$(uid)).data.storageLimitBytes
+                         - firestore.get(/databases/(default)/documents/users/$(uid)).data.storageUsedBytes
+                       );
+      allow update: if false; // no overwrites — re-upload as a new file
+      allow delete: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Watermarked previews — public read (the client never logs in), but
+    // only the photographer who owns this shareId's gallery may write here.
+    match /gallery-previews/{shareId}/{fileName} {
+      allow get: if firestore.get(/databases/(default)/documents/publicGalleries/$(shareId)).data.expiresAt > request.time;
+
+      allow create: if request.auth != null
+                    && request.auth.uid == firestore.get(/databases/(default)/documents/publicGalleries/$(shareId)).data.uid
+                    && request.resource.size < 5 * 1024 * 1024
+                    && request.resource.contentType.matches("image/.*");
+
+      allow list, update, delete: if false;
+    }
+  }
+}
