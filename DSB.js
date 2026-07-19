@@ -2,7 +2,7 @@
 // Open DevTools Console after deploying and confirm THIS exact line prints —
 // if it doesn't (or shows an older date), the browser/CDN is still serving
 // a stale cached copy, not your latest edit.
-console.log("PHOTRIX DSB.js build: 2026-07-18-d");
+console.log("PHOTRIX DSB.js build: 2026-07-19-a");
 
 const firebaseConfig = {
     apiKey: "AIzaSyDQFAJH5_V1-qApDKg1I9RcDi3eVMcWAWg",
@@ -239,17 +239,22 @@ if (generateClientLinkBtn) {
 
         if (!(await canManageStudio())) return;
 
-        // 🆕 FIX: don't silently create a second gallery + duplicate preview
-        // photos if this client already has a link that hasn't expired yet.
+        // 🛠️ FIX: this used to warn-then-allow regenerating a link even
+        // while the old one was still valid — clicking "Continue anyway"
+        // created a second shareId + second gallerySecrets + duplicate
+        // preview photos in Storage, doubling data for no real benefit
+        // (the existing link + PIN are already restored automatically when
+        // this client is selected — see restoreExistingLinkIfValid). Now
+        // this is a hard block: a new link can only be generated once the
+        // old one has actually expired.
         const existing = findLoadedProject(activeProjectId);
         const existingStillValid = existing?.shareId && existing?.expiresAt?.toMillis && existing.expiresAt.toMillis() > Date.now();
         if (existingStillValid) {
-            const proceed = confirm(
+            alert(
                 `This client already has an active link (expires ${new Date(existing.expiresAt.toMillis()).toLocaleString()}).\n\n` +
-                `Generating a new one creates a second copy of the preview photos in storage and a new PIN — the old link will keep working until it expires on its own.\n\n` +
-                `Continue anyway?`
+                `It needs to expire on its own before a new one can be generated. The existing link and PIN are shown above.`
             );
-            if (!proceed) return;
+            return;
         }
 
         generateClientLinkBtn.disabled = true;
