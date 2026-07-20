@@ -60,6 +60,15 @@ async function checkGalleryPin(shareId, pin) {
   return false;
 }
 
+// 🛠️ FIX: subscriptionExpiresAt.toMillis() used to crash (silently, no
+// user-facing error) whenever the field was accidentally saved as the wrong
+// Firestore type in Console (e.g. "string" instead of "timestamp") — a
+// Console data-entry mistake shouldn't be able to break the whole check.
+// This treats anything that isn't a real Timestamp as "no expiry set".
+function getExpiryMillisOrNull(value) {
+  return value && typeof value.toMillis === "function" ? value.toMillis() : null;
+}
+
 // Mirrors the trial/subscription logic in firestore.rules. Admin SDK calls
 // (which every function below makes) BYPASS Firestore security rules
 // entirely, so this check has to be re-implemented here — the rules alone
@@ -77,8 +86,8 @@ async function hasStudioAccess(uid) {
   if (!userDoc.exists) return false;
   const data = userDoc.data();
   if (data.subscriptionStatus === "active") {
-    if (!data.subscriptionExpiresAt) return true;
-    return data.subscriptionExpiresAt.toMillis() > Date.now();
+    const expiresAtMs = getExpiryMillisOrNull(data.subscriptionExpiresAt);
+    return expiresAtMs === null || expiresAtMs > Date.now();
   }
   const start = data.trialStartDate;
   if (!start || typeof start.toMillis !== "function") return false;
@@ -383,7 +392,7 @@ exports.getDownloadUrls = onCall({ region: REGION, enforceAppCheck: false }, asy
   const userDoc = await db.doc(`users/${galleryData.uid}`).get();
   const userData = userDoc.exists ? userDoc.data() : {};
   const subscriptionActive = userData.subscriptionStatus === "active"
-    && (!userData.subscriptionExpiresAt || userData.subscriptionExpiresAt.toMillis() > Date.now());
+    && (() => { const ms = getExpiryMillisOrNull(userData.subscriptionExpiresAt); return ms === null || ms > Date.now(); })();
   if (!subscriptionActive) {
     throw new HttpsError("permission-denied", "HD download is not available for this gallery.");
   }

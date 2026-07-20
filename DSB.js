@@ -2,7 +2,7 @@
 // Open DevTools Console after deploying and confirm THIS exact line prints —
 // if it doesn't (or shows an older date), the browser/CDN is still serving
 // a stale cached copy, not your latest edit.
-console.log("PHOTRIX DSB.js build: 2026-07-19-a");
+console.log("PHOTRIX DSB.js build: 2026-07-19-b");
 
 const firebaseConfig = {
     apiKey: "AIzaSyDQFAJH5_V1-qApDKg1I9RcDi3eVMcWAWg",
@@ -239,21 +239,37 @@ if (generateClientLinkBtn) {
 
         if (!(await canManageStudio())) return;
 
-        // 🛠️ FIX: this used to warn-then-allow regenerating a link even
-        // while the old one was still valid — clicking "Continue anyway"
-        // created a second shareId + second gallerySecrets + duplicate
-        // preview photos in Storage, doubling data for no real benefit
-        // (the existing link + PIN are already restored automatically when
-        // this client is selected — see restoreExistingLinkIfValid). Now
-        // this is a hard block: a new link can only be generated once the
-        // old one has actually expired.
+        // 🛠️ FIX: this used to warn-then-allow regenerating a *whole new*
+        // link even while the old one was still valid, which duplicated
+        // shareId/gallerySecrets/preview data. But hard-blocking entirely
+        // (yesterday's fix) created a new problem: a photographer who
+        // uploads MORE photos after already generating a link had no way
+        // to get those new photos into the client's gallery until the old
+        // link naturally expired. Now: the shareId/PIN never change while
+        // still valid (no duplicate data), but the photo list CAN be
+        // refreshed on demand — same link, same PIN, just re-synced photos.
         const existing = findLoadedProject(activeProjectId);
         const existingStillValid = existing?.shareId && existing?.expiresAt?.toMillis && existing.expiresAt.toMillis() > Date.now();
         if (existingStillValid) {
-            alert(
+            const refresh = confirm(
                 `This client already has an active link (expires ${new Date(existing.expiresAt.toMillis()).toLocaleString()}).\n\n` +
-                `It needs to expire on its own before a new one can be generated. The existing link and PIN are shown above.`
+                `The link and PIN won't change, but I can refresh the gallery's photo list to include anything you've uploaded since it was generated.\n\n` +
+                `Refresh photos now?`
             );
+            if (!refresh) return;
+
+            generateClientLinkBtn.disabled = true;
+            generateClientLinkBtn.innerText = "Refreshing photos...";
+            try {
+                await createGalleryPreviews(existing.shareId);
+                alert("✅ Gallery photos refreshed. The same link and PIN still work for your client.");
+            } catch (error) {
+                console.error("Refresh failed:", error);
+                alert("❌ Could not refresh photos. Check console for details.");
+            } finally {
+                generateClientLinkBtn.disabled = false;
+                generateClientLinkBtn.innerHTML = '<i class="fas fa-link"></i> Generate Client Link';
+            }
             return;
         }
 
@@ -412,8 +428,10 @@ if (unlockPremiumGalleryBtn) {
 
         const userDoc = await db.collection("users").doc(currentUid).get();
         const userData = userDoc.exists ? userDoc.data() : {};
+        const expiresValue = userData.subscriptionExpiresAt;
+        const expiresAtMs = expiresValue && typeof expiresValue.toMillis === "function" ? expiresValue.toMillis() : null;
         const subscriptionActive = userData.subscriptionStatus === "active"
-            && (!userData.subscriptionExpiresAt || userData.subscriptionExpiresAt.toMillis() > Date.now());
+            && (expiresAtMs === null || expiresAtMs > Date.now());
         if (!subscriptionActive) {
             return alert("⚠️ HD ZIP download is a paid-plan feature. Please subscribe to unlock this for your clients.");
         }
