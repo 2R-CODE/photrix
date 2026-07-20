@@ -25,6 +25,7 @@ const counter = document.getElementById("counter-zone");
 const countEl = document.getElementById("selected-count");
 const footer = document.getElementById("action-footer");
 const submit = document.getElementById("submit-selection-btn");
+const downloadZipBtn = document.getElementById("download-zip-btn");
 
 let selected = [];
 let pendingPreviewFiles = [];
@@ -72,6 +73,7 @@ pinInput.addEventListener("input", async () => {
       pinInput.disabled = true;
       pinGate.style.display = "none";
       await renderPreviews(pendingPreviewFiles);
+      checkDownloadAvailability();
     } else {
       alert("Invalid PIN! Try again.");
       pinInput.value = "";
@@ -140,3 +142,52 @@ submit.addEventListener("click", async () => {
     submit.textContent = "Submit Selected Previews";
   }
 });
+
+// 🆕 HD ZIP DOWNLOAD — silently checks whether it's available (photographer
+// on a paid plan + this gallery unlocked + a selection already submitted).
+// This is a normal, expected "not yet" state most of the time (e.g. before
+// the client has submitted a selection at all), so failures here don't
+// alert the client — the button just stays hidden.
+async function checkDownloadAvailability() {
+  if (!downloadZipBtn) return;
+  try {
+    const getUrls = functionsRegion.httpsCallable("getDownloadUrls");
+    const result = await getUrls({ shareId: galleryId, pin: pinInput.value.trim() || "" });
+    if (result.data?.files?.length) {
+      downloadZipBtn.style.display = "block";
+      downloadZipBtn.onclick = (e) => {
+        e.preventDefault();
+        downloadAsZip(result.data.files);
+      };
+    }
+  } catch (error) {
+    console.log("HD download not available yet:", error.code);
+  }
+}
+
+async function downloadAsZip(files) {
+  const originalLabel = downloadZipBtn.innerHTML;
+  downloadZipBtn.innerHTML = "Preparing ZIP...";
+  try {
+    const zip = new JSZip();
+    for (const item of files) {
+      const response = await fetch(item.url);
+      if (!response.ok) throw new Error("A photo could not be downloaded.");
+      zip.file(item.name, await response.blob());
+    }
+    const content = await zip.generateAsync({ type: "blob" });
+    const blobUrl = URL.createObjectURL(content);
+    const link = document.createElement("a");
+    link.href = blobUrl;
+    link.download = "wedding-photos.zip";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(blobUrl);
+  } catch (error) {
+    console.error("ZIP download failed:", error);
+    alert("Could not prepare the download. Please try again.");
+  } finally {
+    downloadZipBtn.innerHTML = originalLabel;
+  }
+}

@@ -193,9 +193,16 @@ exports.publishGalleryPreviews = onCall({ region: REGION, enforceAppCheck: false
   if (previewFiles.some(file => !/^[A-Za-z0-9_-]+\.jpg$/.test(file))) {
     throw new HttpsError("invalid-argument", "Invalid preview file.");
   }
+  // originalFile is later used to build a Storage path (client-albums/{uid}/{projectId}/{originalFile}),
+  // so it must be validated the same strictly — no slashes, no "..", nothing that could escape the folder.
+  const previewOriginalFiles = previews.map(item => String(item.originalFile || ""));
+  if (previewOriginalFiles.some(name => !/^[A-Za-z0-9._-]+$/.test(name))) {
+    throw new HttpsError("invalid-argument", "Invalid original file reference.");
+  }
   await galleryRef.update({
     previewFiles,
-    previewCategories: previews.map(item => String(item.category || "Wedding"))
+    previewCategories: previews.map(item => String(item.category || "Wedding")),
+    previewOriginalFiles
   });
   return { ok: true };
 });
@@ -341,4 +348,81 @@ exports.onPhotoDeleted = onObjectDeleted({ region: REGION }, async (event) => {
   await db.doc(`users/${uid}`).update({
     storageUsedBytes: admin.firestore.FieldValue.increment(-size)
   }).catch(err => logger.warn("Could not decrement storageUsedBytes", { uid, error: err.message }));
+});
+
+// 🆕 HD ZIP DOWNLOAD — returns short-lived signed URLs for a client's
+// original HD photos, ONLY if all of these hold:
+//   1. shareId + PIN are correct and not locked out (checkGalleryPin)
+//   2. the gallery hasn't expired
+//   3. the photographer's own PHOTRIX subscription is "active" (paid plan —
+//      this is a paid-plan-only feature, trial accounts don't get it)
+//   4. the photographer has explicitly unlocked THIS client's gallery
+//      (clientProjects.status === "unlocked", via the dashboard button)
+// The actual ZIP is built in the browser (JSZip) from these signed URLs —
+// this function never builds or stores a ZIP itself, it only decides
+// whether access is allowed and hands back temporary links.
+exports.getDownloadUrls = onCall({ region: REGION, enforceAppCheck: false }, async (request) => {
+  const { shareId, pin } = request.data || {};
+  if (typeof shareId !== "string" || !/^\d{6}$/.test(String(pin || ""))) {
+    throw new HttpsError("invalid-argument", "Invalid request.");
+  }
+
+  const galleryRef = db.doc(`publicGalleries/${shareId}`);
+  const gallery = await galleryRef.get();
+  if (!gallery.exists) throw new HttpsError("not-found", "Gallery not found.");
+  const galleryData = gallery.data();
+  if (galleryData.expiresAt.toMillis() < Date.now()) {
+    throw new HttpsError("failed-precondition", "This gallery link has expired.");
+  }
+
+  if (!(await checkGalleryPin(shareId, pin))) {
+    throw new HttpsError("permission-denied", "Incorrect PIN.");
+  }
+
+  // Gate: photographer's own subscription must be active (not trial).
+  const userDoc = await db.doc(`users/${galleryData.uid}`).get();
+  const userData = userDoc.exists ? userDoc.data() : {};
+  const subscriptionActive = userData.subscriptionStatus === "active"
+    && (!userData.subscriptionExpiresAt || userData.subscriptionExpiresAt.toMillis() > Date.now());
+  if (!subscriptionActive) {
+    throw new HttpsError("permission-denied", "HD download is not available for this gallery.");
+  }
+
+  // Gate: photographer must have unlocked THIS specific client's gallery.
+  const projectRef = db.doc(`users/${galleryData.uid}/clientProjects/${galleryData.projectId}`);
+  const project = await projectRef.get();
+  if (!project.exists || project.data().status !== "unlocked") {
+    throw new HttpsError("failed-precondition", "This gallery hasn't been unlocked for download yet.");
+  }
+  const projectData = project.data();
+  const selectedPhotoIds = Array.isArray(projectData.selectedPhotoIds) ? projectData.selectedPhotoIds : [];
+  if (!selectedPhotoIds.length) {
+    throw new HttpsError("failed-precondition", "No photos have been selected for this gallery yet.");
+  }
+
+  // Map each selected preview filename back to its original HD filename
+  // (previewFiles[i] <-> previewOriginalFiles[i], set at preview-generation
+  // time) — the ZIP only ever contains what the client actually picked.
+  const previewFiles = Array.isArray(galleryData.previewFiles) ? galleryData.previewFiles : [];
+  const previewOriginalFiles = Array.isArray(galleryData.previewOriginalFiles) ? galleryData.previewOriginalFiles : [];
+  const previewToOriginal = {};
+  previewFiles.forEach((f, i) => { previewToOriginal[f] = previewOriginalFiles[i]; });
+
+  const originalFileNames = selectedPhotoIds
+    .map(id => previewToOriginal[id])
+    .filter(name => typeof name === "string" && /^[A-Za-z0-9._-]+$/.test(name));
+
+  if (!originalFileNames.length) {
+    throw new HttpsError("not-found", "Could not match selected photos to their originals.");
+  }
+
+  const bucket = admin.storage().bucket();
+  const expiresAtMs = Date.now() + 15 * 60 * 1000; // links only valid for 15 minutes
+  const downloadFiles = await Promise.all(originalFileNames.map(async name => {
+    const file = bucket.file(`client-albums/${galleryData.uid}/${galleryData.projectId}/${name}`);
+    const [url] = await file.getSignedUrl({ action: "read", expires: expiresAtMs });
+    return { name, url };
+  }));
+
+  return { files: downloadFiles };
 });

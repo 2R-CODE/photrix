@@ -317,7 +317,7 @@ async function createGalleryPreviews(shareId) {
             contentType: "image/jpeg",
             customMetadata: { category: metadata.customMetadata?.category || "Wedding" }
         });
-        previews.push({ file, category: metadata.customMetadata?.category || "Wedding" });
+        previews.push({ file, category: metadata.customMetadata?.category || "Wedding", originalFile: source.name });
     }
     const publishPreviews = firebase.app().functions("asia-south1").httpsCallable("publishGalleryPreviews");
     await publishPreviews({ shareId, previews });
@@ -399,16 +399,29 @@ function listenLiveClientPipeline() {
 
 // ==========================================================================
 // 💸 FEATURE 4: PREMIUM LOCK REVENUE
+// 🆕 HD ZIP download is a paid-plan-only feature — unlocking it now checks
+// that the photographer's own subscriptionStatus is "active" (not trial).
+// This is a UX convenience only; the real gate is server-side in
+// getDownloadUrls (Cloud Function) — this check can't be trusted alone.
 // ==========================================================================
 if (unlockPremiumGalleryBtn) {
     unlockPremiumGalleryBtn.addEventListener("click", async function() {
         if (!activeProjectId) return alert("⚠️ Please select a client from the table first!");
 
         if (!(await canManageStudio())) return;
+
+        const userDoc = await db.collection("users").doc(currentUid).get();
+        const userData = userDoc.exists ? userDoc.data() : {};
+        const subscriptionActive = userData.subscriptionStatus === "active"
+            && (!userData.subscriptionExpiresAt || userData.subscriptionExpiresAt.toMillis() > Date.now());
+        if (!subscriptionActive) {
+            return alert("⚠️ HD ZIP download is a paid-plan feature. Please subscribe to unlock this for your clients.");
+        }
+
         db.collection("users").doc(currentUid).collection("clientProjects").doc(activeProjectId).set({
             status: "unlocked",
             unlockedAt: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: true }).then(() => alert("💸 Gallery Unlocked!"));
+        }, { merge: true }).then(() => alert("💸 Gallery Unlocked! Your client can now download the full HD ZIP."));
     });
 }
 
