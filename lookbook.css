@@ -292,3 +292,48 @@ body {
     .grid-item:nth-child(6n+1) { grid-column: span 4; grid-row: span 2; }
 }
 
+/* ============================================================
+   🦶 ACTION FOOTER — submit selection + HD ZIP download
+   🛠️ FIX: this had NO styling at all before — the footer and its
+   buttons existed in the DOM but were effectively invisible/
+   collapsed with no dimensions, background, or layout.
+   ============================================================ */
+.action-dock {
+    position: sticky;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    padding: 16px 24px;
+    background: var(--gallery-bg-elevated);
+    border-top: 1px solid var(--gallery-border);
+    z-index: 200;
+}
+
+.dock-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 28px;
+    border-radius: 30px;
+    border: none;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: transform 0.15s ease, opacity 0.15s ease;
+}
+.dock-btn:hover { transform: translateY(-2px); }
+.dock-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+.dock-btn.primary-btn {
+    background: var(--gallery-accent);
+    color: var(--gallery-bg);
+}
+
+.dock-btn.success-btn {
+    background: #16a34a;
+    color: #ffffff;
+}
