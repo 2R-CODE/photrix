@@ -136,6 +136,7 @@ submit.addEventListener("click", async () => {
     statusEl.textContent = "Your selection was sent to the photographer.";
     submit.style.display = "none";
     pinGate.style.display = "none";
+    checkDownloadAvailability();
   } catch (error) {
     alert(error.code === "functions/permission-denied" ? "Incorrect gallery PIN." : "Could not submit selection. Please try again.");
     submit.disabled = false;

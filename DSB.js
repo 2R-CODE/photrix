@@ -430,7 +430,7 @@ if (unlockPremiumGalleryBtn) {
         const userData = userDoc.exists ? userDoc.data() : {};
         const expiresValue = userData.subscriptionExpiresAt;
         const expiresAtMs = expiresValue && typeof expiresValue.toMillis === "function" ? expiresValue.toMillis() : null;
-        const subscriptionActive = userData.subscriptionStatus === "active"
+        const subscriptionActive = userData.subscriptionStatus?.trim() === "active"
             && (expiresAtMs === null || expiresAtMs > Date.now());
         if (!subscriptionActive) {
             return alert("⚠️ HD ZIP download is a paid-plan feature. Please subscribe to unlock this for your clients.");
