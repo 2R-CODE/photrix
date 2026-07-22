@@ -30,6 +30,10 @@ const downloadZipBtn = document.getElementById("download-zip-btn");
 let selected = [];
 let pendingPreviewFiles = [];
 let pinVerified = false;
+let verifiedPin = ""; // 🛠️ FIX: PIN ko ek safe variable me store karo — pinInput.value
+                      // pe depend nahi karna chahiye kyunki wo disabled hone ke baad
+                      // browser kabhi kabhi clear kar deta hai, aur submit ke baad bhi
+                      // checkDownloadAvailability ko sahi PIN chahiye.
 
 function setError(message) {
   nameEl.textContent = "Gallery unavailable";
@@ -70,6 +74,7 @@ pinInput.addEventListener("input", async () => {
     // 🛠️ FIX: the Cloud Function returns { ok: true }, never { success: true }.
     if (response.data.ok) {
       pinVerified = true;
+      verifiedPin = pin; // 🛠️ FIX: verified PIN yahan save karo
       pinInput.disabled = true;
       pinGate.style.display = "none";
       await renderPreviews(pendingPreviewFiles);
@@ -124,15 +129,17 @@ function toggleSelection(item, file) {
 }
 
 submit.addEventListener("click", async () => {
-  const pin = pinInput.value.trim();
-  if (!pinVerified || !/^\d{6}$/.test(pin)) return alert("Enter and verify the 6-digit PIN first.");
+  // 🛠️ FIX: pinInput.value ki jagah verifiedPin use karo — ye hamesha
+  // sahi 6-digit PIN hold karta hai chahe input disabled ho ya browser
+  // ne value clear kar di ho.
+  if (!pinVerified || !verifiedPin) return alert("Enter and verify the 6-digit PIN first.");
   if (!selected.length) return alert("Please select at least one photo.");
 
   submit.disabled = true;
   submit.textContent = "Submitting selection...";
   try {
     const submitSelection = functionsRegion.httpsCallable("submitGallerySelection");
-    await submitSelection({ shareId: galleryId, pin, photoIds: selected });
+    await submitSelection({ shareId: galleryId, pin: verifiedPin, photoIds: selected });
     statusEl.textContent = "Your selection was sent to the photographer.";
     submit.style.display = "none";
     pinGate.style.display = "none";
@@ -153,7 +160,8 @@ async function checkDownloadAvailability() {
   if (!downloadZipBtn) return;
   try {
     const getUrls = functionsRegion.httpsCallable("getDownloadUrls");
-    const result = await getUrls({ shareId: galleryId, pin: pinInput.value.trim() || "" });
+    // 🛠️ FIX: verifiedPin use karo, pinInput.value nahi — same reason as above
+    const result = await getUrls({ shareId: galleryId, pin: verifiedPin });
     if (result.data?.files?.length) {
       downloadZipBtn.style.display = "block";
       downloadZipBtn.onclick = (e) => {

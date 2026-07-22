@@ -372,6 +372,7 @@ exports.onPhotoDeleted = onObjectDeleted({ region: REGION }, async (event) => {
 // whether access is allowed and hands back temporary links.
 exports.getDownloadUrls = onCall({ region: REGION, enforceAppCheck: false }, async (request) => {
   const { shareId, pin } = request.data || {};
+  logger.info("getDownloadUrls called", { shareId, pinProvided: !!pin }); // ← YE ADD KARO
   if (typeof shareId !== "string" || !/^\d{6}$/.test(String(pin || ""))) {
     throw new HttpsError("invalid-argument", "Invalid request.");
   }
