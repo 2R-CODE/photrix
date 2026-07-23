@@ -1,274 +1,123 @@
-/* ============================================================
-   🎨 PHOTRIX GALLERY — FINAL PREMIUM VERSION
-   Masonry grid + 3 themes + category sections + polish
-   ============================================================ */
+/* ==========================================
+   PHOTRIX LOOKBOOK RED & CYAN TECH THEME
+   ========================================== */
 
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+body { background: #0c0c0c; color: #f5f5f5; min-height: 100vh; overflow-x: hidden; }
+
+/* --- Top Header --- */
+.lookbook-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 18px 30px; position: fixed; top: 0; left: 0; width: 100%;
+    background: rgba(12, 12, 12, 0.85); backdrop-filter: blur(10px); z-index: 100;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
+.logo { font-size: 1.1rem; font-weight: 700; letter-spacing: 2px; color: #ffffff; }
 
-body {
-    font-family: 'Poppins', sans-serif;
-    min-height: 100vh;
-    transition: background 0.4s ease, color 0.4s ease;
-    -webkit-font-smoothing: antialiased;
+/* --- Scalable Theme Dropdown --- */
+.theme-dropdown-container { position: relative; }
+.theme-menu-toggle {
+    background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #fff; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 0.85rem;
+    transition: all 0.3s ease;
 }
-
-/* ============================================================
-   🌈 THEME VARIABLES
-   ============================================================ */
-body.theme-royal {
-    --gallery-bg: #0d0b08;
-    --gallery-bg-elevated: #17140f;
-    --gallery-text: #f5f0e6;
-    --gallery-text-muted: #b8ac96;
-    --gallery-accent: #d4af37;
-    --gallery-accent-soft: rgba(212, 175, 55, 0.15);
-    --gallery-card-bg: #1a1712;
-    --gallery-heading-font: 'Cinzel', serif;
-    --gallery-border: rgba(212, 175, 55, 0.2);
+.theme-menu-toggle:hover { background: rgba(255, 255, 255, 0.12); }
+.theme-dropdown-content {
+    display: none; position: absolute; right: 0; top: 38px;
+    background: #161616; border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    min-width: 160px; overflow: hidden; z-index: 101;
 }
-
-body.theme-dark {
-    --gallery-bg: #0a0a0a;
-    --gallery-bg-elevated: #141414;
-    --gallery-text: #ffffff;
-    --gallery-text-muted: #8a8a8a;
-    --gallery-accent: #ffffff;
-    --gallery-accent-soft: rgba(255, 255, 255, 0.08);
-    --gallery-card-bg: #121212;
-    --gallery-heading-font: 'Poppins', sans-serif;
-    --gallery-border: rgba(255, 255, 255, 0.1);
+.theme-dropdown-content button {
+    width: 100%; text-align: left; padding: 10px 16px; background: none; border: none;
+    color: #ccc; cursor: pointer; font-size: 0.85rem; transition: background 0.2s;
 }
+.theme-dropdown-content button:hover { background: #FF3B30; color: #fff; }
+.theme-dropdown-container:hover .theme-dropdown-content { display: block; }
 
-body.theme-pastel {
-    --gallery-bg: #fdf6f3;
-    --gallery-bg-elevated: #ffffff;
-    --gallery-text: #4a3f3a;
-    --gallery-text-muted: #a8968e;
-    --gallery-accent: #e8a0a0;
-    --gallery-accent-soft: rgba(232, 160, 160, 0.15);
-    --gallery-card-bg: #ffffff;
-    --gallery-heading-font: 'Cinzel', serif;
-    --gallery-border: rgba(232, 160, 160, 0.25);
-}
-
-body {
-    background: var(--gallery-bg);
-    color: var(--gallery-text);
-}
-
-/* ============================================================
-   🎵 MUSIC CONTROLLER
-   ============================================================ */
-.music-controller {
+/* --- FIXED PIN MODAL --- */
+.pin-modal-overlay {
     position: fixed;
-    bottom: 24px;
-    right: 24px;
-    width: 52px;
-    height: 52px;
-    border-radius: 50%;
-    background: var(--gallery-accent);
-    color: var(--gallery-bg);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.1rem;
-    cursor: pointer;
-    z-index: 500;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-    transition: transform 0.2s ease;
-}
-.music-controller:hover { transform: scale(1.08); }
-
-/* ============================================================
-   🏷️ HEADER
-   ============================================================ */
-.gallery-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 22px 40px;
-    position: relative;
-    z-index: 100;
-}
-.brand-logo {
-    font-family: var(--gallery-heading-font);
-    font-size: 1.4rem;
-    font-weight: 700;
-    letter-spacing: 2px;
-    color: var(--gallery-accent);
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.9);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    z-index: 99999;
 }
 
-.theme-selector-panel {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 0.85rem;
-    color: var(--gallery-text-muted);
-}
-.theme-btn {
-    background: transparent;
-    border: 1px solid var(--gallery-border);
-    color: var(--gallery-text-muted);
-    padding: 6px 14px;
-    border-radius: 20px;
-    font-size: 0.8rem;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-.theme-btn.active, .theme-btn:hover {
-    background: var(--gallery-accent);
-    color: var(--gallery-bg);
-    border-color: var(--gallery-accent);
-}
-
-.theme-toggle-mobile-btn {
-    display: none;
-    background: var(--gallery-accent-soft);
-    border: 1px solid var(--gallery-border);
-    color: var(--gallery-accent);
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-}
-
-/* ============================================================
-   🖼️ HERO SECTION
-   ============================================================ */
-.gallery-hero {
-    position: relative;
-    height: 60vh;
-    min-height: 380px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(180deg, var(--gallery-bg-elevated) 0%, var(--gallery-bg) 100%);
-    overflow: hidden;
-}
-.hero-overlay {
+.pin-modal-card {
     position: absolute;
-    inset: 0;
-    background: radial-gradient(circle at 50% 40%, transparent 0%, var(--gallery-bg) 90%);
-}
-.hero-content {
-    position: relative;
-    z-index: 2;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #141414;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 35px 25px;
+    border-radius: 20px;
     text-align: center;
-    padding: 0 20px;
-    animation: heroFadeIn 0.8s ease both;
-}
-.hero-content h1 {
-    font-family: var(--gallery-heading-font);
-    font-size: 3rem;
-    font-weight: 700;
-    color: var(--gallery-accent);
-    margin-bottom: 16px;
-    letter-spacing: 1px;
-}
-.hero-content p {
-    font-size: 1rem;
-    color: var(--gallery-text-muted);
-    font-weight: 300;
-    letter-spacing: 0.3px;
-}
-@keyframes heroFadeIn {
-    from { opacity: 0; transform: translateY(12px); }
-    to { opacity: 1; transform: translateY(0); }
+    width: min(90%, 380px);
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.8);
 }
 
-/* ============================================================
-   📊 SELECTION COUNTER BAR — glass effect, premium feel
-   ============================================================ */
-.selection-counter-bar {
-    max-width: 1400px;
-    margin: 0 auto 24px;
-    padding: 16px 24px;
-    background: var(--gallery-card-bg);
-    border: 1px solid var(--gallery-border);
-    border-radius: 12px;
-    backdrop-filter: blur(10px);
-}
-.selection-counter-bar p {
-    font-size: 0.95rem;
-    font-weight: 500;
-    color: var(--gallery-text);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-}
-.selection-counter-bar i { color: var(--gallery-accent); }
-#selected-count { color: var(--gallery-accent); font-weight: 700; }
-
-/* ============================================================
-   🧱 GALLERY WRAPPER + CATEGORY SECTIONS
-   #main-photo-grid ab sirf ek wrapper hai — asli masonry columns
-   har .category-photo-group apna khud banata hai (nesting-safe)
-   ============================================================ */
-.gallery-wrapper {
-    padding: 0 40px 60px;
-}
-
-#main-photo-grid {
-    max-width: 1400px;
-    margin: 0 auto;
-    display: block;
-}
-
-.category-section-heading {
-    font-family: var(--gallery-heading-font);
-    color: var(--gallery-accent);
-    font-size: 1.6rem;
+.pin-modal-card h3 {
+    color: #ffffff;
+    font-size: 1.4rem;
+    margin-bottom: 8px;
     font-weight: 600;
-    letter-spacing: 1px;
+}
+
+.pin-modal-card p {
+    color: #888;
+    font-size: 0.85rem;
+    margin-bottom: 20px;
+    line-height: 1.4;
+}
+
+.pin-modal-card input {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 12px;
+    border-radius: 12px;
+    color: #fff;
+    font-size: 1.2rem;
     text-align: center;
-    margin: 56px 0 8px;
-}
-.category-section-heading:first-child { margin-top: 4px; }
-
-.category-section-heading::after {
-    content: '';
-    display: block;
-    width: 60px;
-    height: 2px;
-    background: var(--gallery-accent);
-    margin: 14px auto 0;
-    opacity: 0.5;
+    letter-spacing: 6px;
+    outline: none;
+    transition: border-color 0.3s;
 }
 
-/* ============================================================
-   🎨 EDITORIAL MIX GRID — rhythm ke saath (kabhi badi, kabhi chhoti)
-   ============================================================ */
-.category-photo-group {
-    display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    grid-auto-rows: 140px;
-    gap: 14px;
-    column-count: unset; /* purana masonry column hataya */
+.pin-modal-card input:focus {
+    border-color: #FF3B30;
 }
+
+/* --- Hero Section --- */
+.lookbook-hero {
+    text-align: center; padding: 120px 20px 30px 20px;
+}
+.lookbook-hero h1 { font-size: 2.4rem; font-weight: 500; color: #ffffff; margin-bottom: 8px; text-transform: capitalize; }
+.lookbook-hero p { color: #777; font-size: 0.9rem; }
+
+/* --- Masonry Grid & Photo Interaction --- */
+.lookbook-main-container { max-width: 1400px; margin: 0 auto; padding: 0 20px 140px 20px; }
+.masonry-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
 
 .grid-item {
-    grid-column: span 2;
-    grid-row: span 2;
-    break-inside: unset;
-    border-radius: 10px;
+    border-radius: 14px;
     overflow: hidden;
-    position: relative;
     cursor: pointer;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-    transition: box-shadow 0.3s ease;
+    position: relative;
+    background: #141414;
+    aspect-ratio: 4/5;
+    transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-/* Har 6 photos me se 1 badi hoti hai — rhythm banata hai */
-.grid-item:nth-child(6n+1) {
-    grid-column: span 4;
-    grid-row: span 3;
+.grid-item:active {
+    transform: scale(0.97);
 }
 
 .grid-item img {
@@ -276,64 +125,116 @@ body {
     height: 100%;
     object-fit: cover;
     display: block;
-    transition: transform 0.5s ease;
-}
-.grid-item:hover img { transform: scale(1.05); }
-.grid-item:hover { box-shadow: 0 10px 28px rgba(0, 0, 0, 0.3); }
-
-/* Mobile: chhota grid, kam variation */
-@media (max-width: 768px) {
-    .category-photo-group {
-        grid-template-columns: repeat(4, 1fr);
-        grid-auto-rows: 100px;
-        gap: 8px;
-    }
-    .grid-item { grid-column: span 2; grid-row: span 2; }
-    .grid-item:nth-child(6n+1) { grid-column: span 4; grid-row: span 2; }
+    transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
 }
 
-/* ============================================================
-   🦶 ACTION FOOTER — submit selection + HD ZIP download
-   🛠️ FIX: this had NO styling at all before — the footer and its
-   buttons existed in the DOM but were effectively invisible/
-   collapsed with no dimensions, background, or layout.
-   ============================================================ */
-.action-dock {
-    position: sticky;
-    bottom: 0;
-    left: 0;
-    right: 0;
+.grid-item:hover img {
+    transform: scale(1.04);
+}
+
+.grid-item.selected {
+    border-color: #FF3B30;
+    box-shadow: 0 0 15px rgba(255, 59, 48, 0.3);
+}
+
+.grid-item.selected::after {
+    content: '✓';
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: #FF3B30;
+    color: #fff;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
     display: flex;
-    justify-content: center;
-    gap: 16px;
-    padding: 16px 24px;
-    background: var(--gallery-bg-elevated);
-    border-top: 1px solid var(--gallery-border);
-    z-index: 200;
-}
-
-.dock-btn {
-    display: inline-flex;
     align-items: center;
-    gap: 8px;
-    padding: 12px 28px;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.85rem;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes popIn {
+    0% { transform: scale(0); }
+    100% { transform: scale(1); }
+}
+
+/* --- Floating Glassmorphic Action Bar --- */
+.floating-dock {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(15, 15, 15, 0.8);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(0, 240, 255, 0.2);
+    padding: 12px 20px;
     border-radius: 30px;
-    border: none;
-    font-size: 0.95rem;
-    font-weight: 600;
-    cursor: pointer;
-    text-decoration: none;
-    transition: transform 0.15s ease, opacity 0.15s ease;
-}
-.dock-btn:hover { transform: translateY(-2px); }
-.dock-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
-
-.dock-btn.primary-btn {
-    background: var(--gallery-accent);
-    color: var(--gallery-bg);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.7), 0 0 20px rgba(0, 240, 255, 0.1);
+    z-index: 100;
+    width: min(94%, 520px);
+    animation: slideUpDock 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-.dock-btn.success-btn {
-    background: #16a34a;
-    color: #ffffff;
+@keyframes slideUpDock {
+    0% { transform: translate(-50%, 50px); opacity: 0; }
+    100% { transform: translate(-50%, 0); opacity: 1; }
+}
+
+.dock-content { display: flex; justify-content: space-between; align-items: center; gap: 12px; width: 100%; }
+.counter-badge { font-size: 0.85rem; color: #aaa; font-weight: 500; white-space: nowrap; }
+.counter-badge span { color: #00F0FF; font-weight: 700; }
+.dock-actions { display: flex; gap: 8px; align-items: center; }
+
+.btn-primary, .btn-secondary {
+    background: #FF3B30; color: #fff; border: none; padding: 8px 16px;
+    border-radius: 20px; font-weight: 600; cursor: pointer; font-size: 0.8rem; 
+    transition: transform 0.2s, background 0.2s; white-space: nowrap;
+}
+.btn-primary:hover { background: #FF453A; transform: translateY(-1px); }
+.btn-secondary { background: rgba(255,255,255,0.1); color: #fff; }
+.btn-secondary:hover { background: rgba(255,255,255,0.2); transform: translateY(-1px); }
+
+/* --- Mobile View Adjustments --- */
+@media (max-width: 600px) {
+    .lookbook-header { padding: 12px 16px; }
+    .lookbook-hero { padding: 90px 15px 15px 15px; }
+    .lookbook-hero h1 { font-size: 1.5rem; }
+    
+    .floating-dock {
+        bottom: 12px;
+        width: 92%;
+        padding: 10px 14px;
+        border-radius: 24px;
+    }
+    
+    .dock-content {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+    }
+    
+    .counter-badge {
+        font-size: 0.75rem;
+        white-space: nowrap;
+    }
+    
+    .dock-actions {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+    }
+    
+    .btn-primary, .btn-secondary {
+        padding: 6px 12px;
+        font-size: 0.7rem;
+        border-radius: 16px;
+        white-space: nowrap;
+    }
 }

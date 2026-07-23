@@ -3,69 +3,69 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PHOTRIX</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
-    
+    <title>Lookbook | Photrix</title>
+    <!-- Lenis CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/@studio-freight/lenis@1.0.42/dist/lenis.css">
     <link rel="stylesheet" href="lookbook.css">
 </head>
-<body class="theme-royal">
+<body class="theme-royal-gold">
 
-    <header class="gallery-header">
-        <div class="brand-logo">PHOTRIX</div>
-
-        <button class="theme-toggle-mobile-btn" id="themeToggleMobileBtn">
-    <i class="fas fa-palette"></i>
-</button>
-        
-        <div class="theme-selector-panel" id="theme-panel">
-            <span>✨ Change Theme:</span>
-            <button class="theme-btn active" data-theme="theme-royal">Royal Gold</button>
-            <button class="theme-btn" data-theme="theme-dark">Minimal Dark</button>
-            <button class="theme-btn" data-theme="theme-pastel">Pastel Bloom</button>
+    <!-- Top Navigation Bar -->
+    <header class="lookbook-header">
+        <div class="logo">PHOTRIX</div>
+        <div class="theme-dropdown-container">
+            <button id="theme-menu-btn" class="theme-menu-toggle">✨ Themes ▾</button>
+            <div id="theme-dropdown-menu" class="theme-dropdown-content">
+                <button onclick="setTheme('royal-gold')">Royal Gold</button>
+                <button onclick="setTheme('minimal-dark')">Minimal Dark</button>
+                <button onclick="setTheme('pastel-bloom')">Pastel Bloom</button>
+                <!-- Future themes dynamically yahan add ho sakengi -->
+            </div>
         </div>
     </header>
 
-    <section class="gallery-hero">
-        <div class="hero-overlay"></div>
-        <div class="hero-content">
-            <h1 id="couple-names">Loading Memories...</h1>
-            <p id="gallery-sub-status">Please wait while we arrange your digital album</p>
-        </div>
+    <!-- Hero Section -->
+    <section class="lookbook-hero">
+        <h1 id="couple-names">Loading Gallery...</h1>
+        <p id="gallery-sub-status">Please wait while we fetch your memories.</p>
     </section>
 
-    <main class="gallery-wrapper">
-        <section id="gallery-pin-gate" class="selection-counter-bar" style="display:none; max-width:460px; margin:24px auto;">
-            <p style="margin-bottom:12px;">Enter the 6-digit gallery PIN shared by your photographer.</p>
-            <input id="gallery-pin-input" type="password" inputmode="numeric" maxlength="6" placeholder="Gallery PIN" style="width:100%; padding:12px; border-radius:8px; border:1px solid #c9a54b;">
-        </section>
-        <div class="selection-counter-bar" id="counter-zone" style="display: none;">
-            <p><i class="fa-solid fa-heart-half-stroke"></i> Selected Photos: <span id="selected-count">0</span> / 40</p>
+    <!-- PIN Gate Modal Overlay -->
+    <div id="gallery-pin-gate" class="pin-modal-overlay">
+        <div class="pin-modal-card">
+            <h3>Enter Gallery PIN</h3>
+            <p>Enter the 6-digit gallery PIN shared by your photographer.</p>
+            <input type="password" id="gallery-pin-input" maxlength="6" placeholder="------">
         </div>
+    </div>
 
-        <div class="masonry-grid" id="main-photo-grid">
-            </div>
+    <!-- Main Photo Masonry Grid -->
+    <main class="lookbook-main-container">
+        <div id="main-photo-grid" class="masonry-grid"></div>
     </main>
 
-    <footer class="action-dock" id="action-footer" style="display: none;">
-        <button id="submit-selection-btn" class="dock-btn primary-btn" style="display: none;">
-            <i class="fa-solid fa-cloud-arrow-up"></i> Submit Selected Previews
-        </button>
-
-        <a id="download-zip-btn" class="dock-btn success-btn" style="display: none;" download>
-            <i class="fa-solid fa-file-zipper"></i> Download Full Gallery (HD Zip)
-        </a>
+    <!-- Bottom Floating Glassmorphic Dock (Action Bar) -->
+    <footer id="action-footer" class="floating-dock" style="display: none;">
+        <div class="dock-content">
+            <div id="counter-zone" class="counter-badge">
+                Selected: <span id="selected-count">0</span> / 40
+            </div>
+            <div class="dock-actions">
+                <button id="submit-selection-btn" class="btn-primary">Submit Selection</button>
+                <button id="download-zip-btn" class="btn-secondary" style="display: none;">Download HD ZIP</button>
+            </div>
+        </div>
     </footer>
 
-    <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-storage-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-functions-compat.js"></script>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-
-<script src="lookbook.js"></script>
+    <!-- Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-functions-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://unpkg.com/@studio-freight/lenis@1.0.42/dist/lenis.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+    <script src="lookbook.js"></script>
 </body>
 </html>

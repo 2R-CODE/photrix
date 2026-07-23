@@ -76,7 +76,7 @@ pinInput.addEventListener("input", async () => {
       pinVerified = true;
       verifiedPin = pin; // 🛠️ FIX: verified PIN yahan save karo
       pinInput.disabled = true;
-      pinGate.style.display = "none";
+      document.getElementById('gallery-pin-gate').style.display = 'none';
       await renderPreviews(pendingPreviewFiles);
       checkDownloadAvailability();
     } else {
@@ -199,4 +199,9 @@ async function downloadAsZip(files) {
   } finally {
     downloadZipBtn.innerHTML = originalLabel;
   }
+}
+
+function setTheme(themeName) {
+    document.body.className = `theme-${themeName}`;
+    // Future mein ise Firestore mein user preference ke taur par bhi save kar sakta hai
 }
