@@ -89,7 +89,11 @@ function findLoadedProject(projectId) {
 async function restoreExistingLinkIfValid(projectId) {
     const data = findLoadedProject(projectId);
     const pinDisplay = document.getElementById("clientGalleryPinDisplay");
-    const stillValid = data?.shareId && data?.isActive === true;
+    const stillValid = data?.shareId && (
+    data?.status === "sent_to_client" ||
+    data?.status === "pending_review" ||
+    data?.status === "unlocked"
+);
 
     if (!stillValid) {
         if (clientGeneratedUrlDisplayField) clientGeneratedUrlDisplayField.value = "";
@@ -249,7 +253,7 @@ if (generateClientLinkBtn) {
         // still valid (no duplicate data), but the photo list CAN be
         // refreshed on demand — same link, same PIN, just re-synced photos.
         const existing = findLoadedProject(activeProjectId);
-        const existingStillValid = existing?.shareId && existing?.isActive === true;
+        const existingStillValid = existing?.shareId && existing?.status === "sent_to_client" || existing?.status === "pending_review" || existing?.status === "unlocked";
         if (existingStillValid) {
             const refresh = confirm(
                 `This client already has an active link.\n\n` +
