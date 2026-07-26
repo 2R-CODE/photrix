@@ -28,6 +28,7 @@ const submit = document.getElementById("submit-selection-btn");
 const downloadZipBtn = document.getElementById("download-zip-btn");
 
 let selected = [];
+let galleryData = {};
 let pendingPreviewFiles = [];
 let pinVerified = false;
 let verifiedPin = ""; // 🛠️ FIX: PIN ko ek safe variable me store karo — pinInput.value
@@ -49,6 +50,7 @@ if (!galleryId || !/^[A-Za-z0-9_-]{20,}$/.test(galleryId)) {
   db.collection("publicGalleries").doc(galleryId).get().then(doc => {
     if (!doc.exists) return setError("This gallery was not found.");
     const gallery = doc.data();
+    galleryData = gallery;
     if (!gallery.isActive) {
     return setError("This gallery is no longer active.");
     }
@@ -156,7 +158,7 @@ if (footer) footer.style.display = "none";
 if (counter) counter.style.display = "none";
 
 // Wait screen dikhao
-nameEl.textContent = gallery?.coupleName || "Your Gallery";
+nameEl.textContent = galleryData?.coupleName || "Your Gallery";
 statusEl.innerHTML = `
   <div style="text-align:center;padding:40px 20px;">
     <div style="font-size:3rem;margin-bottom:16px;">📸</div>
