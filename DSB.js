@@ -68,7 +68,7 @@ async function canManageStudio() {
     }
     const userDoc = await db.collection("users").doc(currentUid).get();
     const account = userDoc.exists ? userDoc.data() : {};
-    if (account.subscriptionStatus === "active" || getTrialDaysLeft(account) > 0) return true;
+    if (account.subscriptionStatus?.trim() === "active" || getTrialDaysLeft(account) > 0) return true;
     alert("Your 7-day free trial has ended. Please subscribe to add or upload galleries.");
     return false;
 }
@@ -89,7 +89,7 @@ function findLoadedProject(projectId) {
 async function restoreExistingLinkIfValid(projectId) {
     const data = findLoadedProject(projectId);
     const pinDisplay = document.getElementById("clientGalleryPinDisplay");
-    const stillValid = data?.shareId && data?.expiresAt?.toMillis && data.expiresAt.toMillis() > Date.now();
+    const stillValid = data?.shareId && data?.isActive === true;
 
     if (!stillValid) {
         if (clientGeneratedUrlDisplayField) clientGeneratedUrlDisplayField.value = "";
@@ -104,7 +104,7 @@ async function restoreExistingLinkIfValid(projectId) {
         const getPin = firebase.app().functions("asia-south1").httpsCallable("getGalleryPin");
         const result = await getPin({ projectId });
         if (pinDisplay) {
-            pinDisplay.textContent = `Gallery PIN: ${result.data.pin} — same PIN as before, active until ${new Date(result.data.expiresAt).toLocaleString()}.`;
+            pinDisplay.textContent = `Gallery PIN: ${result.data.pin} — same PIN as before, link is permanently active.`;
             pinDisplay.style.display = "block";
         }
     } catch (err) {
@@ -249,10 +249,10 @@ if (generateClientLinkBtn) {
         // still valid (no duplicate data), but the photo list CAN be
         // refreshed on demand — same link, same PIN, just re-synced photos.
         const existing = findLoadedProject(activeProjectId);
-        const existingStillValid = existing?.shareId && existing?.expiresAt?.toMillis && existing.expiresAt.toMillis() > Date.now();
+        const existingStillValid = existing?.shareId && existing?.isActive === true;
         if (existingStillValid) {
             const refresh = confirm(
-                `This client already has an active link (expires ${new Date(existing.expiresAt.toMillis()).toLocaleString()}).\n\n` +
+                `This client already has an active link.\n\n` +
                 `The link and PIN won't change, but I can refresh the gallery's photo list to include anything you've uploaded since it was generated.\n\n` +
                 `Refresh photos now?`
             );
@@ -875,3 +875,111 @@ if (whatsappShareBtn) {
 function escapeHtml(value) {
     return String(value).replace(/[&<>'\"]/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[char]));
 }
+
+
+// ==========================================================================
+// 🎨 GALLERY THEMES — Firestore se themes fetch karo, cards dikhao
+// Photographer selected client ke liye theme choose kare new part 
+// ==========================================================================
+async function loadGalleryThemes() {
+    const container = document.getElementById("themesGridContainer");
+    if (!container) return;
+
+    container.innerHTML = `<p style="color:var(--text-muted);font-size:0.9rem;">Loading themes...</p>`;
+
+    try {
+        const snapshot = await db.collection("themes")
+            .where("isActive", "==", true)
+            .orderBy("order")
+            .get();
+
+        if (snapshot.empty) {
+            container.innerHTML = `<p style="color:var(--text-muted);">No themes available yet.</p>`;
+            return;
+        }
+
+        container.innerHTML = "";
+
+        // Active project ka current theme kya hai?
+        let currentThemeId = null;
+        if (activeProjectId) {
+            const projectDoc = await db.collection("users").doc(currentUid)
+                .collection("clientProjects").doc(activeProjectId).get();
+            currentThemeId = projectDoc.exists ? projectDoc.data().selectedThemeId : null;
+        }
+
+        snapshot.forEach(doc => {
+            const theme = doc.data();
+            const themeId = doc.id;
+            const isSelected = themeId === currentThemeId;
+
+            const card = document.createElement("div");
+            card.className = `theme-card${isSelected ? " theme-card-selected" : ""}`;
+            card.setAttribute("data-theme-id", themeId);
+            card.setAttribute("data-css-class", theme.cssClass);
+
+            card.innerHTML = `
+                <div class="theme-preview-box ${theme.cssClass}">
+                    ${theme.previewImageUrl
+                        ? `<img src="${theme.previewImageUrl}" alt="${theme.name}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">`
+                        : `<div class="theme-preview-placeholder"><i class="fas fa-palette"></i></div>`
+                    }
+                </div>
+                <div class="theme-card-info">
+                    <strong>${escapeHtml(theme.name)}</strong>
+                    <span>${escapeHtml(theme.description || "")}</span>
+                </div>
+                ${isSelected ? `<div class="theme-selected-badge">✓ Applied</div>` : ""}
+            `;
+
+            card.addEventListener("click", () => applyThemeToClient(themeId, theme.cssClass, theme.name));
+            container.appendChild(card);
+        });
+
+    } catch (err) {
+        console.error("Error loading themes:", err);
+        container.innerHTML = `<p style="color:#ef4444;">Could not load themes. Try again.</p>`;
+    }
+}
+
+async function applyThemeToClient(themeId, cssClass, themeName) {
+    if (!activeProjectId) {
+        return alert("⚠️ Please select a client from Client Projects first!");
+    }
+    if (!(await canManageStudio())) return;
+
+    try {
+        // 1. clientProjects me selectedThemeId update karo
+        await db.collection("users").doc(currentUid)
+            .collection("clientProjects").doc(activeProjectId)
+            .update({ selectedThemeId: themeId });
+
+        // 2. Agar shareId hai toh publicGalleries me bhi update karo
+        const projectDoc = await db.collection("users").doc(currentUid)
+            .collection("clientProjects").doc(activeProjectId).get();
+
+        if (projectDoc.exists && projectDoc.data().shareId) {
+            const shareId = projectDoc.data().shareId;
+            await db.collection("publicGalleries").doc(shareId)
+                .update({ selectedThemeId: themeId });
+        }
+
+        alert(`✅ Theme "${themeName}" applied! Client will see this theme when they open their gallery.`);
+
+        // Cards refresh karo — selected badge update ho
+        loadGalleryThemes();
+
+    } catch (err) {
+        console.error("Theme apply error:", err);
+        alert("❌ Could not apply theme. Try again.");
+    }
+}
+
+// Jab bhi Gallery Themes tab khule, themes load karo
+document.querySelectorAll(".nav-item[data-target]").forEach(item => {
+    item.addEventListener("click", () => {
+        if (item.getAttribute("data-target") === "view-palette") {
+            loadGalleryThemes();
+        }
+    });
+});

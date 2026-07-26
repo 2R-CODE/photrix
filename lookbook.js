@@ -49,14 +49,23 @@ if (!galleryId || !/^[A-Za-z0-9_-]{20,}$/.test(galleryId)) {
   db.collection("publicGalleries").doc(galleryId).get().then(doc => {
     if (!doc.exists) return setError("This gallery was not found.");
     const gallery = doc.data();
-    if (!gallery.expiresAt || Date.now() > gallery.expiresAt.toMillis()) {
-      return setError("This gallery link has expired.");
+    if (!gallery.isActive) {
+    return setError("This gallery is no longer active.");
     }
     nameEl.textContent = gallery.coupleName || "Wedding Album";
-    statusEl.textContent = "Enter the gallery PIN to view and select your previews.";
-    pinGate.style.display = "block";
-    pinInput.focus();
-    pendingPreviewFiles = Array.isArray(gallery.previewFiles) ? gallery.previewFiles : [];
+statusEl.textContent = "Enter the gallery PIN to view and select your previews.";
+pinGate.style.display = "block";
+pinInput.focus();
+pendingPreviewFiles = Array.isArray(gallery.previewFiles) ? gallery.previewFiles : [];
+
+// Theme load karo
+if (gallery.selectedThemeId) {
+  db.collection("themes").doc(gallery.selectedThemeId).get().then(themeDoc => {
+    if (themeDoc.exists && themeDoc.data().cssClass) {
+      document.body.className = themeDoc.data().cssClass;
+    }
+  }).catch(err => console.warn("Theme load failed:", err));
+}
     if (!pendingPreviewFiles.length) {
       console.log("Waiting for files from photographer...");
     }
@@ -140,10 +149,25 @@ submit.addEventListener("click", async () => {
   try {
     const submitSelection = functionsRegion.httpsCallable("submitGallerySelection");
     await submitSelection({ shareId: galleryId, pin: verifiedPin, photoIds: selected });
-    statusEl.textContent = "Your selection was sent to the photographer.";
-    submit.style.display = "none";
-    pinGate.style.display = "none";
-    checkDownloadAvailability();
+
+// Grid aur footer hide karo
+if (grid) grid.style.display = "none";
+if (footer) footer.style.display = "none";
+if (counter) counter.style.display = "none";
+
+// Wait screen dikhao
+nameEl.textContent = gallery?.coupleName || "Your Gallery";
+statusEl.innerHTML = `
+  <div style="text-align:center;padding:40px 20px;">
+    <div style="font-size:3rem;margin-bottom:16px;">📸</div>
+    <h3 style="margin-bottom:12px;font-size:1.2rem;">Selection submitted!</h3>
+    <p style="color:var(--gallery-text-muted);font-size:0.9rem;line-height:1.6;">
+      Your photographer is now working on your gallery.<br>
+      You'll receive a link when it's ready.
+    </p>
+  </div>
+`;
+checkDownloadAvailability();
   } catch (error) {
     alert(error.code === "functions/permission-denied" ? "Incorrect gallery PIN." : "Could not submit selection. Please try again.");
     submit.disabled = false;

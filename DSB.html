@@ -210,13 +210,19 @@
                         </div>
                     </section>
                 </div>
-
+<!--new part -->
                 <div id="view-palette" class="view-section">
-                    <div class="section-heading">
-                        <h2>Gallery Themes</h2>
-                        <p>Select beautiful layouts for client delivery.</p>
-                    </div>
-                </div>
+    <div class="section-heading">
+        <h2>Gallery Themes</h2>
+        <p>Select a client first, then choose a theme for their gallery.</p>
+    </div>
+    <div id="activeClientForTheme" style="margin-bottom:16px;font-size:0.85rem;color:var(--text-muted);">
+        No client selected — go to Client Projects and select one first.
+    </div>
+    <div id="themesGridContainer" class="themes-grid">
+        <p style="color:var(--text-muted);">Loading themes...</p>
+    </div>
+</div>
 
                 <!--SUBSCRIPTION TAB -->
                 <div id="view-subscription" class="view-section">

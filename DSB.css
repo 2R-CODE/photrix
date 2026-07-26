@@ -888,3 +888,53 @@ select.form-control { cursor: pointer; }
     /* Upload section */
     .upload-section .section-heading { flex-direction: column; align-items: flex-start; }
 }
+
+
+/* ============================================================
+   🎨 GALLERY THEMES GRID new part 
+   ============================================================ */
+.themes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+    margin-top: 8px;
+}
+.theme-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color var(--transition), transform var(--transition);
+    position: relative;
+}
+.theme-card:hover { border-color: var(--primary-blue); transform: translateY(-2px); }
+.theme-card-selected { border-color: var(--primary-blue) !important; }
+.theme-preview-box {
+    height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.theme-preview-placeholder { font-size: 2rem; opacity: 0.3; color: var(--text-main); }
+.theme-royal  { background: #0f0f0f; }
+.theme-pastel { background: #fdf6f3; }
+.theme-card-info {
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+.theme-card-info strong { font-size: 0.88rem; color: var(--text-main); }
+.theme-card-info span   { font-size: 0.75rem; color: var(--text-muted); }
+.theme-selected-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: var(--primary-blue);
+    color: #0f0f0f;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 20px;
+}
