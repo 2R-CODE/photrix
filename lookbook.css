@@ -1,158 +1,129 @@
 /* ==========================================
-   PHOTRIX LOOKBOOK RED & CYAN TECH THEME
+   PHOTRIX LOOKBOOK - MULTI-THEME CSS
    ========================================== */
 
-* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
-body { background: #0c0c0c; color: #f5f5f5; min-height: 100vh; overflow-x: hidden; }
+/* --- 1. THEME VARIABLES (DYNAMIC) --- */
+:root, body.theme-default, body.theme-minimal-dark {
+    --bg-color: #0c0c0c;
+    --text-color: #ffffff;
+    --text-muted: #888888;
+    --card-bg: #141414;
+    --accent-color: #FF3B30;
+    --accent-glow: rgba(255, 59, 48, 0.3);
+    --border-color: rgba(255, 255, 255, 0.05);
+    --border-highlight: rgba(255, 255, 255, 0.15);
+    --glass-bg: rgba(12, 12, 12, 0.85);
+}
 
-/* --- Top Header --- */
+/* Theme: Royal Gold */
+body.theme-royal-gold {
+    --bg-color: #0b0c10;
+    --text-color: #f4d03f;
+    --text-muted: #c5a059;
+    --card-bg: #1f2833;
+    --accent-color: #d4af37;
+    --accent-glow: rgba(212, 175, 55, 0.3);
+    --border-color: rgba(212, 175, 55, 0.15);
+    --border-highlight: rgba(212, 175, 55, 0.3);
+    --glass-bg: rgba(11, 12, 16, 0.9);
+}
+
+/* Theme: Pastel Bloom */
+body.theme-pastel-bloom {
+    --bg-color: #fcf8f6;
+    --text-color: #4a3e3d;
+    --text-muted: #8c7b79;
+    --card-bg: #ffffff;
+    --accent-color: #e8a598;
+    --accent-glow: rgba(232, 165, 152, 0.4);
+    --border-color: rgba(232, 165, 152, 0.3);
+    --border-highlight: rgba(232, 165, 152, 0.6);
+    --glass-bg: rgba(252, 248, 246, 0.85);
+}
+
+/* --- 2. BASE STYLES --- */
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+
+body { 
+    background: var(--bg-color); 
+    color: var(--text-color); 
+    min-height: 100vh; 
+    overflow-x: hidden; 
+    transition: background-color 0.5s ease, color 0.5s ease;
+}
+
+/* --- 3. TOP HEADER --- */
 .lookbook-header {
     display: flex; justify-content: space-between; align-items: center;
     padding: 18px 30px; position: fixed; top: 0; left: 0; width: 100%;
-    background: rgba(12, 12, 12, 0.85); backdrop-filter: blur(10px); z-index: 100;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--glass-bg); backdrop-filter: blur(10px); z-index: 100;
+    border-bottom: 1px solid var(--border-color);
 }
-.logo { font-size: 1.1rem; font-weight: 700; letter-spacing: 2px; color: #ffffff; }
+.logo { font-size: 1.1rem; font-weight: 700; letter-spacing: 2px; color: var(--text-color); }
 
-/* --- Scalable Theme Dropdown --- */
-.theme-dropdown-container { position: relative; }
-.theme-menu-toggle {
-    background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.15);
-    color: #fff; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 0.85rem;
-    transition: all 0.3s ease;
-}
-.theme-menu-toggle:hover { background: rgba(255, 255, 255, 0.12); }
-.theme-dropdown-content {
-    display: none; position: absolute; right: 0; top: 38px;
-    background: #161616; border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    min-width: 160px; overflow: hidden; z-index: 101;
-}
-.theme-dropdown-content button {
-    width: 100%; text-align: left; padding: 10px 16px; background: none; border: none;
-    color: #ccc; cursor: pointer; font-size: 0.85rem; transition: background 0.2s;
-}
-.theme-dropdown-content button:hover { background: #FF3B30; color: #fff; }
-.theme-dropdown-container:hover .theme-dropdown-content { display: block; }
-
-/* --- FIXED PIN MODAL --- */
+/* --- 4. FIXED PIN MODAL --- */
 .pin-modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
     background: rgba(0, 0, 0, 0.9);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
     z-index: 99999;
 }
 
 .pin-modal-card {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: #141414;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    padding: 35px 25px;
-    border-radius: 20px;
-    text-align: center;
-    width: min(90%, 380px);
-    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.8);
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    background: var(--card-bg);
+    border: 1px solid var(--border-highlight);
+    padding: 35px 25px; border-radius: 20px; text-align: center;
+    width: min(90%, 380px); box-shadow: 0 25px 50px rgba(0, 0, 0, 0.8);
 }
 
-.pin-modal-card h3 {
-    color: #ffffff;
-    font-size: 1.4rem;
-    margin-bottom: 8px;
-    font-weight: 600;
-}
-
-.pin-modal-card p {
-    color: #888;
-    font-size: 0.85rem;
-    margin-bottom: 20px;
-    line-height: 1.4;
-}
+.pin-modal-card h3 { color: var(--text-color); font-size: 1.4rem; margin-bottom: 8px; font-weight: 600; }
+.pin-modal-card p { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 20px; line-height: 1.4; }
 
 .pin-modal-card input {
-    width: 100%;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    padding: 12px;
-    border-radius: 12px;
-    color: #fff;
-    font-size: 1.2rem;
-    text-align: center;
-    letter-spacing: 6px;
-    outline: none;
+    width: 100%; background: transparent;
+    border: 1px solid var(--border-highlight);
+    padding: 12px; border-radius: 12px;
+    color: var(--text-color); font-size: 1.2rem;
+    text-align: center; letter-spacing: 6px; outline: none;
     transition: border-color 0.3s;
 }
+.pin-modal-card input:focus { border-color: var(--accent-color); }
 
-.pin-modal-card input:focus {
-    border-color: #FF3B30;
-}
+/* --- 5. HERO SECTION --- */
+.lookbook-hero { text-align: center; padding: 120px 20px 30px 20px; }
+.lookbook-hero h1 { font-size: 2.4rem; font-weight: 500; color: var(--text-color); margin-bottom: 8px; text-transform: capitalize; }
+.lookbook-hero p { color: var(--text-muted); font-size: 0.9rem; }
 
-/* --- Hero Section --- */
-.lookbook-hero {
-    text-align: center; padding: 120px 20px 30px 20px;
-}
-.lookbook-hero h1 { font-size: 2.4rem; font-weight: 500; color: #ffffff; margin-bottom: 8px; text-transform: capitalize; }
-.lookbook-hero p { color: #777; font-size: 0.9rem; }
-
-/* --- Masonry Grid & Photo Interaction --- */
+/* --- 6. MASONRY GRID & PHOTO INTERACTION --- */
 .lookbook-main-container { max-width: 1400px; margin: 0 auto; padding: 0 20px 140px 20px; }
 .masonry-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
 
 .grid-item {
-    border-radius: 14px;
-    overflow: hidden;
-    cursor: pointer;
-    position: relative;
-    background: #141414;
-    aspect-ratio: 4/5;
+    border-radius: 14px; overflow: hidden; cursor: pointer; position: relative;
+    background: var(--card-bg); aspect-ratio: 4/5;
     transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.3s ease;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-color);
 }
-
-.grid-item:active {
-    transform: scale(0.97);
-}
+.grid-item:active { transform: scale(0.97); }
 
 .grid-item img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
+    width: 100%; height: 100%; object-fit: cover; display: block;
     transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
 }
-
-.grid-item:hover img {
-    transform: scale(1.04);
-}
+.grid-item:hover img { transform: scale(1.04); }
 
 .grid-item.selected {
-    border-color: #FF3B30;
-    box-shadow: 0 0 15px rgba(255, 59, 48, 0.3);
+    border-color: var(--accent-color);
+    box-shadow: 0 0 15px var(--accent-glow);
 }
 
 .grid-item.selected::after {
-    content: '✓';
-    position: absolute;
-    top: 12px;
-    right: 12px;
-    background: #FF3B30;
-    color: #fff;
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    font-size: 0.85rem;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    content: '✓'; position: absolute; top: 12px; right: 12px;
+    background: var(--accent-color); color: #fff;
+    width: 30px; height: 30px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 0.85rem; box-shadow: 0 4px 10px rgba(0,0,0,0.5);
     animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 
@@ -161,21 +132,14 @@ body { background: #0c0c0c; color: #f5f5f5; min-height: 100vh; overflow-x: hidde
     100% { transform: scale(1); }
 }
 
-/* --- Floating Glassmorphic Action Bar --- */
+/* --- 7. FLOATING GLASSMORPHIC DOCK --- */
 .floating-dock {
-    position: fixed;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(15, 15, 15, 0.8);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(0, 240, 255, 0.2);
-    padding: 12px 20px;
-    border-radius: 30px;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.7), 0 0 20px rgba(0, 240, 255, 0.1);
-    z-index: 100;
-    width: min(94%, 520px);
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--border-highlight);
+    padding: 12px 20px; border-radius: 30px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.7), 0 0 20px var(--accent-glow);
+    z-index: 100; width: min(94%, 520px);
     animation: slideUpDock 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
@@ -185,56 +149,29 @@ body { background: #0c0c0c; color: #f5f5f5; min-height: 100vh; overflow-x: hidde
 }
 
 .dock-content { display: flex; justify-content: space-between; align-items: center; gap: 12px; width: 100%; }
-.counter-badge { font-size: 0.85rem; color: #aaa; font-weight: 500; white-space: nowrap; }
-.counter-badge span { color: #00F0FF; font-weight: 700; }
+.counter-badge { font-size: 0.85rem; color: var(--text-muted); font-weight: 500; white-space: nowrap; }
+.counter-badge span { color: var(--accent-color); font-weight: 700; }
 .dock-actions { display: flex; gap: 8px; align-items: center; }
 
 .btn-primary, .btn-secondary {
-    background: #FF3B30; color: #fff; border: none; padding: 8px 16px;
-    border-radius: 20px; font-weight: 600; cursor: pointer; font-size: 0.8rem; 
-    transition: transform 0.2s, background 0.2s; white-space: nowrap;
+    border: none; padding: 8px 16px; border-radius: 20px; font-weight: 600; 
+    cursor: pointer; font-size: 0.8rem; transition: transform 0.2s, filter 0.2s; white-space: nowrap;
 }
-.btn-primary:hover { background: #FF453A; transform: translateY(-1px); }
-.btn-secondary { background: rgba(255,255,255,0.1); color: #fff; }
-.btn-secondary:hover { background: rgba(255,255,255,0.2); transform: translateY(-1px); }
+.btn-primary { background: var(--accent-color); color: #fff; } /* Text always white for primary */
+.btn-primary:hover { filter: brightness(1.15); transform: translateY(-1px); }
 
-/* --- Mobile View Adjustments --- */
+.btn-secondary { background: var(--border-color); color: var(--text-color); }
+.btn-secondary:hover { background: var(--border-highlight); transform: translateY(-1px); }
+
+/* --- 8. MOBILE VIEW ADJUSTMENTS --- */
 @media (max-width: 600px) {
     .lookbook-header { padding: 12px 16px; }
     .lookbook-hero { padding: 90px 15px 15px 15px; }
     .lookbook-hero h1 { font-size: 1.5rem; }
     
-    .floating-dock {
-        bottom: 12px;
-        width: 92%;
-        padding: 10px 14px;
-        border-radius: 24px;
-    }
-    
-    .dock-content {
-        display: flex;
-        flex-direction: row;
-        justify-content: space-between;
-        align-items: center;
-        gap: 8px;
-        width: 100%;
-    }
-    
-    .counter-badge {
-        font-size: 0.75rem;
-        white-space: nowrap;
-    }
-    
-    .dock-actions {
-        display: flex;
-        gap: 6px;
-        align-items: center;
-    }
-    
-    .btn-primary, .btn-secondary {
-        padding: 6px 12px;
-        font-size: 0.7rem;
-        border-radius: 16px;
-        white-space: nowrap;
-    }
+    .floating-dock { bottom: 12px; width: 92%; padding: 10px 14px; border-radius: 24px; }
+    .dock-content { flex-direction: row; gap: 8px; }
+    .counter-badge { font-size: 0.75rem; }
+    .dock-actions { gap: 6px; }
+    .btn-primary, .btn-secondary { padding: 6px 12px; font-size: 0.7rem; border-radius: 16px; }
 }
