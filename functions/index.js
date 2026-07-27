@@ -23,13 +23,7 @@ function hashPin(pin, salt) {
 const MAX_PIN_ATTEMPTS = 8;
 const LOCKOUT_MINUTES = 15;
 
-// 🆕 A 6-digit PIN only has 1,000,000 combinations — without this, a script
-// could just try all of them against verifyGalleryPin/submitGallerySelection
-// in minutes and get into someone's private gallery. This tracks failed
-// attempts per shareId (on gallerySecrets, which is already fully locked
-// from any client read/write) and locks that shareId out for 15 minutes
-// after 8 wrong tries. Both PIN-checking functions call this — one place,
-// so the rule can't drift out of sync between them.
+// 🆕 A 6-digit PIN only has 1,000,000 combinations 
 async function checkGalleryPin(shareId, pin) {
   const secretRef = db.doc(`gallerySecrets/${shareId}`);
   const secret = await secretRef.get();
@@ -61,26 +55,11 @@ async function checkGalleryPin(shareId, pin) {
 }
 
 // 🛠️ FIX: subscriptionExpiresAt.toMillis() used to crash (silently, no
-// user-facing error) whenever the field was accidentally saved as the wrong
-// Firestore type in Console (e.g. "string" instead of "timestamp") — a
-// Console data-entry mistake shouldn't be able to break the whole check.
-// This treats anything that isn't a real Timestamp as "no expiry set".
 function getExpiryMillisOrNull(value) {
   return value && typeof value.toMillis === "function" ? value.toMillis() : null;
 }
 
 // Mirrors the trial/subscription logic in firestore.rules. Admin SDK calls
-// (which every function below makes) BYPASS Firestore security rules
-// entirely, so this check has to be re-implemented here — the rules alone
-// do not protect this function.
-//
-// 🛠️ FIX: subscriptionStatus === "active" used to be treated as permanently
-// active, with no time limit. A 6-month plan set to "active" in the Console
-// would stay "active" forever unless someone remembered to revert it by
-// hand. Now access also requires subscriptionExpiresAt to be in the future
-// (if that field isn't set yet on an older/manually-activated account, we
-// still allow it — see the subscription activation steps below for how to
-// set it going forward).
 async function hasStudioAccess(uid) {
   const userDoc = await db.doc(`users/${uid}`).get();
   if (!userDoc.exists) return false;
@@ -118,8 +97,10 @@ exports.createGalleryShare = onCall({ region: REGION, enforceAppCheck: false }, 
   const data = project.data();
 
   await db.runTransaction(async transaction => {
+    
     transaction.set(db.doc(`publicGalleries/${shareId}`), {
       uid, projectId, coupleName: data.coupleName || "Wedding Album", expiresAt,
+      isActive: true,
       status: "sent_to_client", selectionLimit: 40,
       createdAt: admin.firestore.FieldValue.serverTimestamp()
     });
@@ -137,6 +118,8 @@ exports.createGalleryShare = onCall({ region: REGION, enforceAppCheck: false }, 
   return { shareId, pin, expiresAt: expiresAt.toMillis() };
 });
 
+
+
 // Public client endpoint: validates expiry + PIN and accepts only bounded image IDs.
 exports.submitGallerySelection = onCall({ region: REGION, enforceAppCheck: false }, async (request) => {
   const { shareId, pin, photoIds } = request.data || {};
@@ -150,7 +133,7 @@ exports.submitGallerySelection = onCall({ region: REGION, enforceAppCheck: false
   const gallery = await galleryRef.get();
   if (!gallery.exists) throw new HttpsError("not-found", "Gallery not found.");
   const data = gallery.data();
-  if (data.expiresAt.toMillis() < Date.now() || data.status !== "sent_to_client") {
+  if (data.isActive !== true) {
     throw new HttpsError("failed-precondition", "Gallery is no longer accepting selections.");
   }
   if (!(await checkGalleryPin(shareId, pin))) {
@@ -176,7 +159,7 @@ exports.verifyGalleryPin = onCall({ region: REGION, enforceAppCheck: false }, as
     throw new HttpsError("invalid-argument", "Invalid PIN.");
   }
   const gallery = await db.doc(`publicGalleries/${shareId}`).get();
-  if (!gallery.exists || gallery.data().expiresAt.toMillis() < Date.now()) {
+  if (!gallery.exists || gallery.data().isActive !== true) {
     throw new HttpsError("not-found", "Gallery unavailable.");
   }
   if (!(await checkGalleryPin(shareId, pin))) {
@@ -217,9 +200,6 @@ exports.publishGalleryPreviews = onCall({ region: REGION, enforceAppCheck: false
 });
 
 // 🆕 Lets a photographer look up the PIN for their own client's still-active
-// link, instead of being forced to click "Generate Client Link" again (which
-// used to create a whole new shareId + duplicate preview photos just because
-// the original PIN wasn't written down anywhere retrievable).
 exports.getGalleryPin = onCall({ region: REGION, enforceAppCheck: false }, async (request) => {
   if (!request.auth) throw new HttpsError("unauthenticated", "Please sign in.");
   const projectId = String(request.data?.projectId || "");
@@ -235,8 +215,8 @@ exports.getGalleryPin = onCall({ region: REGION, enforceAppCheck: false }, async
 
   const galleryRef = db.doc(`publicGalleries/${data.shareId}`);
   const gallery = await galleryRef.get();
-  if (!gallery.exists || gallery.data().expiresAt.toMillis() < Date.now()) {
-    throw new HttpsError("failed-precondition", "This client's link has expired.");
+  if (!gallery.exists || gallery.data().isActive !== true) {
+    throw new HttpsError("failed-precondition", "This client's link is no longer active.");
   }
 
   const secret = await db.doc(`gallerySecrets/${data.shareId}`).get();
@@ -244,32 +224,22 @@ exports.getGalleryPin = onCall({ region: REGION, enforceAppCheck: false }, async
     throw new HttpsError("not-found", "PIN not available for this link.");
   }
 
-  return { shareId: data.shareId, pin: secret.data().pin, expiresAt: gallery.data().expiresAt.toMillis() };
+  return { shareId: data.shareId, pin: secret.data().pin };
 });
 
-// 🆕 SCHEDULED CLEANUP — publicGalleries/gallerySecrets only ever get created,
-// never deleted, and every "Generate Client Link" click re-uploads a fresh
-// set of watermarked previews under a brand-new shareId. Without this, every
-// test link and every re-generated link sits in Storage/Firestore forever,
-// quietly eating into paid storage quota. This runs every 6 hours, finds any
-// gallery whose 24-hour window has passed, and removes:
-//   1. its watermarked preview files in Storage (gallery-previews/{shareId}/)
-//   2. its gallerySecrets/{shareId} document (the PIN hash)
-//   3. its publicGalleries/{shareId} document
-// The original HD photos in client-albums/{uid}/{projectId}/ are NEVER
-// touched by this — only the disposable, already-expired share/preview data.
-exports.cleanupExpiredGalleries = onSchedule({ region: REGION, schedule: "every 6 hours" }, async () => {
-  const now = admin.firestore.Timestamp.now();
-  const expiredSnap = await db.collection("publicGalleries").where("expiresAt", "<=", now).get();
+// 🆕 SCHEDULED CLEANUP
+exports.cleanupExpiredGalleries = onSchedule({ region: REGION, schedule: "every 24 hours" }, async () => {
+  // Sirf vohi galleries clean hongi jinhe explicitly isActive: false set kiya gaya ho
+  const inactiveSnap = await db.collection("publicGalleries").where("isActive", "==", false).get();
 
-  if (expiredSnap.empty) {
+  if (inactiveSnap.empty) {
     logger.info("cleanupExpiredGalleries: nothing to clean up.");
     return;
   }
 
   const bucket = admin.storage().bucket();
 
-  for (const doc of expiredSnap.docs) {
+  for (const doc of inactiveSnap.docs) {
     const shareId = doc.id;
     try {
       const [files] = await bucket.getFiles({ prefix: `gallery-previews/${shareId}/` });
@@ -278,7 +248,7 @@ exports.cleanupExpiredGalleries = onSchedule({ region: REGION, schedule: "every 
       })));
       await db.doc(`gallerySecrets/${shareId}`).delete().catch(() => {});
       await doc.ref.delete();
-      logger.info("Cleaned up expired gallery", { shareId, previewFilesDeleted: files.length });
+      logger.info("Cleaned up inactive gallery", { shareId, previewFilesDeleted: files.length });
     } catch (err) {
       logger.error("Cleanup failed for a gallery", { shareId, error: err.message });
     }
@@ -286,10 +256,6 @@ exports.cleanupExpiredGalleries = onSchedule({ region: REGION, schedule: "every 
 });
 
 // 🆕 QUOTA ENFORCEMENT — gallery count
-// Moves client-project creation server-side (was a direct client-side
-// Firestore write in DSB.js before, with no limit check at all). Checks the
-// photographer's own users/{uid}.galleryLimit field against how many
-// clientProjects they already have.
 exports.createClientProject = onCall({ region: REGION, enforceAppCheck: false }, async (request) => {
   if (!request.auth) throw new HttpsError("unauthenticated", "Please sign in.");
   if (!request.auth.token.email_verified) {
@@ -359,20 +325,10 @@ exports.onPhotoDeleted = onObjectDeleted({ region: REGION }, async (event) => {
   }).catch(err => logger.warn("Could not decrement storageUsedBytes", { uid, error: err.message }));
 });
 
-// 🆕 HD ZIP DOWNLOAD — returns short-lived signed URLs for a client's
-// original HD photos, ONLY if all of these hold:
-//   1. shareId + PIN are correct and not locked out (checkGalleryPin)
-//   2. the gallery hasn't expired
-//   3. the photographer's own PHOTRIX subscription is "active" (paid plan —
-//      this is a paid-plan-only feature, trial accounts don't get it)
-//   4. the photographer has explicitly unlocked THIS client's gallery
-//      (clientProjects.status === "unlocked", via the dashboard button)
-// The actual ZIP is built in the browser (JSZip) from these signed URLs —
-// this function never builds or stores a ZIP itself, it only decides
-// whether access is allowed and hands back temporary links.
+// 🆕 HD ZIP DOWNLOAD — returns short-lived signed URLs for a 
 exports.getDownloadUrls = onCall({ region: REGION, enforceAppCheck: false }, async (request) => {
   const { shareId, pin } = request.data || {};
-  logger.info("getDownloadUrls called", { shareId, pinProvided: !!pin }); // ← YE ADD KARO
+  logger.info("getDownloadUrls called", { shareId, pinProvided: !!pin });
   if (typeof shareId !== "string" || !/^\d{6}$/.test(String(pin || ""))) {
     throw new HttpsError("invalid-argument", "Invalid request.");
   }
@@ -381,15 +337,14 @@ exports.getDownloadUrls = onCall({ region: REGION, enforceAppCheck: false }, asy
   const gallery = await galleryRef.get();
   if (!gallery.exists) throw new HttpsError("not-found", "Gallery not found.");
   const galleryData = gallery.data();
-  if (galleryData.expiresAt.toMillis() < Date.now()) {
-    throw new HttpsError("failed-precondition", "This gallery link has expired.");
+  if (galleryData.isActive !== true) {
+    throw new HttpsError("failed-precondition", "This gallery link is no longer active.");
   }
 
   if (!(await checkGalleryPin(shareId, pin))) {
     throw new HttpsError("permission-denied", "Incorrect PIN.");
   }
 
-  // Gate: photographer's own subscription must be active (not trial).
   const userDoc = await db.doc(`users/${galleryData.uid}`).get();
   const userData = userDoc.exists ? userDoc.data() : {};
   const subscriptionActive = userData.subscriptionStatus === "active"
@@ -398,7 +353,6 @@ exports.getDownloadUrls = onCall({ region: REGION, enforceAppCheck: false }, asy
     throw new HttpsError("permission-denied", "HD download is not available for this gallery.");
   }
 
-  // Gate: photographer must have unlocked THIS specific client's gallery.
   const projectRef = db.doc(`users/${galleryData.uid}/clientProjects/${galleryData.projectId}`);
   const project = await projectRef.get();
   if (!project.exists || project.data().status !== "unlocked") {
@@ -410,9 +364,6 @@ exports.getDownloadUrls = onCall({ region: REGION, enforceAppCheck: false }, asy
     throw new HttpsError("failed-precondition", "No photos have been selected for this gallery yet.");
   }
 
-  // Map each selected preview filename back to its original HD filename
-  // (previewFiles[i] <-> previewOriginalFiles[i], set at preview-generation
-  // time) — the ZIP only ever contains what the client actually picked.
   const previewFiles = Array.isArray(galleryData.previewFiles) ? galleryData.previewFiles : [];
   const previewOriginalFiles = Array.isArray(galleryData.previewOriginalFiles) ? galleryData.previewOriginalFiles : [];
   const previewToOriginal = {};
@@ -427,7 +378,7 @@ exports.getDownloadUrls = onCall({ region: REGION, enforceAppCheck: false }, asy
   }
 
   const bucket = admin.storage().bucket();
-  const expiresAtMs = Date.now() + 15 * 60 * 1000; // links only valid for 15 minutes
+  const expiresAtMs = Date.now() + 15 * 60 * 1000;
   const downloadFiles = await Promise.all(originalFileNames.map(async name => {
     const file = bucket.file(`client-albums/${galleryData.uid}/${galleryData.projectId}/${name}`);
     const [url] = await file.getSignedUrl({ action: "read", expires: expiresAtMs });

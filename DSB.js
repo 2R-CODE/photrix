@@ -962,11 +962,6 @@ async function applyThemeToClient(themeId, cssClass, themeName) {
         const projectDoc = await db.collection("users").doc(currentUid)
             .collection("clientProjects").doc(activeProjectId).get();
 
-        if (projectDoc.exists && projectDoc.data().shareId) {
-            const shareId = projectDoc.data().shareId;
-            await db.collection("publicGalleries").doc(shareId)
-                .update({ selectedThemeId: themeId });
-        }
 
         alert(`✅ Theme "${themeName}" applied! Client will see this theme when they open their gallery.`);
 
