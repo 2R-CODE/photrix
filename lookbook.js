@@ -41,7 +41,7 @@ function setError(message) {
 if (!galleryId || !/^[A-Za-z0-9_-]{20,}$/.test(galleryId)) {
   setError("This gallery link is invalid. Please ask your photographer for a new link.");
 } else {
-  // Real-time listener: taaki agar upload late complete ho toh photos apne aap dikhne lagein
+  // Real-time listener: taaki agar upload late complete ho toh photos apne aap dikhne lagei
   db.collection("publicGalleries").doc(galleryId).onSnapshot(doc => {
     if (!doc.exists) return setError("This gallery was not found.");
     
@@ -51,6 +51,19 @@ if (!galleryId || !/^[A-Za-z0-9_-]{20,}$/.test(galleryId)) {
     if (gallery.isActive !== true) {
       return setError("This gallery is no longer active.");
     }
+
+    // --- NAYA LOGIC: CLIENT SUBMIT LOCK ---
+    // Agar client pehle hi submit kar chuka है ya gallery publish ho chuki hai, toh turant lock screen dikhao
+    if (gallery.workflowState === 'selection_completed' || gallery.workflowState === 'published') {
+      showSubmittedScreen();
+      
+      // Agar gallery published hai aur PIN verified hai, toh hum check kar sakte hain ki download link dena hai ya nahi
+      if (gallery.workflowState === 'published' && pinVerified) {
+          checkDownloadAvailability(); 
+      }
+      return; // Aage ka code (grid render karna etc.) execute nahi hoga
+    }
+    // --------------------------------------
 
     if (nameEl) nameEl.textContent = gallery.coupleName || "Wedding Album";
     if (statusEl && !pinVerified) statusEl.textContent = "Enter the gallery PIN to view and select your previews.";
@@ -72,7 +85,6 @@ if (!galleryId || !/^[A-Za-z0-9_-]{20,}$/.test(galleryId)) {
       renderPreviews(pendingPreviewFiles);
     }
   }, err => setError("This gallery cannot be opened right now."));
-}
 
 if (pinInput) {
   pinInput.addEventListener("input", async () => {
@@ -234,4 +246,26 @@ async function downloadAsZip(files) {
   } finally {
     downloadZipBtn.innerHTML = originalLabel;
   }
+}
+
+function showSubmittedScreen() {
+  if (grid) grid.style.display = "none";
+  if (footer) footer.style.display = "none";
+  if (counter) counter.style.display = "none";
+  if (pinGate) pinGate.style.display = "none";
+
+  if (nameEl) nameEl.textContent = galleryData?.coupleName || "Your Gallery";
+  if (statusEl) {
+    statusEl.innerHTML = `
+      <div style="text-align:center;padding:40px 20px;">
+        <div style="font-size:3rem;margin-bottom:16px;">📸</div>
+        <h3 style="margin-bottom:12px;font-size:1.2rem;">Selection submitted!</h3>
+        <p style="color:var(--text-muted);font-size:0.9rem;line-height:1.6;">
+          Your photographer is now working on your gallery.<br>
+          You'll receive an update when it's ready.
+        </p>
+      </div>
+    `;
+  }
+}
 }

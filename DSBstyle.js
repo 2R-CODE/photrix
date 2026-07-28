@@ -48,10 +48,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    
-    
-
-    
     // 🖱️ GLOBAL CLICK: Hide any open menu when clicking outside
     window.addEventListener("click", (e) => {
         if (appSwitcherMenu && !appSwitcherMenu.contains(e.target) && e.target !== appSwitcherHeading) {

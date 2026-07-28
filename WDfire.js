@@ -1,9 +1,4 @@
-// ==========================================================================
-// 🔥 FIREBASE LIGHTWEIGHT INITIALIZATION FOR HOME PAGE STATUS
-// 🛠️ Standardized to the same compat SDK (v12.15.0) and firebase.auth()
-// style used by every other page — was previously the only page using the
-// newer modular import syntax at a different SDK version (v11.0.1).
-// ==========================================================================
+// 🔥 FIREBASE LIGHTWEIGHT INITIALIZATION FOR HOME PAGE 
 const firebaseConfig = {
     apiKey: "AIzaSyDQFAJH5_V1-qApDKg1I9RcDi3eVMcWAWg", 
     authDomain: "eternal-memories-wedding.firebaseapp.com",
@@ -17,10 +12,8 @@ const firebaseConfig = {
 if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
 }
-
-// ==========================================================================
 // 🌐 LIVE NAVBAR USER STATE MANAGER (Clean & Synchronized)
-// ==========================================================================
+
 document.addEventListener("DOMContentLoaded", () => {
     const loginLink = document.querySelector('.nav-login-link');
     const startFreeBtn = document.querySelector('.get-started-btn');

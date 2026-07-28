@@ -552,12 +552,122 @@
     grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
     gap: 10px;
 }
-.live-thumbnails-grid img {
+/* ============================================================
+   LIVE THUMBNAILS & REVIEW UI (UPDATED)
+   ============================================================ */
+.live-thumbnails-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 12px;
+}
+
+/* Thumbnail Wrapper for Hover Effects */
+.thumbnail-wrapper {
+    position: relative;
     width: 100%;
     height: 100px;
-    object-fit: cover;
     border-radius: var(--radius-sm);
+    overflow: hidden;
     border: 1px solid var(--border-soft);
+    cursor: zoom-in; /* Shows magnifying glass */
+    transition: transform var(--transition), border-color var(--transition);
+}
+.thumbnail-wrapper:hover {
+    transform: translateY(-3px);
+    border-color: var(--primary-blue);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+.thumbnail-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* Remove (Trash) Button */
+.remove-photo-btn {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    background: rgba(12, 12, 12, 0.8); /* Dark glass */
+    color: var(--danger-red);
+    border: 1px solid rgba(255, 59, 48, 0.4);
+    border-radius: 50%;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    cursor: pointer;
+    opacity: 0; /* Hidden by default */
+    transform: scale(0.8);
+    transition: all 0.2s ease;
+}
+.thumbnail-wrapper:hover .remove-photo-btn {
+    opacity: 1;
+    transform: scale(1);
+}
+.remove-photo-btn:hover {
+    background: var(--danger-red);
+    color: #fff;
+    border-color: var(--danger-red);
+    transform: scale(1.1) !important;
+}
+
+/* ============================================================
+   LIGHTBOX OVERLAY (FULL SCREEN VIEW)
+   ============================================================ */
+.lightbox-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    background: rgba(0, 0, 0, 0.92);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 20000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+.lightbox-overlay.active {
+    opacity: 1;
+    pointer-events: all;
+}
+.lightbox-img {
+    max-width: 90%;
+    max-height: 90vh;
+    border-radius: var(--radius-md);
+    box-shadow: 0 10px 50px rgba(0, 0, 0, 0.8);
+    transform: scale(0.95);
+    transition: transform 0.3s ease;
+}
+.lightbox-overlay.active .lightbox-img {
+    transform: scale(1);
+}
+.lightbox-close-btn {
+    position: absolute;
+    top: 24px;
+    right: 32px;
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-main);
+    border: none;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition);
+}
+.lightbox-close-btn:hover {
+    background: var(--danger-red);
+    color: #fff;
+    transform: rotate(90deg);
 }
 
 /* WhatsApp button */

@@ -228,15 +228,7 @@ if (uploadImagesBtn) {
     });
 }
 
-// ==========================================================================
 // 🔗 FEATURE 2: SECURE CLIENT LINK GENERATOR
-// 🛠️ FIX: purane code me yahan link generate hone ke baad ek dusra,
-// direct client-side write "publicGalleries/{shareId}" par hota tha jo
-// expiresAt ko plain number se overwrite kar deta tha (Cloud Function ne
-// use pehle hi sahi Timestamp ke roop me likha hota hai). Ye duplicate
-// write ab poori tarah hata di gayi hai — Cloud Functions (createGalleryShare
-// + publishGalleryPreviews) hi is data ka single source of truth hain.
-// ==========================================================================
 if (generateClientLinkBtn) {
     generateClientLinkBtn.addEventListener("click", async function() {
         if (!activeProjectId) return alert("⚠️ Please select a client from the table first!");
@@ -366,14 +358,7 @@ function resizePreview(blob) {
         image.src = objectUrl;
     });
 }
-//TRACKER
-
-// 🛠️ FIX: purana code field "selectedPhotos" padh raha tha, jabki
-// submitGallerySelection Cloud Function "selectedPhotoIds" likhta hai
-// (aur values filenames hain, poori URLs nahi) — isliye client ka
-// selection dashboard par kabhi dikhta hi nahi tha. Ab sahi field
-// padha ja raha hai aur har filename ko Storage se download URL me
-// resolve karke dikhaya ja raha hai.
+//f store img
 function listenLiveClientPipeline() {
     if (!activeProjectId || !currentUid) return;
 
@@ -400,12 +385,57 @@ function listenLiveClientPipeline() {
                 if (selectionStatsStatusSummaryCounter) {
                     if (data.selectedPhotoIds && data.selectedPhotoIds.length > 0 && data.shareId) {
                         selectionStatsStatusSummaryCounter.innerText = `Client selected total ${data.selectedPhotoIds.length} photos.`;
+                        
                         data.selectedPhotoIds.forEach((file) => {
                             storage.ref(`gallery-previews/${data.shareId}/${file}`).getDownloadURL()
                                 .then((url) => {
+                                    // 🛠️ NAYA WRAPPER LOGIC 🛠️
+                                    const wrapper = document.createElement("div");
+                                    wrapper.className = "thumbnail-wrapper";
+
+                                    // 1. Image Element & Lightbox Trigger
                                     const img = document.createElement("img");
                                     img.src = url;
-                                    if (liveClientSelectionThumbnailsGrid) liveClientSelectionThumbnailsGrid.appendChild(img);
+                                    img.onclick = () => {
+                                        const lightbox = document.getElementById("photoLightbox");
+                                        const lightboxImg = document.getElementById("lightboxImage");
+                                        if (lightbox && lightboxImg) {
+                                            lightboxImg.src = url;
+                                            lightbox.classList.add("active");
+                                        }
+                                    };
+
+                                    // 2. Remove Button Element
+                                    const removeBtn = document.createElement("button");
+                                    removeBtn.className = "remove-photo-btn";
+                                    removeBtn.innerHTML = '<i class="fas fa-trash"></i>';
+                                    removeBtn.title = "Remove from selection";
+                                    
+                                    // 3. Delete Logic (Live Firestore Update)
+                                    removeBtn.onclick = async (e) => {
+                                        e.stopPropagation(); // Parent (image) click trigger hone se rokta hai
+                                        if (confirm("Are you sure you want to remove this photo from the client's selection?")) {
+                                            try {
+                                                await db.collection("users").doc(currentUid)
+                                                        .collection("clientProjects").doc(activeProjectId)
+                                                        .update({
+                                                            selectedPhotoIds: firebase.firestore.FieldValue.arrayRemove(file)
+                                                        });
+                                                // Note: Snapshot listener apne aap UI ko bina refresh kiye update kar dega!
+                                            } catch (err) {
+                                                console.error("Error removing photo:", err);
+                                                alert("Failed to remove photo.");
+                                            }
+                                        }
+                                    };
+
+                                    // Append elements
+                                    wrapper.appendChild(img);
+                                    wrapper.appendChild(removeBtn);
+
+                                    if (liveClientSelectionThumbnailsGrid) {
+                                        liveClientSelectionThumbnailsGrid.appendChild(wrapper);
+                                    }
                                 })
                                 .catch((err) => console.warn("Could not load a selected preview:", file, err));
                         });
@@ -416,14 +446,23 @@ function listenLiveClientPipeline() {
             }
         }, err => console.log("Watchdog passive error:", err));
 }
+// ================= LIGHTBOX CLOSE LOGIC =================
+document.addEventListener("DOMContentLoaded", () => {
+    const closeLightboxBtn = document.getElementById("closeLightboxBtn");
+    const lightbox = document.getElementById("photoLightbox");
+    
+    if (closeLightboxBtn && lightbox) {
+        // Cross button pe click karne se band
+        closeLightboxBtn.onclick = () => lightbox.classList.remove("active");
+        
+        // Background black area pe click karne se bhi band ho jaye
+        lightbox.onclick = (e) => {
+            if (e.target === lightbox) lightbox.classList.remove("active");
+        };
+    }
+});
 
-// ==========================================================================
 // 💸 FEATURE 4: PREMIUM LOCK REVENUE
-// 🆕 HD ZIP download is a paid-plan-only feature — unlocking it now checks
-// that the photographer's own subscriptionStatus is "active" (not trial).
-// This is a UX convenience only; the real gate is server-side in
-// getDownloadUrls (Cloud Function) — this check can't be trusted alone.
-// ==========================================================================
 if (unlockPremiumGalleryBtn) {
     unlockPremiumGalleryBtn.addEventListener("click", async function() {
         if (!activeProjectId) return alert("⚠️ Please select a client from the table first!");
@@ -543,10 +582,7 @@ if (createClientBtn) {
     });
 }
 
-// ==========================================================================
 // 🆕 STEP B: CLIENT TRACKER TABLE — Firestore se real-time data dikhata hai
-// (Ab pagination + search dono ek saath kaam karte hain)
-// ==========================================================================
 const clientTrackerTableBody = document.getElementById("clientTrackerTableBody");
 const clientSearchInput = document.getElementById("clientSearchInput");
 const prevPageBtn = document.getElementById("prevPageBtn");
@@ -600,9 +636,7 @@ function renderClientRow(projectId, data) {
     return tr;
 }
 
-// ==========================================================================
-// 🆕 RENDER FUNCTION — search filter + pagination dono yahin handle hote hain
-// ==========================================================================
+// 🆕 RENDER FUNCTION 
 function renderTablePage() {
     if (!clientTrackerTableBody) return;
 
@@ -636,10 +670,7 @@ function renderTablePage() {
     if (prevPageBtn) prevPageBtn.disabled = currentPage <= 1;
     if (nextPageBtn) nextPageBtn.disabled = currentPage >= totalPages;
 }
-
-// ==========================================================================
-// 🔴 FIRESTORE LISTENER — data aate hi metrics calculate + table render
-// ==========================================================================
+// 🔴 FIRESTORE LISTENER 
 function listenClientTrackerTable() {
     if (!clientTrackerTableBody || !currentUid) return;
 
@@ -679,9 +710,8 @@ function updateDashboardMetrics(activeLinks, readyToDeliver) {
     if (readyToDeliverEl) readyToDeliverEl.innerHTML = `${readyToDeliver} <span class="metric-label">Pending Galleries</span>`;
 }
 
-// ==========================================================================
 // 🆕 SEARCH — ab sirf filter karta hai, page bhi reset karta hai
-// ==========================================================================
+
 if (clientSearchInput) {
     clientSearchInput.addEventListener("input", () => {
         currentPage = 1;
@@ -704,9 +734,7 @@ if (nextPageBtn) {
     });
 }
 
-// ==========================================================================
-// 🆕 STEP C: TABLE ROW CLICK — kisi row par click karne se wo client "active" ban jaata hai
-// ==========================================================================
+// 🆕 STEP C: TABLE ROW 
 if (clientTrackerTableBody) {
     clientTrackerTableBody.addEventListener("click", async (e) => {
         // "Copy Link" button ka apna alag kaam hai — pehle wo check karo
@@ -779,10 +807,7 @@ if (clientTrackerTableBody) {
         row.classList.add("active-row");
     });
 }
-
-// ==========================================================================
-// ⭐ PAGE LOAD — table listener + subscription UI start hoga
-// ==========================================================================
+//PAGE LOAD — table listener 
 firebase.auth().onAuthStateChanged((user) => {
     if (!user) {
         localStorage.removeItem("isLoggedIn");
@@ -802,10 +827,7 @@ firebase.auth().onAuthStateChanged((user) => {
     }
 });
 
-// ==========================================================================
-// 🆕 SPA VIEW SWITCHING — sidebar click karne se page reload hue bina
-// content switch hota hai
-// ==========================================================================
+// 🆕 SPA VIEW SWITCHING 
 const navItems = document.querySelectorAll(".nav-item[data-target]");
 navItems.forEach((item) => {
     item.addEventListener("click", (e) => {
@@ -861,9 +883,7 @@ function updateSubscriptionUI() {
     }).catch(err => console.error("Subscription UI error:", err));
 }
 
-// ==========================================================================
 // 🆕 WHATSAPP SHARE — gallery link seedha WhatsApp pe pre-filled message ke saath
-// ==========================================================================
 const whatsappShareBtn = document.getElementById("whatsappShareBtn");
 if (whatsappShareBtn) {
     whatsappShareBtn.addEventListener("click", () => {
@@ -879,12 +899,7 @@ if (whatsappShareBtn) {
 function escapeHtml(value) {
     return String(value).replace(/[&<>'\"]/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[char]));
 }
-
-
-// ==========================================================================
-// 🎨 GALLERY THEMES — Firestore se themes fetch karo, cards dikhao
-// Photographer selected client ke liye theme choose kare new part 
-// ==========================================================================
+// 🎨 GALLERY THEMES — Firestore 
 async function loadGalleryThemes() {
     const container = document.getElementById("themesGridContainer");
     if (!container) return;

@@ -129,26 +129,39 @@ exports.submitGallerySelection = onCall({ region: REGION, enforceAppCheck: false
   if (!/^\d{6}$/.test(pin) || photoIds.length < 1 || photoIds.length > 40 || photoIds.some(id => typeof id !== "string" || id.length > 200)) {
     throw new HttpsError("invalid-argument", "Invalid PIN or photo selection.");
   }
+  
   const galleryRef = db.doc(`publicGalleries/${shareId}`);
   const gallery = await galleryRef.get();
   if (!gallery.exists) throw new HttpsError("not-found", "Gallery not found.");
+  
   const data = gallery.data();
   if (data.isActive !== true) {
     throw new HttpsError("failed-precondition", "Gallery is no longer accepting selections.");
   }
+  
   if (!(await checkGalleryPin(shareId, pin))) {
     throw new HttpsError("permission-denied", "Incorrect PIN.");
   }
+  
   const allowed = new Set(data.previewFiles || []);
   if (allowed.size === 0 || photoIds.some(id => !allowed.has(id))) {
     throw new HttpsError("invalid-argument", "One or more selected photos are invalid.");
   }
 
+  // 1. Update Photographer's private project document
   await db.doc(`users/${data.uid}/clientProjects/${data.projectId}`).update({
     status: "pending_review",
+    workflowState: "selection_completed", // Dashboard ko bhi pata chale ki submit ho gaya
     selectedPhotoIds: [...new Set(photoIds)],
     selectedAt: admin.firestore.FieldValue.serverTimestamp()
   });
+
+  // 2. 🛠️ FIX: Update Public Gallery document so Client UI locks up on refresh!
+  await galleryRef.update({
+    workflowState: "selection_completed",
+    status: "selection_completed"
+  });
+
   logger.info("Gallery selection submitted", { shareId });
   return { ok: true };
 });

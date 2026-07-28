@@ -1,6 +1,4 @@
-// ==========================================================================
 // 🔒 FIREBASE CONFIGURATION
-// ==========================================================================
 const firebaseConfig = {
     apiKey: "AIzaSyDQFAJH5_V1-qApDKg1I9RcDi3eVMcWAWg", 
     authDomain: "eternal-memories-wedding.firebaseapp.com",
@@ -27,9 +25,7 @@ function resetBtn(button, text) {
     }
 }
 
-// ==========================================================================
 // 🔁 VIEW SWITCHING (Login <-> Signup)
-// ==========================================================================
 const switchToSignUpBtn = document.getElementById('switchToSignUpBtn');
 if (switchToSignUpBtn) {
     switchToSignUpBtn.addEventListener('click', (e) => {
