@@ -74,18 +74,9 @@ async function canManageStudio() {
 }
 
 function findLoadedProject(projectId) {
-    // allClientDocs is populated by the client tracker listener before any
-    // row can be clicked, so this is always available without a fresh read.
     return allClientDocs.find(item => item.id === projectId)?.data || null;
 }
-
 // 🆕 FIX: switching clients used to always leave the link field blank, even
-// when that client already had a valid (not-yet-expired) link — so
-// photographers kept hitting "Generate Client Link" again "just to be
-// safe," which silently created a brand new shareId + duplicate preview
-// photos in Storage every time. Now the existing link AND its original PIN
-// are both restored automatically (via getGalleryPin) — no need to ever
-// regenerate just because the PIN wasn't written down somewhere.
 async function restoreExistingLinkIfValid(projectId) {
     const data = findLoadedProject(projectId);
     const pinDisplay = document.getElementById("clientGalleryPinDisplay");
@@ -119,8 +110,6 @@ async function restoreExistingLinkIfValid(projectId) {
         }
     }
 }
-
-
 function setActiveProject(projectId, coupleName) {
     activeProjectId = projectId;
     activeProjectName = coupleName;
@@ -133,12 +122,7 @@ function setActiveProject(projectId, coupleName) {
     restoreExistingLinkIfValid(projectId);
     calculateCloudStorageMetrics();
 }
-
-// ==========================================================================
-// 🛠️ FEATURE 1: IMAGES UPLOADER ENGINE (Secured at Action Click)
-// ==========================================================================
-
-// 🆕 VALIDATION RULES — yahan se limits control hote hain
+// 🛠️ FEATURE 1: IMAGES UPLOADER ENGINE VALIDATION RULES 
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"];
 const MAX_FILE_SIZE_MB = 30;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
@@ -184,9 +168,7 @@ if (uploadImagesBtn) {
         if (oversizedFiles.length > 0) {
             return alert(`❌ Each photo must be under ${MAX_FILE_SIZE_MB}MB.\n\nToo large:\n${oversizedFiles.slice(0, 5).join("\n")}${oversizedFiles.length > 5 ? `\n...and ${oversizedFiles.length - 5} more` : ""}`);
         }
-        // ==================================================================
         // ✅ Validation passed — ab upload shuru karo
-        // ==================================================================
 
         uploadImagesBtn.innerText = "Uploading Assets...";
         uploadImagesBtn.disabled = true;
@@ -227,7 +209,6 @@ if (uploadImagesBtn) {
         });
     });
 }
-
 // 🔗 FEATURE 2: SECURE CLIENT LINK GENERATOR
 if (generateClientLinkBtn) {
     generateClientLinkBtn.addEventListener("click", async function() {
@@ -235,15 +216,7 @@ if (generateClientLinkBtn) {
 
         if (!(await canManageStudio())) return;
 
-        // 🛠️ FIX: this used to warn-then-allow regenerating a *whole new*
-        // link even while the old one was still valid, which duplicated
-        // shareId/gallerySecrets/preview data. But hard-blocking entirely
-        // (yesterday's fix) created a new problem: a photographer who
-        // uploads MORE photos after already generating a link had no way
-        // to get those new photos into the client's gallery until the old
-        // link naturally expired. Now: the shareId/PIN never change while
-        // still valid (no duplicate data), but the photo list CAN be
-        // refreshed on demand — same link, same PIN, just re-synced photos.
+        // 🛠️ FIX: this used to warn-then-allow regenerating 
         const existing = findLoadedProject(activeProjectId);
         const existingStillValid = existing?.shareId && existing?.status === "sent_to_client" || existing?.status === "pending_review" || existing?.status === "unlocked";
         if (existingStillValid) {
@@ -286,8 +259,6 @@ if (generateClientLinkBtn) {
             }
 
             // Preview upload + publishGalleryPreviews already write previewFiles/previewCategories.
-            // createGalleryShare already wrote status/shareId/expiresAt on the project doc.
-            // Nothing left to write from the client here.
             await createGalleryPreviews(shareId);
 
             alert("Secure gallery ready. Send the link and PIN separately to your client. 24-Hour protection protocol is active.");
@@ -446,22 +417,6 @@ function listenLiveClientPipeline() {
             }
         }, err => console.log("Watchdog passive error:", err));
 }
-// ================= LIGHTBOX CLOSE LOGIC =================
-document.addEventListener("DOMContentLoaded", () => {
-    const closeLightboxBtn = document.getElementById("closeLightboxBtn");
-    const lightbox = document.getElementById("photoLightbox");
-    
-    if (closeLightboxBtn && lightbox) {
-        // Cross button pe click karne se band
-        closeLightboxBtn.onclick = () => lightbox.classList.remove("active");
-        
-        // Background black area pe click karne se bhi band ho jaye
-        lightbox.onclick = (e) => {
-            if (e.target === lightbox) lightbox.classList.remove("active");
-        };
-    }
-});
-
 // 💸 FEATURE 4: PREMIUM LOCK REVENUE
 if (unlockPremiumGalleryBtn) {
     unlockPremiumGalleryBtn.addEventListener("click", async function() {
@@ -485,10 +440,7 @@ if (unlockPremiumGalleryBtn) {
         }, { merge: true }).then(() => alert("💸 Gallery Unlocked! Your client can now download the full HD ZIP."));
     });
 }
-
-// ==========================================================================
 // 🎛️ FEATURE 5: STORAGE METRICS CALCULATOR
-// ==========================================================================
 function calculateCloudStorageMetrics() {
     if (!storageTextCounter || !storage || !currentUid || !activeProjectId) return;
     const folderRef = storage.ref().child(`client-albums/${currentUid}/${activeProjectId}`);
@@ -501,23 +453,16 @@ function calculateCloudStorageMetrics() {
         if (progress) progress.style.width = `${Math.min(100, (megabytesUsed / (20 * 1024)) * 100)}%`;
     }).catch(() => {});
 }
-
-// ==========================================================================
 // 🚪 SECURE LOGOUT PIPELINE (Clears Auth + LocalStorage)
-// ==========================================================================
 document.addEventListener("click", (e) => {
     if (e.target.closest("#signOutMasterBtn")) {
 
-        // 1. Firebase se session khatam karo
+        // 1. Firebase end
         firebase.auth().signOut().then(() => {
             console.log("🔴 Firebase Auth Logged Out");
-
-            // 2. Browser ka memory (Cache) saaf karo taaki Security lock wapas lag jaye
             localStorage.removeItem('isLoggedIn');
             localStorage.removeItem('clientWorkspace');
-            localStorage.clear(); // Safe side ke liye sab saaf
-
-            // 3. User ko wapas Home Page (WD.html) par bhej do
+            localStorage.clear(); 
             window.location.replace("WD.html");
         }).catch((error) => {
             console.error("Logout Error:", error);
@@ -525,9 +470,7 @@ document.addEventListener("click", (e) => {
     }
 });
 
-// ==========================================================================
-// 🆕 STEP A: NEW CLIENT MODAL — Firestore me naya client project banata hai
-// ==========================================================================
+// 🆕 STEP A: NEW CLIENT MODAL — Firestore add new clint
 const newClientModal = document.getElementById("newClientModal");
 const closeModalBtn = document.getElementById("closeModalBtn");
 const cancelModalBtn = document.getElementById("cancelModalBtn");
@@ -562,8 +505,6 @@ if (createClientBtn) {
         createClientBtn.disabled = true;
 
         // 🆕 Goes through a Cloud Function now instead of writing to Firestore
-        // directly — the function checks the plan's gallery-count limit
-        // before creating anything (see createClientProject in index.js).
         try {
             const createProject = firebase.app().functions("asia-south1").httpsCallable("createClientProject");
             const result = await createProject({ coupleName, eventType });
@@ -582,7 +523,7 @@ if (createClientBtn) {
     });
 }
 
-// 🆕 STEP B: CLIENT TRACKER TABLE — Firestore se real-time data dikhata hai
+// 🆕 STEP B: CLIENT TRACKER TABLE — 
 const clientTrackerTableBody = document.getElementById("clientTrackerTableBody");
 const clientSearchInput = document.getElementById("clientSearchInput");
 const prevPageBtn = document.getElementById("prevPageBtn");
@@ -590,7 +531,7 @@ const nextPageBtn = document.getElementById("nextPageBtn");
 const paginationInfo = document.getElementById("paginationInfo");
 
 const PAGE_SIZE = 10;
-let allClientDocs = [];   // Firestore se aaya poora data (unfiltered)
+let allClientDocs = [];
 let currentPage = 1;
 
 function renderClientRow(projectId, data) {
@@ -826,22 +767,6 @@ firebase.auth().onAuthStateChanged((user) => {
         updateSubscriptionUI();
     }
 });
-
-// 🆕 SPA VIEW SWITCHING 
-const navItems = document.querySelectorAll(".nav-item[data-target]");
-navItems.forEach((item) => {
-    item.addEventListener("click", (e) => {
-        e.preventDefault();
-        const targetId = item.getAttribute("data-target");
-
-        document.querySelectorAll(".view-section").forEach(v => v.classList.remove("active-view"));
-        document.getElementById(targetId)?.classList.add("active-view");
-
-        navItems.forEach(nav => nav.classList.remove("active"));
-        item.classList.add("active");
-    });
-});
-
 // ==========================================================================
 // 🆕 SUBSCRIPTION TAB UI — current plan status dikhata hai
 // ==========================================================================
@@ -883,117 +808,6 @@ function updateSubscriptionUI() {
     }).catch(err => console.error("Subscription UI error:", err));
 }
 
-// 🆕 WHATSAPP SHARE — gallery link seedha WhatsApp pe pre-filled message ke saath
-const whatsappShareBtn = document.getElementById("whatsappShareBtn");
-if (whatsappShareBtn) {
-    whatsappShareBtn.addEventListener("click", () => {
-        const link = clientGeneratedUrlDisplayField?.value;
-        if (!link) return alert("Generate a link first!");
-
-        const clientName = activeProjectName || "there";
-        const message = `Hi ${clientName}! 📸✨ Your wedding photo gallery is ready. View and select your favorite photos here: ${link}`;
-        window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, "_blank");
-    });
-}
-
 function escapeHtml(value) {
     return String(value).replace(/[&<>'\"]/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[char]));
 }
-// 🎨 GALLERY THEMES — Firestore 
-async function loadGalleryThemes() {
-    const container = document.getElementById("themesGridContainer");
-    if (!container) return;
-
-    container.innerHTML = `<p style="color:var(--text-muted);font-size:0.9rem;">Loading themes...</p>`;
-
-    try {
-        const snapshot = await db.collection("themes")
-            .where("isActive", "==", true)
-            .orderBy("order")
-            .get();
-
-        if (snapshot.empty) {
-            container.innerHTML = `<p style="color:var(--text-muted);">No themes available yet.</p>`;
-            return;
-        }
-
-        container.innerHTML = "";
-
-        // Active project ka current theme kya hai?
-        let currentThemeId = null;
-        if (activeProjectId) {
-            const projectDoc = await db.collection("users").doc(currentUid)
-                .collection("clientProjects").doc(activeProjectId).get();
-            currentThemeId = projectDoc.exists ? projectDoc.data().selectedThemeId : null;
-        }
-
-        snapshot.forEach(doc => {
-            const theme = doc.data();
-            const themeId = doc.id;
-            const isSelected = themeId === currentThemeId;
-
-            const card = document.createElement("div");
-            card.className = `theme-card${isSelected ? " theme-card-selected" : ""}`;
-            card.setAttribute("data-theme-id", themeId);
-            card.setAttribute("data-css-class", theme.cssClass);
-
-            card.innerHTML = `
-                <div class="theme-preview-box ${theme.cssClass}">
-                    ${theme.previewImageUrl
-                        ? `<img src="${theme.previewImageUrl}" alt="${theme.name}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">`
-                        : `<div class="theme-preview-placeholder"><i class="fas fa-palette"></i></div>`
-                    }
-                </div>
-                <div class="theme-card-info">
-                    <strong>${escapeHtml(theme.name)}</strong>
-                    <span>${escapeHtml(theme.description || "")}</span>
-                </div>
-                ${isSelected ? `<div class="theme-selected-badge">✓ Applied</div>` : ""}
-            `;
-
-            card.addEventListener("click", () => applyThemeToClient(themeId, theme.cssClass, theme.name));
-            container.appendChild(card);
-        });
-
-    } catch (err) {
-        console.error("Error loading themes:", err);
-        container.innerHTML = `<p style="color:#ef4444;">Could not load themes. Try again.</p>`;
-    }
-}
-
-async function applyThemeToClient(themeId, cssClass, themeName) {
-    if (!activeProjectId) {
-        return alert("⚠️ Please select a client from Client Projects first!");
-    }
-    if (!(await canManageStudio())) return;
-
-    try {
-        // 1. clientProjects me selectedThemeId update karo
-        await db.collection("users").doc(currentUid)
-            .collection("clientProjects").doc(activeProjectId)
-            .update({ selectedThemeId: themeId });
-
-        // 2. Agar shareId hai toh publicGalleries me bhi update karo
-        const projectDoc = await db.collection("users").doc(currentUid)
-            .collection("clientProjects").doc(activeProjectId).get();
-
-
-        alert(`✅ Theme "${themeName}" applied! Client will see this theme when they open their gallery.`);
-
-        // Cards refresh karo — selected badge update ho
-        loadGalleryThemes();
-
-    } catch (err) {
-        console.error("Theme apply error:", err);
-        alert("❌ Could not apply theme. Try again.");
-    }
-}
-
-// Jab bhi Gallery Themes tab khule, themes load karo
-document.querySelectorAll(".nav-item[data-target]").forEach(item => {
-    item.addEventListener("click", () => {
-        if (item.getAttribute("data-target") === "view-palette") {
-            loadGalleryThemes();
-        }
-    });
-});

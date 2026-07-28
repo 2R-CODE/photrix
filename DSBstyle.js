@@ -68,13 +68,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (e.key === "Escape") closeAllMenus();
     });
 });
-
-// ==========================================================================
-// ⭐ FIXED: SIDEBAR TOGGLE LOGIC (Desktop collapse + Mobile slide-in)
-// Pehle ye "sidebarToggleBtn" aur "studioSidebar" IDs dhoondh raha tha,
-// jabki HTML me actual IDs "testToggleBtn" aur "testSidebar" hain.
-// Isi mismatch ki wajah se button kaam hi nahi kar raha tha.
-// ==========================================================================
+// ⭐ FIXED: SIDEBAR TOGGLE LOGIC (Desktop collapse + Mobile slide-in
 document.addEventListener("DOMContentLoaded", function () {
     const toggleBtn = document.getElementById("testToggleBtn");
     const sidebarElement = document.getElementById("testSidebar");
@@ -130,3 +124,48 @@ document.getElementById('realFileInput').addEventListener('change', function() {
         document.getElementById('startCloudUploadBtn').style.display = 'inline-block';
     }
 });
+
+// 🆕 SPA VIEW SWITCHING 
+const navItems = document.querySelectorAll(".nav-item[data-target]");
+navItems.forEach((item) => {
+    item.addEventListener("click", (e) => {
+        e.preventDefault();
+        const targetId = item.getAttribute("data-target");
+
+        document.querySelectorAll(".view-section").forEach(v => v.classList.remove("active-view"));
+        document.getElementById(targetId)?.classList.add("active-view");
+
+        navItems.forEach(nav => nav.classList.remove("active"));
+        item.classList.add("active");
+    });
+});
+
+
+// ================= LIGHTBOX CLOSE LOGIC =================
+document.addEventListener("DOMContentLoaded", () => {
+    const closeLightboxBtn = document.getElementById("closeLightboxBtn");
+    const lightbox = document.getElementById("photoLightbox");
+    
+    if (closeLightboxBtn && lightbox) {
+        // Cross button pe click karne se band
+        closeLightboxBtn.onclick = () => lightbox.classList.remove("active");
+        
+        // Background black area pe click karne se bhi band ho jaye
+        lightbox.onclick = (e) => {
+            if (e.target === lightbox) lightbox.classList.remove("active");
+        };
+    }
+});
+
+// 🆕 WHATSAPP SHARE — gallery link seedha WhatsApp pe pre-filled message ke saath
+const whatsappShareBtn = document.getElementById("whatsappShareBtn");
+if (whatsappShareBtn) {
+    whatsappShareBtn.addEventListener("click", () => {
+        const link = clientGeneratedUrlDisplayField?.value;
+        if (!link) return alert("Generate a link first!");
+
+        const clientName = activeProjectName || "there";
+        const message = `Hi ${clientName}! 📸✨ Your wedding photo gallery is ready. View and select your favorite photos here: ${link}`;
+        window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, "_blank");
+    });
+}
