@@ -523,6 +523,73 @@ if (createClientBtn) {
     });
 }
 
+// ==========================================
+// 🚀 CORRECTED: EDIT CLIENT MODAL LOGIC
+// ==========================================
+const editClientModal = document.getElementById("editClientModal");
+const closeEditModalBtn = document.getElementById("closeEditModalBtn");
+const cancelEditModalBtn = document.getElementById("cancelEditModalBtn");
+const saveClientEditBtn = document.getElementById("saveClientEditBtn");
+
+// 1. Modal Band Karne Ka Function
+function closeEditModal() {
+    if(editClientModal) {
+        editClientModal.classList.remove("active");
+    }
+}
+
+// Cancel aur (X) button par ye function lagao
+if (closeEditModalBtn) closeEditModalBtn.addEventListener("click", closeEditModal);
+if (cancelEditModalBtn) cancelEditModalBtn.addEventListener("click", closeEditModal);
+
+// 2. Save Changes Button Ka Logic
+if (saveClientEditBtn) {
+    saveClientEditBtn.addEventListener("click", async () => {
+        // Correct Input IDs used here
+        const projectId = document.getElementById("editClientIdInput").value;
+        const newName = document.getElementById("editClientNameInput").value.trim();
+        const newEvent = document.getElementById("editEventTypeInput").value;
+
+        if (!newName) {
+            alert("Client name cannot be empty!");
+            return;
+        }
+
+        saveClientEditBtn.innerText = "Saving...";
+        saveClientEditBtn.disabled = true;
+
+        try {
+            // Firebase Firestore mein Data Update Karo
+            await db.collection("users").doc(currentUid).collection("clientProjects").doc(projectId).update({
+                coupleName: newName,
+                eventType: newEvent
+            });
+
+            // Update successful hone par:
+            closeEditModal(); 
+            saveClientEditBtn.innerText = "Save Changes";
+            saveClientEditBtn.disabled = false;
+            
+            // UI Update: Agar same client active tha, toh top indicator update kardo
+            if (activeProjectId === projectId) {
+                setActiveProject(projectId, newName);
+            }
+
+            // UI Update: Table ko wapis render karo naye naam ke sath (Tera function)
+            if (typeof renderTablePage === "function") {
+                renderTablePage(); 
+            }
+
+        } catch (error) {
+            console.error("Edit Update Error:", error);
+            alert("Failed to update project: " + error.message);
+            saveClientEditBtn.innerText = "Save Changes";
+            saveClientEditBtn.disabled = false;
+        }
+    });
+}
+
+
 // 🆕 STEP B: CLIENT TRACKER TABLE — 
 const clientTrackerTableBody = document.getElementById("clientTrackerTableBody");
 const clientSearchInput = document.getElementById("clientSearchInput");
@@ -569,6 +636,11 @@ function renderClientRow(projectId, data) {
             <button class="action-btn text-btn copy-project-link-btn" data-project-id="${projectId}">
                 <i class="far fa-copy"></i> Copy Link
             </button>
+            <!-- NAYA EDIT BUTTON 👇 -->
+            <button class="action-btn text-btn edit-project-btn" data-project-id="${projectId}" data-couple-name="${safeName}" data-event-type="${safeEvent}" style="color:#0ea5e9; border-color:#bae6fd;">
+                <i class="fas fa-pencil-alt"></i>
+            </button>
+            <!-- DELETE BUTTON -->
             <button class="action-btn text-btn delete-project-btn" data-project-id="${projectId}" data-couple-name="${safeName}" style="color:#ef4444; border-color:#fecaca;">
                 <i class="fas fa-trash"></i>
             </button>
@@ -678,15 +750,14 @@ if (nextPageBtn) {
 // 🆕 STEP C: TABLE ROW 
 if (clientTrackerTableBody) {
     clientTrackerTableBody.addEventListener("click", async (e) => {
-        // "Copy Link" button ka apna alag kaam hai — pehle wo check karo
+        
+        // 1. COPY LINK (Tumhara Advance Code - Exactly same)
         const copyBtn = e.target.closest(".copy-project-link-btn");
         if (copyBtn) {
             const projectId = copyBtn.getAttribute("data-project-id");
             const project = allClientDocs.find(item => item.id === projectId)?.data;
             // 🛠️ FIX: purana code yahan "?uid=...&project=..." wala alag, broken link
             // banata tha jo lookbook.js samajh hi nahi paata (wo sirf "?gallery=" padhta hai).
-            // Ab yahan bhi wahi shareId use ho raha hai jo Generate Client Link banata hai —
-            // link banane ki ek hi jagah / ek hi tareeka hai poore app me.
             if (!project?.shareId || project.status === "created") {
                 return alert("Select this client, then use Generate Client Link before sharing it.");
             }
@@ -695,7 +766,19 @@ if (clientTrackerTableBody) {
             return; // row-select trigger na ho isliye yahin ruk jao
         }
 
-        // "Delete" button ka apna alag kaam
+        // ==========================================
+        // 🚀 NAYA: EDIT CLIENT LOGIC (Ye add kiya)
+        // ==========================================
+        const editBtn = e.target.closest(".edit-project-btn");
+        if (editBtn) {
+            document.getElementById("editClientIdInput").value = editBtn.getAttribute("data-project-id");
+            document.getElementById("editClientNameInput").value = editBtn.getAttribute("data-couple-name");
+            document.getElementById("editEventTypeInput").value = editBtn.getAttribute("data-event-type");
+            document.getElementById("editClientModal").classList.add("active");
+            return; // Edit modal khule toh row selection click na ho, isliye yahan return kiya
+        }
+
+        // 2. DELETE PROJECT (Tumhara Advance Code - Exactly same)
         const deleteBtn = e.target.closest(".delete-project-btn");
         if (deleteBtn) {
             const projectId = deleteBtn.getAttribute("data-project-id");
@@ -736,7 +819,7 @@ if (clientTrackerTableBody) {
             return;
         }
 
-        // Baaki row click = us client ko active banao
+        // 3. ROW SELECTION & HIGHLIGHT (Tumhara purana code)
         const row = e.target.closest("tr[data-project-id]");
         if (!row) return;
         const projectId = row.getAttribute("data-project-id");
@@ -746,6 +829,14 @@ if (clientTrackerTableBody) {
         // Visual feedback: saari rows se highlight hatao, isi row pe lagao
         document.querySelectorAll("#clientTrackerTableBody tr").forEach(r => r.classList.remove("active-row"));
         row.classList.add("active-row");
+
+        // ==========================================
+        // 🚀 NAYA: AUTO-NAVIGATE TO OVERVIEW TAB
+        // ==========================================
+        const overviewTab = document.querySelector('.nav-item[data-target="view-overview"]');
+        if (overviewTab) {
+            overviewTab.click(); 
+        }
     });
 }
 //PAGE LOAD — table listener 

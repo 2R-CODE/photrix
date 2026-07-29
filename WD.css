@@ -348,15 +348,15 @@ body {
     font-size: 0.9rem;
     text-transform: uppercase;
     letter-spacing: 3px;
-    color: #94a3b8; /* 👈 Neon hata kar soft metallic slate gray kiya */
-    margin-bottom: 20px;
-    text-align: left;
+    color: #ffffff; 
+    margin-bottom: 100px;
+    text-align:left
 }
 
 .hero-title {
     font-family: 'Cormorant Garamond', serif;
-    font-size: 4.5rem;
-    font-weight: 300;
+    font-size: 3.5rem;
+    font-weight: 200;
     line-height: 1.2;
     margin-bottom: 25px;
 }
