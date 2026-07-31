@@ -23,12 +23,18 @@ const countEl = document.getElementById("selected-count");
 const footer = document.getElementById("action-footer");
 const submit = document.getElementById("submit-selection-btn");
 const downloadZipBtn = document.getElementById("download-zip-btn");
+const undoBar = document.getElementById("undo-submit-bar");
+const undoBtn = document.getElementById("undo-submit-btn");
+const undoSecondsEl = document.getElementById("undo-seconds");
+
+const UNDO_WINDOW_SECONDS = 30;
 
 let selected = [];
 let galleryData = {};
 let pendingPreviewFiles = [];
 let pinVerified = false;
 let verifiedPin = "";
+let undoTimer = null;
 
 function setError(message) {
   if (nameEl) nameEl.textContent = "Gallery unavailable";
@@ -36,15 +42,48 @@ function setError(message) {
   if (grid) grid.innerHTML = "";
   if (pinGate) pinGate.style.display = "none";
   if (footer) footer.style.display = "none";
+  hideUndoBar();
+}
+
+function hideUndoBar() {
+  if (undoTimer) { clearInterval(undoTimer); undoTimer = null; }
+  if (undoBar) undoBar.style.display = "none";
+}
+
+function startUndoCountdown(submittedAtMs) {
+  if (!undoBar || !undoBtn || !submittedAtMs) return;
+
+  const tick = () => {
+    const remaining = UNDO_WINDOW_SECONDS - Math.floor((Date.now() - submittedAtMs) / 1000);
+    if (remaining <= 0) {
+      hideUndoBar();
+      return;
+    }
+    if (undoSecondsEl) undoSecondsEl.textContent = remaining;
+  };
+
+  hideUndoBar();
+  undoBar.style.display = "block";
+  tick();
+  undoTimer = setInterval(tick, 1000);
+}
+
+function applyThemeClass(themeId) {
+  if (!themeId) return;
+  db.collection("themes").doc(themeId).get().then(themeDoc => {
+    if (themeDoc.exists && themeDoc.data().cssClass) {
+      document.body.className = themeDoc.data().cssClass;
+    }
+  }).catch(err => console.warn("Theme load failed:", err));
 }
 
 if (!galleryId || !/^[A-Za-z0-9_-]{20,}$/.test(galleryId)) {
   setError("This gallery link is invalid. Please ask your photographer for a new link.");
 } else {
-  // Real-time listener: taaki agar upload late complete ho toh photos apne aap dikhne lagei
+  // Real-time listener — single source of truth: gallery.workflowState
   db.collection("publicGalleries").doc(galleryId).onSnapshot(doc => {
     if (!doc.exists) return setError("This gallery was not found.");
-    
+
     const gallery = doc.data();
     galleryData = gallery;
 
@@ -52,35 +91,48 @@ if (!galleryId || !/^[A-Za-z0-9_-]{20,}$/.test(galleryId)) {
       return setError("This gallery is no longer active.");
     }
 
-    // --- NAYA LOGIC: CLIENT SUBMIT LOCK ---
-    // Agar client pehle hi submit kar chuka है ya gallery publish ho chuki hai, toh turant lock screen dikhao
-    if (gallery.workflowState === 'selection_completed' || gallery.workflowState === 'published') {
+    // --- STATE: selection_completed (client submitted, photographer reviewing) ---
+    if (gallery.workflowState === "selection_completed") {
       showSubmittedScreen();
-      
-      // Agar gallery published hai aur PIN verified hai, toh hum check kar sakte hain ki download link dena hai ya nahi
-      if (gallery.workflowState === 'published' && pinVerified) {
-          checkDownloadAvailability(); 
+      const submittedAtMs = gallery.selectionSubmittedAt && typeof gallery.selectionSubmittedAt.toMillis === "function"
+        ? gallery.selectionSubmittedAt.toMillis() : null;
+      if (pinVerified && submittedAtMs && (Date.now() - submittedAtMs) < UNDO_WINDOW_SECONDS * 1000) {
+        startUndoCountdown(submittedAtMs);
+      } else {
+        hideUndoBar();
       }
-      return; // Aage ka code (grid render karna etc.) execute nahi hoga
+      return;
     }
-    // --------------------------------------
 
+    hideUndoBar();
+
+    // --- STATE: published (final delivery) ---
+    if (gallery.workflowState === "published") {
+      if (nameEl) nameEl.textContent = gallery.coupleName || "Wedding Album";
+      if (statusEl && !pinVerified) statusEl.textContent = "Your final gallery is ready! Enter PIN to view and download.";
+      if (pinGate && !pinVerified) pinGate.style.display = "block";
+
+      if (submit) submit.style.display = "none";
+
+      pendingPreviewFiles = Array.isArray(gallery.previewFiles) ? gallery.previewFiles : [];
+      applyThemeClass(gallery.selectedThemeId);
+
+      if (pinVerified && pendingPreviewFiles.length > 0) {
+        renderPreviews(pendingPreviewFiles);
+        checkDownloadAvailability();
+      }
+      return;
+    }
+
+    // --- STATE: selection_open (default) ---
     if (nameEl) nameEl.textContent = gallery.coupleName || "Wedding Album";
     if (statusEl && !pinVerified) statusEl.textContent = "Enter the gallery PIN to view and select your previews.";
     if (pinGate && !pinVerified) pinGate.style.display = "block";
+    if (submit) submit.style.display = "block";
 
     pendingPreviewFiles = Array.isArray(gallery.previewFiles) ? gallery.previewFiles : [];
+    applyThemeClass(gallery.selectedThemeId);
 
-    // Theme loading
-    if (gallery.selectedThemeId) {
-      db.collection("themes").doc(gallery.selectedThemeId).get().then(themeDoc => {
-        if (themeDoc.exists && themeDoc.data().cssClass) {
-          document.body.className = themeDoc.data().cssClass;
-        }
-      }).catch(err => console.warn("Theme load failed:", err));
-    }
-
-    // Agar PIN pehle hi verify ho chuka hai aur naye files aaye hain toh render karein
     if (pinVerified && pendingPreviewFiles.length > 0) {
       renderPreviews(pendingPreviewFiles);
     }
@@ -92,6 +144,7 @@ if (pinInput) {
     if (pin.length !== 6) return;
 
     try {
+      // PIN check backend pe hi chalega for security
       const verifyGalleryPin = functionsRegion.httpsCallable("verifyGalleryPin");
       const response = await verifyGalleryPin({ shareId: galleryId, pin });
 
@@ -101,12 +154,22 @@ if (pinInput) {
         pinInput.disabled = true;
         if (pinGate) pinGate.style.display = 'none';
 
-        if (pendingPreviewFiles.length === 0) {
+        if (galleryData.workflowState === "selection_completed") {
+          showSubmittedScreen();
+          const submittedAtMs = galleryData.selectionSubmittedAt && typeof galleryData.selectionSubmittedAt.toMillis === "function"
+            ? galleryData.selectionSubmittedAt.toMillis() : null;
+          if (submittedAtMs && (Date.now() - submittedAtMs) < UNDO_WINDOW_SECONDS * 1000) {
+            startUndoCountdown(submittedAtMs);
+          }
+        } else if (pendingPreviewFiles.length === 0) {
           if (statusEl) statusEl.textContent = "Photos are being processed by photographer. Please wait a moment...";
         } else {
           await renderPreviews(pendingPreviewFiles);
         }
-        checkDownloadAvailability();
+
+        if (galleryData.workflowState === 'published') {
+            checkDownloadAvailability();
+        }
       } else {
         alert("Invalid PIN! Try again.");
         pinInput.value = "";
@@ -128,7 +191,13 @@ if (pinInput) {
 async function renderPreviews(files) {
   if (!grid) return;
   grid.innerHTML = "";
-  if (statusEl) statusEl.textContent = "Select your favorite photos below:";
+  grid.style.display = "grid";
+
+  if (galleryData.workflowState === 'published') {
+      if (statusEl) statusEl.textContent = "Your beautiful moments are here!";
+  } else {
+      if (statusEl) statusEl.textContent = "Select your favorite photos below:";
+  }
 
   for (let index = 0; index < files.length; index++) {
     const file = files[index];
@@ -136,23 +205,36 @@ async function renderPreviews(files) {
       const url = await storage.ref(`gallery-previews/${galleryId}/${file}`).getDownloadURL();
       const item = document.createElement("div");
       item.className = "grid-item";
-      
+
       const image = document.createElement("img");
       image.src = url;
       image.alt = `Preview ${index + 1}`;
       image.loading = "lazy";
-      
+
       item.appendChild(image);
-      item.addEventListener("click", () => toggleSelection(item, file));
+
+      // Selection tabhi allow karni hai jab state published NA ho
+      if (galleryData.workflowState !== 'published') {
+          item.addEventListener("click", () => toggleSelection(item, file));
+      } else {
+          item.style.cursor = "default"; // Pointer hata do published state mein
+      }
+
       grid.appendChild(item);
     } catch (err) {
       console.warn(`Could not load preview image: ${file}`, err);
     }
   }
 
-  if (counter) counter.style.display = "block";
-  if (footer) footer.style.display = "flex";
-  if (submit) submit.style.display = "block";
+  if (galleryData.workflowState !== 'published') {
+      if (counter) counter.style.display = "block";
+      if (footer) footer.style.display = "flex";
+      if (submit) submit.style.display = "block";
+      if (downloadZipBtn) downloadZipBtn.style.display = "none";
+  } else {
+      if (counter) counter.style.display = "none";
+      if (footer) footer.style.display = "flex"; // Footer dikhao ZIP button ke liye
+  }
 }
 
 function toggleSelection(item, file) {
@@ -173,33 +255,43 @@ if (submit) {
     if (!selected.length) return alert("Please select at least one photo.");
 
     submit.disabled = true;
-    submit.textContent = "Submitting selection...";
+    submit.innerHTML = '<span class="btn-spinner"></span> Submitting...';
+
     try {
       const submitSelection = functionsRegion.httpsCallable("submitGallerySelection");
       await submitSelection({ shareId: galleryId, pin: verifiedPin, photoIds: selected });
 
-      if (grid) grid.style.display = "none";
-      if (footer) footer.style.display = "none";
-      if (counter) counter.style.display = "none";
-
-      if (nameEl) nameEl.textContent = galleryData?.coupleName || "Your Gallery";
-      if (statusEl) {
-        statusEl.innerHTML = `
-          <div style="text-align:center;padding:40px 20px;">
-            <div style="font-size:3rem;margin-bottom:16px;">📸</div>
-            <h3 style="margin-bottom:12px;font-size:1.2rem;">Selection submitted!</h3>
-            <p style="color:var(--gallery-text-muted);font-size:0.9rem;line-height:1.6;">
-              Your photographer is now working on your gallery.<br>
-              You'll receive an update when it's ready.
-            </p>
-          </div>
-        `;
-      }
-      checkDownloadAvailability();
+      // Optimistic switch — the onSnapshot listener will confirm this
+      // moments later and start the undo countdown from the server timestamp.
+      showSubmittedScreen();
     } catch (error) {
-      alert(error.code === "functions/permission-denied" ? "Incorrect gallery PIN." : "Could not submit selection. Please try again.");
+      console.error("Submit selection error:", error);
+      alert("Could not submit selection: " + (error.message || "Please check your connection and try again."));
       submit.disabled = false;
-      submit.textContent = "Submit Selected Previews";
+      submit.textContent = "Submit Selection";
+    }
+  });
+}
+
+if (undoBtn) {
+  undoBtn.addEventListener("click", async () => {
+    if (!pinVerified || !verifiedPin) return;
+    undoBtn.disabled = true;
+    undoBtn.textContent = "Undoing...";
+    try {
+      const undoSubmission = functionsRegion.httpsCallable("undoSelectionSubmission");
+      await undoSubmission({ shareId: galleryId, pin: verifiedPin });
+      hideUndoBar();
+      // onSnapshot will flip workflowState back to selection_open and
+      // re-render the grid automatically (selection will reset — client
+      // reselects, which is expected after an explicit undo).
+    } catch (error) {
+      console.error("Undo error:", error);
+      alert("Could not undo: " + (error.message || "The undo window may have expired."));
+      hideUndoBar();
+    } finally {
+      undoBtn.disabled = false;
+      undoBtn.innerHTML = `Undo Submission (<span id="undo-seconds">30</span>s)`;
     }
   });
 }

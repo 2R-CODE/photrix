@@ -96,17 +96,19 @@ exports.createGalleryShare = onCall({ region: REGION, enforceAppCheck: false }, 
   const expiresAt = admin.firestore.Timestamp.fromMillis(Date.now() + 24 * 60 * 60 * 1000);
   const data = project.data();
 
+  // WORKFLOW_STATE: single source of truth, mirrored on both documents.
+  // Values: selection_open -> selection_completed -> published
   await db.runTransaction(async transaction => {
-    
+
     transaction.set(db.doc(`publicGalleries/${shareId}`), {
       uid, projectId, coupleName: data.coupleName || "Wedding Album", expiresAt,
       isActive: true,
-      status: "sent_to_client", selectionLimit: 40,
+      workflowState: "selection_open", selectionLimit: 40,
       createdAt: admin.firestore.FieldValue.serverTimestamp()
     });
     transaction.set(db.doc(`gallerySecrets/${shareId}`), { pinSalt, pinHash: hashPin(pin, pinSalt), pin });
     transaction.update(projectRef, {
-      status: "sent_to_client",
+      workflowState: "selection_open",
       shareId,
       expiresAt,
       linkGeneratedAt: admin.firestore.FieldValue.serverTimestamp()
@@ -138,31 +140,173 @@ exports.submitGallerySelection = onCall({ region: REGION, enforceAppCheck: false
   if (data.isActive !== true) {
     throw new HttpsError("failed-precondition", "Gallery is no longer accepting selections.");
   }
-  
+  if (data.workflowState !== "selection_open") {
+    throw new HttpsError("failed-precondition", "This gallery is not accepting selections right now.");
+  }
+
   if (!(await checkGalleryPin(shareId, pin))) {
     throw new HttpsError("permission-denied", "Incorrect PIN.");
   }
-  
+
   const allowed = new Set(data.previewFiles || []);
   if (allowed.size === 0 || photoIds.some(id => !allowed.has(id))) {
     throw new HttpsError("invalid-argument", "One or more selected photos are invalid.");
   }
 
-  // 1. Update Photographer's private project document
-  await db.doc(`users/${data.uid}/clientProjects/${data.projectId}`).update({
-    status: "pending_review",
-    workflowState: "selection_completed", // Dashboard ko bhi pata chale ki submit ho gaya
-    selectedPhotoIds: [...new Set(photoIds)],
-    selectedAt: admin.firestore.FieldValue.serverTimestamp()
-  });
+  const uniqueIds = [...new Set(photoIds)];
+  const submittedAt = admin.firestore.FieldValue.serverTimestamp();
 
-  // 2. 🛠️ FIX: Update Public Gallery document so Client UI locks up on refresh!
+  // Single write pattern, mirrored on both documents so Dashboard and the
+  // client-facing gallery never disagree about state.
+  await db.doc(`users/${data.uid}/clientProjects/${data.projectId}`).update({
+    workflowState: "selection_completed",
+    selectedPhotoIds: uniqueIds,
+    selectionSubmittedAt: submittedAt
+  });
   await galleryRef.update({
     workflowState: "selection_completed",
-    status: "selection_completed"
+    selectedPhotoIds: uniqueIds,
+    selectionSubmittedAt: submittedAt
   });
 
   logger.info("Gallery selection submitted", { shareId });
+  return { ok: true };
+});
+
+// Client-side "Undo" grace window right after submit — lets them reopen
+// their selection without waiting on the photographer.
+const UNDO_WINDOW_MS = 30 * 1000;
+exports.undoSelectionSubmission = onCall({ region: REGION, enforceAppCheck: false }, async (request) => {
+  const { shareId, pin } = request.data || {};
+  if (typeof shareId !== "string" || !/^\d{6}$/.test(String(pin || ""))) {
+    throw new HttpsError("invalid-argument", "Invalid request.");
+  }
+
+  const galleryRef = db.doc(`publicGalleries/${shareId}`);
+  const gallery = await galleryRef.get();
+  if (!gallery.exists) throw new HttpsError("not-found", "Gallery not found.");
+  const data = gallery.data();
+
+  if (data.workflowState !== "selection_completed") {
+    throw new HttpsError("failed-precondition", "This selection can no longer be undone.");
+  }
+  if (!(await checkGalleryPin(shareId, pin))) {
+    throw new HttpsError("permission-denied", "Incorrect PIN.");
+  }
+
+  const submittedAtMs = data.selectionSubmittedAt && typeof data.selectionSubmittedAt.toMillis === "function"
+    ? data.selectionSubmittedAt.toMillis() : 0;
+  if (Date.now() - submittedAtMs > UNDO_WINDOW_MS) {
+    throw new HttpsError("failed-precondition", "The undo window has expired.");
+  }
+
+  await db.doc(`users/${data.uid}/clientProjects/${data.projectId}`).update({
+    workflowState: "selection_open",
+    selectedPhotoIds: admin.firestore.FieldValue.delete(),
+    selectionSubmittedAt: admin.firestore.FieldValue.delete()
+  });
+  await galleryRef.update({
+    workflowState: "selection_open",
+    selectedPhotoIds: admin.firestore.FieldValue.delete(),
+    selectionSubmittedAt: admin.firestore.FieldValue.delete()
+  });
+
+  logger.info("Gallery selection undone", { shareId });
+  return { ok: true };
+});
+
+// Photographer removes a single client-selected photo during the review
+// stage (before publish). Keeps both documents in sync in one transaction.
+exports.removeSelectedPhoto = onCall({ region: REGION, enforceAppCheck: false }, async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Please sign in.");
+  const uid = request.auth.uid;
+  const projectId = String(request.data?.projectId || "");
+  const file = String(request.data?.file || "");
+  if (!/^[A-Za-z0-9_-]{8,128}$/.test(projectId) || !file) {
+    throw new HttpsError("invalid-argument", "Invalid request.");
+  }
+
+  const projectRef = db.doc(`users/${uid}/clientProjects/${projectId}`);
+  const project = await projectRef.get();
+  if (!project.exists) throw new HttpsError("not-found", "Project not found.");
+  const data = project.data();
+  if (!data.shareId) throw new HttpsError("failed-precondition", "No gallery link generated yet.");
+  if (data.workflowState === "published") {
+    throw new HttpsError("failed-precondition", "Gallery is already published. Revert to editing first.");
+  }
+
+  const galleryRef = db.doc(`publicGalleries/${data.shareId}`);
+  await db.runTransaction(async (tx) => {
+    tx.update(projectRef, { selectedPhotoIds: admin.firestore.FieldValue.arrayRemove(file) });
+    tx.update(galleryRef, { selectedPhotoIds: admin.firestore.FieldValue.arrayRemove(file) });
+  });
+
+  return { ok: true };
+});
+
+// Photographer locks in a theme and publishes the final gallery — one
+// atomic write across both documents, so Dashboard and client never desync.
+exports.applyThemeAndPublish = onCall({ region: REGION, enforceAppCheck: false }, async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Please sign in.");
+  const uid = request.auth.uid;
+  const projectId = String(request.data?.projectId || "");
+  const themeId = String(request.data?.themeId || "");
+  if (!/^[A-Za-z0-9_-]{8,128}$/.test(projectId)) throw new HttpsError("invalid-argument", "Invalid project.");
+  if (!themeId) throw new HttpsError("invalid-argument", "Please choose a theme first.");
+
+  if (!(await hasStudioAccess(uid))) {
+    throw new HttpsError("permission-denied", "HD ZIP download is a paid-plan feature. Please subscribe to publish.");
+  }
+
+  const themeDoc = await db.doc(`themes/${themeId}`).get();
+  if (!themeDoc.exists) throw new HttpsError("not-found", "Selected theme not found.");
+
+  const projectRef = db.doc(`users/${uid}/clientProjects/${projectId}`);
+  const project = await projectRef.get();
+  if (!project.exists) throw new HttpsError("not-found", "Project not found.");
+  const data = project.data();
+  if (!data.shareId) throw new HttpsError("failed-precondition", "Generate a client link first.");
+  if (!Array.isArray(data.selectedPhotoIds) || data.selectedPhotoIds.length === 0) {
+    throw new HttpsError("failed-precondition", "Client hasn't selected any photos yet.");
+  }
+
+  const galleryRef = db.doc(`publicGalleries/${data.shareId}`);
+  await db.runTransaction(async (tx) => {
+    tx.update(projectRef, {
+      workflowState: "published",
+      selectedThemeId: themeId,
+      publishedAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+    tx.update(galleryRef, {
+      workflowState: "published",
+      selectedThemeId: themeId,
+      selectedPhotoIds: data.selectedPhotoIds
+    });
+  });
+
+  return { ok: true };
+});
+
+// Photographer reopens a published gallery for further editing (same link,
+// same PIN — client just sees the review-in-progress screen again).
+exports.revertGalleryToEditing = onCall({ region: REGION, enforceAppCheck: false }, async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Please sign in.");
+  const uid = request.auth.uid;
+  const projectId = String(request.data?.projectId || "");
+  if (!/^[A-Za-z0-9_-]{8,128}$/.test(projectId)) throw new HttpsError("invalid-argument", "Invalid project.");
+
+  const projectRef = db.doc(`users/${uid}/clientProjects/${projectId}`);
+  const project = await projectRef.get();
+  if (!project.exists) throw new HttpsError("not-found", "Project not found.");
+  const data = project.data();
+  if (!data.shareId) throw new HttpsError("failed-precondition", "No gallery link yet.");
+
+  const galleryRef = db.doc(`publicGalleries/${data.shareId}`);
+  await db.runTransaction(async (tx) => {
+    tx.update(projectRef, { workflowState: "selection_completed" });
+    tx.update(galleryRef, { workflowState: "selection_completed" });
+  });
+
   return { ok: true };
 });
 
@@ -299,7 +443,7 @@ exports.createClientProject = onCall({ region: REGION, enforceAppCheck: false },
   const projectRef = await db.collection(`users/${uid}/clientProjects`).add({
     coupleName,
     eventType,
-    status: "created",
+    workflowState: "draft",
     selectedPhotoIds: [],
     createdAt: admin.firestore.FieldValue.serverTimestamp()
   });
@@ -368,8 +512,8 @@ exports.getDownloadUrls = onCall({ region: REGION, enforceAppCheck: false }, asy
 
   const projectRef = db.doc(`users/${galleryData.uid}/clientProjects/${galleryData.projectId}`);
   const project = await projectRef.get();
-  if (!project.exists || project.data().status !== "unlocked") {
-    throw new HttpsError("failed-precondition", "This gallery hasn't been unlocked for download yet.");
+  if (!project.exists || project.data().workflowState !== "published") {
+    throw new HttpsError("failed-precondition", "This gallery hasn't been published for download yet.");
   }
   const projectData = project.data();
   const selectedPhotoIds = Array.isArray(projectData.selectedPhotoIds) ? projectData.selectedPhotoIds : [];

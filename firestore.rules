@@ -50,7 +50,7 @@ service cloud.firestore {
         allow create: if signedInOwner(uid)
           && request.auth.token.email_verified == true
           && hasStudioAccess(uid)
-          && request.resource.data.status == "created";
+          && request.resource.data.workflowState == "draft";
 
         allow update: if signedInOwner(uid)
           && request.auth.token.email_verified == true

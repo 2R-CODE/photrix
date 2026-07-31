@@ -175,3 +175,16 @@ body {
     .dock-actions { gap: 6px; }
     .btn-primary, .btn-secondary { padding: 6px 12px; font-size: 0.7rem; border-radius: 16px; }
 }
+
+/* --- 9. UNDO SUBMIT BAR & SPINNER --- */
+#undo-submit-bar { display: flex; justify-content: center; }
+#undo-submit-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+}
+.btn-spinner {
+    display: inline-block; width: 12px; height: 12px;
+    border: 2px solid rgba(255,255,255,0.4); border-top-color: #fff;
+    border-radius: 50%; animation: btnSpin 0.7s linear infinite;
+    vertical-align: middle; margin-right: 4px;
+}
+@keyframes btnSpin { to { transform: rotate(360deg); } }

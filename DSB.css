@@ -572,6 +572,17 @@
     cursor: zoom-in; /* Shows magnifying glass */
     transition: transform var(--transition), border-color var(--transition);
 }
+
+/* Theme live-preview swatches for the Review & Finalize thumbnail grid —
+   same palettes as lookbook.css, scoped to the grid itself (not body),
+   since this preview only needs to color the border/background here. */
+.live-thumbnails-grid.theme-royal-gold { background: #0b0c10; border-radius: var(--radius-sm); padding: 8px; }
+.live-thumbnails-grid.theme-royal-gold .thumbnail-wrapper { border-color: rgba(212, 175, 55, 0.4); box-shadow: 0 0 10px rgba(212, 175, 55, 0.15); }
+.live-thumbnails-grid.theme-pastel-bloom { background: #fcf8f6; border-radius: var(--radius-sm); padding: 8px; }
+.live-thumbnails-grid.theme-pastel-bloom .thumbnail-wrapper { border-color: rgba(232, 165, 152, 0.5); box-shadow: 0 0 10px rgba(232, 165, 152, 0.2); }
+.live-thumbnails-grid.theme-default .thumbnail-wrapper,
+.live-thumbnails-grid.theme-minimal-dark .thumbnail-wrapper { border-color: rgba(255, 59, 48, 0.3); }
+
 .thumbnail-wrapper:hover {
     transform: translateY(-3px);
     border-color: var(--primary-blue);

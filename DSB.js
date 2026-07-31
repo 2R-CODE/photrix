@@ -2,7 +2,7 @@
 // Open DevTools Console after deploying and confirm THIS exact line prints —
 // if it doesn't (or shows an older date), the browser/CDN is still serving
 // a stale cached copy, not your latest edit.
-console.log("PHOTRIX DSB.js build: 2026-07-19-b");
+console.log("PHOTRIX DSB.js build: 2026-07-30-v1");
 
 const firebaseConfig = {
     apiKey: "AIzaSyDQFAJH5_V1-qApDKg1I9RcDi3eVMcWAWg",
@@ -26,7 +26,7 @@ let dashboardStarted = false;
 let verificationEmailAttempted = false;
 const TRIAL_DAYS = 7;
 
-// DOM SELECTORS (Updated for New UI Design)
+// DOM SELECTORS
 const bulkImagePickerFiles = document.getElementById("realFileInput");
 const uploadImagesBtn = document.getElementById("startCloudUploadBtn");
 const uploadStatusNotificationLabel = document.getElementById("uploadStatusText");
@@ -76,24 +76,24 @@ async function canManageStudio() {
 function findLoadedProject(projectId) {
     return allClientDocs.find(item => item.id === projectId)?.data || null;
 }
-// 🆕 FIX: switching clients used to always leave the link field blank, even
+
+const LIVE_LINK_STATES = ["selection_open", "selection_completed", "published"];
+
 async function restoreExistingLinkIfValid(projectId) {
     const data = findLoadedProject(projectId);
     const pinDisplay = document.getElementById("clientGalleryPinDisplay");
-    const stillValid = data?.shareId && (
-    data?.status === "sent_to_client" ||
-    data?.status === "pending_review" ||
-    data?.status === "unlocked"
-);
+    const stillValid = data?.shareId && LIVE_LINK_STATES.includes(data?.workflowState);
 
     if (!stillValid) {
         if (clientGeneratedUrlDisplayField) clientGeneratedUrlDisplayField.value = "";
         if (pinDisplay) { pinDisplay.style.display = "none"; pinDisplay.textContent = ""; }
+        updatePublishControls(null);
         return;
     }
 
     const securePath = `${window.location.origin}${window.location.pathname.replace("DSB.html", "lookbook.html")}?gallery=${encodeURIComponent(data.shareId)}`;
     if (clientGeneratedUrlDisplayField) clientGeneratedUrlDisplayField.value = securePath;
+    updatePublishControls(data);
 
     try {
         const getPin = firebase.app().functions("asia-south1").httpsCallable("getGalleryPin");
@@ -110,6 +110,7 @@ async function restoreExistingLinkIfValid(projectId) {
         }
     }
 }
+
 function setActiveProject(projectId, coupleName) {
     activeProjectId = projectId;
     activeProjectName = coupleName;
@@ -117,11 +118,11 @@ function setActiveProject(projectId, coupleName) {
         activeClientIndicator.innerText = `Currently working on: ${coupleName}`;
         activeClientIndicator.style.color = "var(--primary-blue)";
     }
-    // Jab client badle, uska tracker data + storage bhi reload karo
     listenLiveClientPipeline();
     restoreExistingLinkIfValid(projectId);
     calculateCloudStorageMetrics();
 }
+
 // 🛠️ FEATURE 1: IMAGES UPLOADER ENGINE VALIDATION RULES 
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"];
 const MAX_FILE_SIZE_MB = 30;
@@ -136,7 +137,6 @@ if (uploadImagesBtn) {
         const files = bulkImagePickerFiles.files;
         if (files.length === 0) return alert("Please select files first!");
 
-        // 🛡️ ACTION GUARD: Only verify context right when hitting the server
         const isUserLogged = localStorage.getItem('isLoggedIn') === 'true';
         if (!isUserLogged) {
             return alert("Session Out: Unauthorized action blocked. Please login again.");
@@ -148,7 +148,6 @@ if (uploadImagesBtn) {
             return alert(`⚠️ Too many files selected! Max ${MAX_FILES_PER_UPLOAD} photos allowed per upload. You selected ${fileArray.length}.`);
         }
 
-        // 2) Type + size check — har file ko validate karo
         const invalidTypeFiles = [];
         const oversizedFiles = [];
 
@@ -168,20 +167,17 @@ if (uploadImagesBtn) {
         if (oversizedFiles.length > 0) {
             return alert(`❌ Each photo must be under ${MAX_FILE_SIZE_MB}MB.\n\nToo large:\n${oversizedFiles.slice(0, 5).join("\n")}${oversizedFiles.length > 5 ? `\n...and ${oversizedFiles.length - 5} more` : ""}`);
         }
-        // ✅ Validation passed — ab upload shuru karo
 
         uploadImagesBtn.innerText = "Uploading Assets...";
         uploadImagesBtn.disabled = true;
         let uploadCounter = 0;
 
-        // 🆕 Category dropdown se select ki hui category yahan padho
         const selectedCategory = document.getElementById("photoCategorySelect")?.value || "Wedding";
 
         fileArray.forEach((file, index) => {
             const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
             const fileRef = storage.ref().child(`client-albums/${currentUid}/${activeProjectId}/${Date.now()}-${index}-${safeName}`);
 
-            // 🆕 Category ko file ke saath metadata me save karo
             const metadata = {
                 customMetadata: {
                     category: selectedCategory,
@@ -209,6 +205,7 @@ if (uploadImagesBtn) {
         });
     });
 }
+
 // 🔗 FEATURE 2: SECURE CLIENT LINK GENERATOR
 if (generateClientLinkBtn) {
     generateClientLinkBtn.addEventListener("click", async function() {
@@ -216,9 +213,8 @@ if (generateClientLinkBtn) {
 
         if (!(await canManageStudio())) return;
 
-        // 🛠️ FIX: this used to warn-then-allow regenerating 
         const existing = findLoadedProject(activeProjectId);
-        const existingStillValid = existing?.shareId && existing?.status === "sent_to_client" || existing?.status === "pending_review" || existing?.status === "unlocked";
+        const existingStillValid = existing?.shareId && LIVE_LINK_STATES.includes(existing?.workflowState);
         if (existingStillValid) {
             const refresh = confirm(
                 `This client already has an active link.\n\n` +
@@ -258,7 +254,6 @@ if (generateClientLinkBtn) {
                 pinDisplay.style.display = "block";
             }
 
-            // Preview upload + publishGalleryPreviews already write previewFiles/previewCategories.
             await createGalleryPreviews(shareId);
 
             alert("Secure gallery ready. Send the link and PIN separately to your client. 24-Hour protection protocol is active.");
@@ -329,7 +324,7 @@ function resizePreview(blob) {
         image.src = objectUrl;
     });
 }
-//f store img
+
 function listenLiveClientPipeline() {
     if (!activeProjectId || !currentUid) return;
 
@@ -339,13 +334,14 @@ function listenLiveClientPipeline() {
 
             if (doc.exists) {
                 const data = doc.data();
+                updatePublishControls(data);
 
                 if (paymentStatusBadgeIndicator) {
-                    if (data.status === "unlocked") {
-                        paymentStatusBadgeIndicator.innerText = "Unlocked & Paid ✅";
+                    if (data.workflowState === "published") {
+                        paymentStatusBadgeIndicator.innerText = "Published ✅";
                         paymentStatusBadgeIndicator.style.color = "#00cca3";
-                    } else if (data.status === "pending_review") {
-                        paymentStatusBadgeIndicator.innerText = "Review Compiled! (Payment Needed)";
+                    } else if (data.workflowState === "selection_completed") {
+                        paymentStatusBadgeIndicator.innerText = "Review Compiled! (Choose theme & Publish)";
                         paymentStatusBadgeIndicator.style.color = "#ef4444";
                     } else {
                         paymentStatusBadgeIndicator.innerText = "Awaiting Client Action";
@@ -356,15 +352,14 @@ function listenLiveClientPipeline() {
                 if (selectionStatsStatusSummaryCounter) {
                     if (data.selectedPhotoIds && data.selectedPhotoIds.length > 0 && data.shareId) {
                         selectionStatsStatusSummaryCounter.innerText = `Client selected total ${data.selectedPhotoIds.length} photos.`;
-                        
+
+                        const canEdit = data.workflowState === "selection_completed";
                         data.selectedPhotoIds.forEach((file) => {
                             storage.ref(`gallery-previews/${data.shareId}/${file}`).getDownloadURL()
                                 .then((url) => {
-                                    // 🛠️ NAYA WRAPPER LOGIC 🛠️
                                     const wrapper = document.createElement("div");
                                     wrapper.className = "thumbnail-wrapper";
 
-                                    // 1. Image Element & Lightbox Trigger
                                     const img = document.createElement("img");
                                     img.src = url;
                                     img.onclick = () => {
@@ -376,33 +371,32 @@ function listenLiveClientPipeline() {
                                         }
                                     };
 
-                                    // 2. Remove Button Element
-                                    const removeBtn = document.createElement("button");
-                                    removeBtn.className = "remove-photo-btn";
-                                    removeBtn.innerHTML = '<i class="fas fa-trash"></i>';
-                                    removeBtn.title = "Remove from selection";
-                                    
-                                    // 3. Delete Logic (Live Firestore Update)
-                                    removeBtn.onclick = async (e) => {
-                                        e.stopPropagation(); // Parent (image) click trigger hone se rokta hai
-                                        if (confirm("Are you sure you want to remove this photo from the client's selection?")) {
+                                    wrapper.appendChild(img);
+
+                                    // Removing a photo only makes sense while still reviewing —
+                                    // once published, use "Revert to Editing" first.
+                                    if (canEdit) {
+                                        const removeBtn = document.createElement("button");
+                                        removeBtn.className = "remove-photo-btn";
+                                        removeBtn.innerHTML = '<i class="fas fa-trash"></i>';
+                                        removeBtn.title = "Remove from selection";
+
+                                        removeBtn.onclick = async (e) => {
+                                            e.stopPropagation();
+                                            if (!confirm("Are you sure you want to remove this photo from the client's selection?")) return;
+                                            removeBtn.disabled = true;
                                             try {
-                                                await db.collection("users").doc(currentUid)
-                                                        .collection("clientProjects").doc(activeProjectId)
-                                                        .update({
-                                                            selectedPhotoIds: firebase.firestore.FieldValue.arrayRemove(file)
-                                                        });
-                                                // Note: Snapshot listener apne aap UI ko bina refresh kiye update kar dega!
+                                                const removePhoto = firebase.app().functions("asia-south1").httpsCallable("removeSelectedPhoto");
+                                                await removePhoto({ projectId: activeProjectId, file });
                                             } catch (err) {
                                                 console.error("Error removing photo:", err);
-                                                alert("Failed to remove photo.");
+                                                alert("Failed to remove photo: " + (err.message || "Try again."));
+                                                removeBtn.disabled = false;
                                             }
-                                        }
-                                    };
+                                        };
 
-                                    // Append elements
-                                    wrapper.appendChild(img);
-                                    wrapper.appendChild(removeBtn);
+                                        wrapper.appendChild(removeBtn);
+                                    }
 
                                     if (liveClientSelectionThumbnailsGrid) {
                                         liveClientSelectionThumbnailsGrid.appendChild(wrapper);
@@ -414,32 +408,88 @@ function listenLiveClientPipeline() {
                         selectionStatsStatusSummaryCounter.innerText = "Awaiting client selection pipeline...";
                     }
                 }
+            } else {
+                updatePublishControls(null);
             }
         }, err => console.log("Watchdog passive error:", err));
 }
-// 💸 FEATURE 4: PREMIUM LOCK REVENUE
+
+// 💸 FEATURE 4: REVIEW & FINALIZE — Publish Gallery / Revert to Editing
+const revertToEditingBtn = document.getElementById("revertToEditingBtn");
+
+// Keeps the Publish/Revert buttons in sync with the gallery's current
+// workflowState — same URL, same PIN, only the state (and what the
+// buttons let you do) changes.
+function updatePublishControls(data) {
+    if (!unlockPremiumGalleryBtn) return;
+    const state = data?.workflowState;
+
+    if (state === "published") {
+        unlockPremiumGalleryBtn.style.display = "none";
+        if (revertToEditingBtn) revertToEditingBtn.style.display = "inline-flex";
+    } else if (state === "selection_completed") {
+        unlockPremiumGalleryBtn.style.display = "inline-flex";
+        unlockPremiumGalleryBtn.disabled = false;
+        unlockPremiumGalleryBtn.innerHTML = '<i class="fas fa-unlock"></i> Publish Gallery';
+        if (revertToEditingBtn) revertToEditingBtn.style.display = "none";
+    } else {
+        // selection_open or no gallery yet — nothing to publish
+        unlockPremiumGalleryBtn.style.display = "inline-flex";
+        unlockPremiumGalleryBtn.disabled = true;
+        unlockPremiumGalleryBtn.innerHTML = '<i class="fas fa-unlock"></i> Awaiting Client Selection';
+        if (revertToEditingBtn) revertToEditingBtn.style.display = "none";
+    }
+}
+
 if (unlockPremiumGalleryBtn) {
     unlockPremiumGalleryBtn.addEventListener("click", async function() {
         if (!activeProjectId) return alert("⚠️ Please select a client from the table first!");
-
         if (!(await canManageStudio())) return;
 
-        const userDoc = await db.collection("users").doc(currentUid).get();
-        const userData = userDoc.exists ? userDoc.data() : {};
-        const expiresValue = userData.subscriptionExpiresAt;
-        const expiresAtMs = expiresValue && typeof expiresValue.toMillis === "function" ? expiresValue.toMillis() : null;
-        const subscriptionActive = userData.subscriptionStatus?.trim() === "active"
-            && (expiresAtMs === null || expiresAtMs > Date.now());
-        if (!subscriptionActive) {
-            return alert("⚠️ HD ZIP download is a paid-plan feature. Please subscribe to unlock this for your clients.");
+        const projectData = findLoadedProject(activeProjectId);
+        if (!projectData?.shareId) return alert("⚠️ Generate a client link first!");
+        if (projectData.workflowState !== "selection_completed") {
+            return alert("⚠️ Client hasn't submitted their selection yet.");
+        }
+        const themeId = projectData.selectedThemeId;
+        if (!themeId) {
+            return alert("⚠️ Choose a theme from Gallery Themes first — it gets locked in when you publish.");
         }
 
-        db.collection("users").doc(currentUid).collection("clientProjects").doc(activeProjectId).set({
-            status: "unlocked",
-            unlockedAt: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: true }).then(() => alert("💸 Gallery Unlocked! Your client can now download the full HD ZIP."));
+        unlockPremiumGalleryBtn.disabled = true;
+        unlockPremiumGalleryBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Publishing...';
+
+        try {
+            const publish = firebase.app().functions("asia-south1").httpsCallable("applyThemeAndPublish");
+            await publish({ projectId: activeProjectId, themeId });
+            alert("💸 Gallery Published! Your client can now view the final themed gallery and download the full HD ZIP.");
+        } catch (error) {
+            console.error("Error publishing gallery:", error);
+            alert("Could not publish the gallery: " + (error.message || "Try again."));
+            unlockPremiumGalleryBtn.disabled = false;
+            unlockPremiumGalleryBtn.innerHTML = '<i class="fas fa-unlock"></i> Publish Gallery';
+        }
     });
 }
+
+if (revertToEditingBtn) {
+    revertToEditingBtn.addEventListener("click", async function() {
+        if (!activeProjectId) return;
+        if (!confirm("Reopen this gallery for editing? Your client will temporarily see the review-in-progress screen instead of the final gallery, until you publish again.")) return;
+
+        revertToEditingBtn.disabled = true;
+        try {
+            const revert = firebase.app().functions("asia-south1").httpsCallable("revertGalleryToEditing");
+            await revert({ projectId: activeProjectId });
+        } catch (error) {
+            console.error("Error reverting gallery:", error);
+            alert("Could not reopen the gallery: " + (error.message || "Try again."));
+        } finally {
+            revertToEditingBtn.disabled = false;
+        }
+    });
+}
+
 // 🎛️ FEATURE 5: STORAGE METRICS CALCULATOR
 function calculateCloudStorageMetrics() {
     if (!storageTextCounter || !storage || !currentUid || !activeProjectId) return;
@@ -453,11 +503,10 @@ function calculateCloudStorageMetrics() {
         if (progress) progress.style.width = `${Math.min(100, (megabytesUsed / (20 * 1024)) * 100)}%`;
     }).catch(() => {});
 }
-// 🚪 SECURE LOGOUT PIPELINE (Clears Auth + LocalStorage)
+
+// 🚪 SECURE LOGOUT PIPELINE
 document.addEventListener("click", (e) => {
     if (e.target.closest("#signOutMasterBtn")) {
-
-        // 1. Firebase end
         firebase.auth().signOut().then(() => {
             console.log("🔴 Firebase Auth Logged Out");
             localStorage.removeItem('isLoggedIn');
@@ -470,14 +519,14 @@ document.addEventListener("click", (e) => {
     }
 });
 
-// 🆕 STEP A: NEW CLIENT MODAL — Firestore add new clint
+// 🆕 STEP A: NEW CLIENT MODAL
 const newClientModal = document.getElementById("newClientModal");
 const closeModalBtn = document.getElementById("closeModalBtn");
 const cancelModalBtn = document.getElementById("cancelModalBtn");
 const createClientBtn = document.getElementById("createClientBtn");
 const clientNameInput = document.getElementById("clientNameInput");
 const eventTypeInput = document.getElementById("eventTypeInput");
-const newClientTriggerBtn = document.querySelector(".tracker-section .btn-primary-small"); // "New Client" wala button
+const newClientTriggerBtn = document.querySelector(".tracker-section .btn-primary-small"); 
 
 function openNewClientModal() {
     if (newClientModal) newClientModal.classList.add("active");
@@ -504,7 +553,6 @@ if (createClientBtn) {
         createClientBtn.innerText = "Creating...";
         createClientBtn.disabled = true;
 
-        // 🆕 Goes through a Cloud Function now instead of writing to Firestore
         try {
             const createProject = firebase.app().functions("asia-south1").httpsCallable("createClientProject");
             const result = await createProject({ coupleName, eventType });
@@ -512,7 +560,6 @@ if (createClientBtn) {
             closeNewClientModal();
             createClientBtn.innerText = "Create & Go to Upload";
             createClientBtn.disabled = false;
-            // Naya client banate hi usko automatically "active" bhi bana do
             setActiveProject(result.data.projectId, coupleName);
         } catch (err) {
             console.error("Error creating client project:", err);
@@ -523,29 +570,23 @@ if (createClientBtn) {
     });
 }
 
-// ==========================================
-// 🚀 CORRECTED: EDIT CLIENT MODAL LOGIC
-// ==========================================
+// 🚀 EDIT CLIENT MODAL LOGIC
 const editClientModal = document.getElementById("editClientModal");
 const closeEditModalBtn = document.getElementById("closeEditModalBtn");
 const cancelEditModalBtn = document.getElementById("cancelEditModalBtn");
 const saveClientEditBtn = document.getElementById("saveClientEditBtn");
 
-// 1. Modal Band Karne Ka Function
 function closeEditModal() {
     if(editClientModal) {
         editClientModal.classList.remove("active");
     }
 }
 
-// Cancel aur (X) button par ye function lagao
 if (closeEditModalBtn) closeEditModalBtn.addEventListener("click", closeEditModal);
 if (cancelEditModalBtn) cancelEditModalBtn.addEventListener("click", closeEditModal);
 
-// 2. Save Changes Button Ka Logic
 if (saveClientEditBtn) {
     saveClientEditBtn.addEventListener("click", async () => {
-        // Correct Input IDs used here
         const projectId = document.getElementById("editClientIdInput").value;
         const newName = document.getElementById("editClientNameInput").value.trim();
         const newEvent = document.getElementById("editEventTypeInput").value;
@@ -559,23 +600,19 @@ if (saveClientEditBtn) {
         saveClientEditBtn.disabled = true;
 
         try {
-            // Firebase Firestore mein Data Update Karo
             await db.collection("users").doc(currentUid).collection("clientProjects").doc(projectId).update({
                 coupleName: newName,
                 eventType: newEvent
             });
 
-            // Update successful hone par:
             closeEditModal(); 
             saveClientEditBtn.innerText = "Save Changes";
             saveClientEditBtn.disabled = false;
             
-            // UI Update: Agar same client active tha, toh top indicator update kardo
             if (activeProjectId === projectId) {
                 setActiveProject(projectId, newName);
             }
 
-            // UI Update: Table ko wapis render karo naye naam ke sath (Tera function)
             if (typeof renderTablePage === "function") {
                 renderTablePage(); 
             }
@@ -589,8 +626,7 @@ if (saveClientEditBtn) {
     });
 }
 
-
-// 🆕 STEP B: CLIENT TRACKER TABLE — 
+// 🆕 STEP B: CLIENT TRACKER TABLE 
 const clientTrackerTableBody = document.getElementById("clientTrackerTableBody");
 const clientSearchInput = document.getElementById("clientSearchInput");
 const prevPageBtn = document.getElementById("prevPageBtn");
@@ -606,23 +642,21 @@ function renderClientRow(projectId, data) {
     tr.setAttribute("data-project-id", projectId);
     tr.setAttribute("data-couple-name", data.coupleName || "Unnamed");
 
-    // Selection status badge decide karna
     let statusHtml = "";
-    if (data.status === "unlocked") {
-        statusHtml = `<span class="status-badge success">✅ Unlocked & Paid</span>`;
+    if (data.workflowState === "published") {
+        statusHtml = `<span class="status-badge success">✅ Published</span>`;
     } else if (data.selectedPhotoIds && data.selectedPhotoIds.length > 0) {
         statusHtml = `<span class="status-badge success">✅ ${data.selectedPhotoIds.length} Photos Picked</span>`;
-    } else if (data.status === "sent_to_client") {
+    } else if (data.workflowState === "selection_open") {
         statusHtml = `<span class="status-badge pending">⏳ Awaiting Selection</span>`;
     } else {
         statusHtml = `<span class="status-badge pending">🆕 Not Sent Yet</span>`;
     }
 
-    // Event tag color class
     const eventClass = data.eventType === "Pre-Wedding" ? "event-tag pre-wed" : "event-tag";
-
     const safeName = escapeHtml(data.coupleName || "Unnamed");
     const safeEvent = escapeHtml(data.eventType || "");
+    
     tr.innerHTML = `
         <td data-label="Client Name">
             <div class="client-info">
@@ -636,11 +670,9 @@ function renderClientRow(projectId, data) {
             <button class="action-btn text-btn copy-project-link-btn" data-project-id="${projectId}">
                 <i class="far fa-copy"></i> Copy Link
             </button>
-            <!-- NAYA EDIT BUTTON 👇 -->
             <button class="action-btn text-btn edit-project-btn" data-project-id="${projectId}" data-couple-name="${safeName}" data-event-type="${safeEvent}" style="color:#0ea5e9; border-color:#bae6fd;">
                 <i class="fas fa-pencil-alt"></i>
             </button>
-            <!-- DELETE BUTTON -->
             <button class="action-btn text-btn delete-project-btn" data-project-id="${projectId}" data-couple-name="${safeName}" style="color:#ef4444; border-color:#fecaca;">
                 <i class="fas fa-trash"></i>
             </button>
@@ -649,13 +681,11 @@ function renderClientRow(projectId, data) {
     return tr;
 }
 
-// 🆕 RENDER FUNCTION 
 function renderTablePage() {
     if (!clientTrackerTableBody) return;
 
     const query = (clientSearchInput?.value || "").trim().toLowerCase();
 
-    // Pehle search se filter karo
     const filtered = query
         ? allClientDocs.filter(item => (item.data.coupleName || "").toLowerCase().includes(query))
         : allClientDocs;
@@ -678,12 +708,11 @@ function renderTablePage() {
         });
     }
 
-    // Pagination controls update karo
     if (paginationInfo) paginationInfo.innerText = `Page ${currentPage} of ${totalPages}`;
     if (prevPageBtn) prevPageBtn.disabled = currentPage <= 1;
     if (nextPageBtn) nextPageBtn.disabled = currentPage >= totalPages;
 }
-// 🔴 FIRESTORE LISTENER 
+
 function listenClientTrackerTable() {
     if (!clientTrackerTableBody || !currentUid) return;
 
@@ -699,10 +728,10 @@ function listenClientTrackerTable() {
                 allClientDocs.push({ id: doc.id, data });
 
                 const hasSelectedPhotos = data.selectedPhotoIds && data.selectedPhotoIds.length > 0;
-                if (data.status === "sent_to_client" || data.status === "pending_review") {
+                if (data.workflowState === "selection_open" || data.workflowState === "selection_completed") {
                     activeLinksCount++;
                 }
-                if (hasSelectedPhotos && data.status !== "unlocked") {
+                if (hasSelectedPhotos && data.workflowState !== "published") {
                     readyToDeliverCount++;
                 }
             });
@@ -714,7 +743,6 @@ function listenClientTrackerTable() {
         });
 }
 
-// 🆕 HELPER FUNCTION — dashboard ke 2 metric cards update karta hai
 function updateDashboardMetrics(activeLinks, readyToDeliver) {
     const activeLinksEl = document.getElementById("activeLinksCount");
     const readyToDeliverEl = document.getElementById("readyToDeliverCount");
@@ -723,8 +751,6 @@ function updateDashboardMetrics(activeLinks, readyToDeliver) {
     if (readyToDeliverEl) readyToDeliverEl.innerHTML = `${readyToDeliver} <span class="metric-label">Pending Galleries</span>`;
 }
 
-// 🆕 SEARCH — ab sirf filter karta hai, page bhi reset karta hai
-
 if (clientSearchInput) {
     clientSearchInput.addEventListener("input", () => {
         currentPage = 1;
@@ -732,9 +758,6 @@ if (clientSearchInput) {
     });
 }
 
-// ==========================================================================
-// 🆕 PAGINATION BUTTONS
-// ==========================================================================
 if (prevPageBtn) {
     prevPageBtn.addEventListener("click", () => {
         if (currentPage > 1) { currentPage--; renderTablePage(); }
@@ -747,42 +770,39 @@ if (nextPageBtn) {
     });
 }
 
-// 🆕 STEP C: TABLE ROW 
+// 🆕 STEP C: TABLE ROW ACTIONS
 if (clientTrackerTableBody) {
     clientTrackerTableBody.addEventListener("click", async (e) => {
         
-        // 1. COPY LINK (Tumhara Advance Code - Exactly same)
+        // 1. COPY LINK
         const copyBtn = e.target.closest(".copy-project-link-btn");
         if (copyBtn) {
             const projectId = copyBtn.getAttribute("data-project-id");
             const project = allClientDocs.find(item => item.id === projectId)?.data;
-            // 🛠️ FIX: purana code yahan "?uid=...&project=..." wala alag, broken link
-            // banata tha jo lookbook.js samajh hi nahi paata (wo sirf "?gallery=" padhta hai).
-            if (!project?.shareId || project.status === "created") {
+            if (!project?.shareId || project.workflowState === "draft") {
                 return alert("Select this client, then use Generate Client Link before sharing it.");
             }
             const link = `${window.location.href.split('DSB.html')[0]}lookbook.html?gallery=${encodeURIComponent(project.shareId)}`;
             navigator.clipboard.writeText(link).then(() => alert("📋 Link copied to clipboard!"));
-            return; // row-select trigger na ho isliye yahin ruk jao
+            return; 
         }
 
-        // ==========================================
-        // 🚀 NAYA: EDIT CLIENT LOGIC (Ye add kiya)
-        // ==========================================
+        // 2. EDIT PROJECT
         const editBtn = e.target.closest(".edit-project-btn");
         if (editBtn) {
             document.getElementById("editClientIdInput").value = editBtn.getAttribute("data-project-id");
             document.getElementById("editClientNameInput").value = editBtn.getAttribute("data-couple-name");
             document.getElementById("editEventTypeInput").value = editBtn.getAttribute("data-event-type");
             document.getElementById("editClientModal").classList.add("active");
-            return; // Edit modal khule toh row selection click na ho, isliye yahan return kiya
+            return; 
         }
 
-        // 2. DELETE PROJECT (Tumhara Advance Code - Exactly same)
+        // 3. DELETE PROJECT
         const deleteBtn = e.target.closest(".delete-project-btn");
         if (deleteBtn) {
             const projectId = deleteBtn.getAttribute("data-project-id");
             const coupleName = deleteBtn.getAttribute("data-couple-name");
+            const project = allClientDocs.find(item => item.id === projectId)?.data;
 
             const confirmed = confirm(`⚠️ Are you sure you want to permanently delete "${coupleName}"?\n\nThis will delete ALL photos and cannot be undone.`);
             if (!confirmed) return;
@@ -791,15 +811,19 @@ if (clientTrackerTableBody) {
             deleteBtn.disabled = true;
 
             try {
-                // 1. Pehle Storage se saari photos delete karo
+                // Remove Storage Assets
                 const folderRef = storage.ref().child(`client-albums/${currentUid}/${projectId}`);
                 const res = await folderRef.listAll();
                 await Promise.all(res.items.map(item => item.delete()));
 
-                // 2. Fir Firestore se project document delete karo
+                // Remove Client Project Doc
                 await db.collection("users").doc(currentUid).collection("clientProjects").doc(projectId).delete();
 
-                // 3. Agar yehi client abhi "active" tha, to active state clear karo
+                // 🛠️ NEW: Remove Orphan Public Gallery to prevent leaks
+                if (project && project.shareId) {
+                    await db.collection("publicGalleries").doc(project.shareId).delete().catch(e => console.warn("Failed to delete public gallery data:", e));
+                }
+
                 if (activeProjectId === projectId) {
                     activeProjectId = null;
                     activeProjectName = null;
@@ -819,27 +843,24 @@ if (clientTrackerTableBody) {
             return;
         }
 
-        // 3. ROW SELECTION & HIGHLIGHT (Tumhara purana code)
+        // 4. ROW SELECTION
         const row = e.target.closest("tr[data-project-id]");
         if (!row) return;
         const projectId = row.getAttribute("data-project-id");
         const coupleName = row.getAttribute("data-couple-name");
         setActiveProject(projectId, coupleName);
 
-        // Visual feedback: saari rows se highlight hatao, isi row pe lagao
         document.querySelectorAll("#clientTrackerTableBody tr").forEach(r => r.classList.remove("active-row"));
         row.classList.add("active-row");
 
-        // ==========================================
-        // 🚀 NAYA: AUTO-NAVIGATE TO OVERVIEW TAB
-        // ==========================================
         const overviewTab = document.querySelector('.nav-item[data-target="view-overview"]');
         if (overviewTab) {
             overviewTab.click(); 
         }
     });
 }
-//PAGE LOAD — table listener 
+
+// PAGE LOAD
 firebase.auth().onAuthStateChanged((user) => {
     if (!user) {
         localStorage.removeItem("isLoggedIn");
@@ -858,9 +879,8 @@ firebase.auth().onAuthStateChanged((user) => {
         updateSubscriptionUI();
     }
 });
-// ==========================================================================
-// 🆕 SUBSCRIPTION TAB UI — current plan status dikhata hai
-// ==========================================================================
+
+// SUBSCRIPTION TAB UI
 function updateSubscriptionUI() {
     if (!currentUid) return;
     db.collection("users").doc(currentUid).get().then((doc) => {

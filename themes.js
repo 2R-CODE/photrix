@@ -1,4 +1,10 @@
 // 🎨 THEMES MANAGEMENT MODULE (`themes.js`)
+// Selecting a theme here only sets a PENDING choice on the photographer's
+// own clientProjects doc — it never touches publicGalleries directly.
+// The theme only becomes visible to the client when "Publish Gallery" is
+// pressed (applyThemeAndPublish Cloud Function), which locks it in on both
+// documents atomically. This keeps "photographer's own single-document
+// write" separate from "client-facing, cross-collection write".
 async function loadGalleryThemes() {
     const container = document.getElementById("themesGridContainer");
     if (!container) return;
@@ -18,22 +24,25 @@ async function loadGalleryThemes() {
 
         container.innerHTML = "";
 
-        // Active project ka current theme kya hai?
-        let currentThemeId = null;
-        // Global variables `activeProjectId` and `currentUid` check (coming from DSB.js)
+        // Active project ka pending theme aur uska publish status kya hai?
+        let pendingThemeId = null;
+        let isPublished = false;
         if (typeof activeProjectId !== 'undefined' && activeProjectId) {
             const projectDoc = await db.collection("users").doc(currentUid)
                 .collection("clientProjects").doc(activeProjectId).get();
-            currentThemeId = projectDoc.exists ? projectDoc.data().selectedThemeId : null;
+            if (projectDoc.exists) {
+                pendingThemeId = projectDoc.data().selectedThemeId || null;
+                isPublished = projectDoc.data().workflowState === "published";
+            }
         }
 
         snapshot.forEach(doc => {
             const theme = doc.data();
             const themeId = doc.id;
-            const isSelected = themeId === currentThemeId;
+            const isPending = themeId === pendingThemeId;
 
             const card = document.createElement("div");
-            card.className = `theme-card${isSelected ? " theme-card-selected" : ""}`;
+            card.className = `theme-card${isPending ? " theme-card-selected" : ""}`;
             card.setAttribute("data-theme-id", themeId);
             card.setAttribute("data-css-class", theme.cssClass);
 
@@ -49,7 +58,7 @@ async function loadGalleryThemes() {
                     <strong>${escapeHtml(theme.name)}</strong>
                     <span>${escapeHtml(theme.description || "")}</span>
                 </div>
-                ${isSelected ? `<div class="theme-selected-badge">✓ Applied</div>` : ""}
+                ${isPending ? `<div class="theme-selected-badge">${isPublished ? "✓ Live for client" : "⏳ Pending — publish to apply"}</div>` : ""}
             `;
 
             card.addEventListener("click", () => applyThemeToClient(themeId, theme.cssClass, theme.name));
@@ -70,19 +79,28 @@ async function applyThemeToClient(themeId, cssClass, themeName) {
     if (typeof canManageStudio === 'function' && !(await canManageStudio())) return;
 
     try {
-        // 1. clientProjects me selectedThemeId update karo
-        await db.collection("users").doc(currentUid)
-            .collection("clientProjects").doc(activeProjectId)
-            .update({ selectedThemeId: themeId });
+        const projectRef = db.collection("users").doc(currentUid)
+            .collection("clientProjects").doc(activeProjectId);
 
-        alert(`✅ Theme "${themeName}" applied! Client will see this theme when they open their gallery.`);
+        // Owner-scoped, single-document write — safe as a direct Firestore
+        // write. This is just a PENDING choice; it does not touch
+        // publicGalleries and the client cannot see it yet.
+        await projectRef.update({ selectedThemeId: themeId });
 
-        // Cards refresh karo — selected badge update ho
+        // Live-preview: swap the theme class on the dashboard's own
+        // selected-photos thumbnail grid so the photographer can see the
+        // look before publishing — purely local, no Firestore write.
+        if (typeof liveClientSelectionThumbnailsGrid !== 'undefined' && liveClientSelectionThumbnailsGrid) {
+            liveClientSelectionThumbnailsGrid.className = "live-thumbnails-grid " + cssClass;
+        }
+
+        alert(`🎨 "${themeName}" set as the pending theme. It'll go live for your client as soon as you hit "Publish Gallery".`);
+
         loadGalleryThemes();
 
     } catch (err) {
         console.error("Theme apply error:", err);
-        alert("❌ Could not apply theme. Try again.");
+        alert("❌ Could not set theme. Try again.");
     }
 }
 
