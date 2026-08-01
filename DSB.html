@@ -5,7 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PHOTRIX - Photographer Studio</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="DSB.css">
+    <link rel="stylesheet" href="subscription.css">
 </head>
 <body>
 
@@ -105,7 +108,7 @@
                             <input type="file" id="realFileInput" multiple hidden accept="image/*">
                             <i class="fas fa-cloud-upload-alt dropzone-icon"></i>
                             <h3>Drag & Drop high-res photos here</h3>
-                            <p>or click to browse files from your computer (Max 500 photos at once)</p>
+                            <p>or click to browse — up to 500 photos at a time</p>
                             
                             <div class="watermark-toggle">
                                 <input type="checkbox" id="watermarkCheck" checked>
@@ -160,7 +163,7 @@
     </button>
 
 <div class="generated-link-row">
-    <input type="text" id="clientGeneratedUrlDisplayField" class="form-control" readonly placeholder="Link generate karne ke baad yahan dikhega...">
+    <input type="text" id="clientGeneratedUrlDisplayField" class="form-control" readonly placeholder="Your client link will appear here once generated...">
     <button class="action-btn text-btn" id="copySecureLinkBtn">
         <i class="far fa-copy"></i> Copy
     </button>
@@ -173,7 +176,7 @@
 
                         <div class="live-tracker-status-row">
                             <span id="paymentStatusBadgeIndicator" class="status-badge pending">Awaiting Client Action</span>
-                            <span id="selectionStatsStatusSummaryCounter" class="selection-stats-text">Awaiting client selection pipeline...</span>
+                            <span id="selectionStatsStatusSummaryCounter" class="selection-stats-text">No selections yet — waiting on your client.</span>
                             <button class="action-btn btn-green" id="unlockPremiumGalleryBtn">
                                 <i class="fas fa-unlock"></i> Publish Gallery
                             </button>
@@ -237,7 +240,7 @@
                 <!--SUBSCRIPTION TAB -->
                 <div id="view-subscription" class="view-section">
     <div class="section-heading">
-        <h2>Subscription & Storage</h2>
+        <h2>Subscription</h2>
         <p>Manage your plan and billing.</p>
     </div>
 
@@ -251,41 +254,62 @@
         <p id="subscriptionStatusText" class="subscription-status-text">Checking your account status...</p>
     </div>
 
-    <div class="plans-grid">
-    <div class="plan-card">
-        <h3>Starter</h3>
-        <p class="plan-price">₹700 <span>/ 6 months</span></p>
-        <ul class="plan-features">
-            <li><i class="fas fa-check"></i> Up to 50 client galleries</li>
-            <li><i class="fas fa-check"></i> 20 GB storage</li>
-            <li><i class="fas fa-check"></i> Secure client links</li>
-            <li><i class="fas fa-check"></i> ZIP downloads</li>
-        </ul>
-        <a href="https://wa.me/919265536548?text=Hi%20PHOTRIX%2C%20I%20want%20to%20subscribe%20to%20the%20Starter%20plan." target="_blank" rel="noopener noreferrer" class="btn-primary-small plan-subscribe-btn" data-plan-name="Starter" data-plan-storage="20">
-            <i class="fas fa-crown"></i> Subscribe Now
-        </a>
+    <div class="plan-toggle-wrap">
+        <div class="plan-toggle" role="tablist">
+            <button type="button" class="plan-toggle-btn active" data-plan="starter">Starter</button>
+            <button type="button" class="plan-toggle-btn" data-plan="growth">Growth</button>
+        </div>
+
+        <div class="plan-single-card">
+            <div class="plan-content active" data-plan-content="starter">
+                <h3>Starter</h3>
+                <p class="plan-tagline">Perfect if you're just getting started</p>
+                <p class="plan-price">₹700 <span>/ 6 months</span></p>
+                <p class="plan-price-sub">≈ ₹117/month</p>
+                <ul class="plan-features">
+                    <li><i class="fas fa-check"></i> Up to 50 client galleries</li>
+                    <li><i class="fas fa-check"></i> 20 GB storage</li>
+                    <li><i class="fas fa-check"></i> Secure client links</li>
+                    <li><i class="fas fa-check"></i> ZIP downloads</li>
+                </ul>
+                <a href="https://wa.me/919265536548?text=Hi%20PHOTRIX%2C%20I%20want%20to%20subscribe%20to%20the%20Starter%20plan." target="_blank" rel="noopener noreferrer" class="btn-primary-small plan-subscribe-btn plan-btn-secondary" data-plan-name="Starter" data-plan-storage="20">
+                    <i class="fas fa-crown"></i> Subscribe Now
+                </a>
+            </div>
+
+            <div class="plan-content" data-plan-content="growth">
+                <span class="plan-badge-inline">Most Popular</span>
+                <h3>Growth</h3>
+                <p class="plan-tagline">For studios booking steadily every month</p>
+                <p class="plan-price">₹1400 <span>/ 6 months</span></p>
+                <p class="plan-price-sub">≈ ₹233/month</p>
+                <ul class="plan-features">
+                    <li><i class="fas fa-check"></i> <strong>Up to 150 client galleries</strong></li>
+                    <li><i class="fas fa-check"></i> <strong>50 GB storage</strong></li>
+                    <li><i class="fas fa-check"></i> Secure client links</li>
+                    <li><i class="fas fa-check"></i> ZIP downloads</li>
+                    <li><i class="fas fa-check"></i> <strong>Priority support</strong> <span class="feature-new-tag">New</span></li>
+                </ul>
+                <a href="https://wa.me/919265536548?text=Hi%20PHOTRIX%2C%20I%20want%20to%20subscribe%20to%20the%20Growth%20plan." target="_blank" rel="noopener noreferrer" class="btn-primary-small plan-subscribe-btn" data-plan-name="Growth" data-plan-storage="50">
+                    <i class="fas fa-crown"></i> Subscribe Now
+                </a>
+            </div>
+        </div>
     </div>
 
-    <div class="plan-card featured">
-        <span class="plan-badge">Most Popular</span>
-        <h3>Growth</h3>
-        <p class="plan-price">₹1400 <span>/ 6 months</span></p>
-        <ul class="plan-features">
-            <li><i class="fas fa-check"></i> Up to 150 client galleries</li>
-            <li><i class="fas fa-check"></i> 50 GB storage</li>
-            <li><i class="fas fa-check"></i> Secure client links</li>
-            <li><i class="fas fa-check"></i> ZIP downloads</li>
-            <li><i class="fas fa-check"></i> Priority support</li>
-        </ul>
-        <a href="https://wa.me/919265536548?text=Hi%20PHOTRIX%2C%20I%20want%20to%20subscribe%20to%20the%20Growth%20plan." target="_blank" rel="noopener noreferrer" class="btn-primary-small plan-subscribe-btn" data-plan-name="Growth" data-plan-storage="50">
-            <i class="fas fa-crown"></i> Subscribe Now
-        </a>
-    </div>
-</div>
-
-    <div class="payment-instructions">
-        <h4>After payment:</h4>
-        <p>Your account will be activated after payment verification. If it takes longer than 24 hours, contact us on WhatsApp: <a href="https://wa.me/919265536548" target="_blank" rel="noopener noreferrer">+91 9265536548</a></p>
+    <div class="payment-faq">
+        <details class="payment-faq-item" open>
+            <summary>Is there auto-renewal or a surprise charge?</summary>
+            <p>Never. Every payment is manually verified — your account is never auto-billed or auto-renewed without you reaching out first. Activation usually takes a few hours; if it's been over 24, <a href="https://wa.me/919265536548" target="_blank" rel="noopener noreferrer" class="whatsapp-inline-link"><i class="fab fa-whatsapp"></i> message us on WhatsApp</a>.</p>
+        </details>
+        <details class="payment-faq-item">
+            <summary>What if I need help?</summary>
+            <p>Priority support is one WhatsApp message away — no ticket queues, you're talking directly to the team.</p>
+        </details>
+        <details class="payment-faq-item">
+            <summary>Can I get a refund?</summary>
+            <p>Yes — refund requests are approved within 24 hours, no back-and-forth required.</p>
+        </details>
     </div>
 </div>
 
@@ -357,7 +381,6 @@
 
     <!-- Firebase Scripts Starts Here -->
 <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-storage-compat.js"></script>    
@@ -366,5 +389,6 @@
 <script src="DSBstyle.js"></script>
 <script src="DSB.js"></script>
 <script src="themes.js" defer></script>
+<script src="subscription.js" defer></script>
 </body>
 </html>

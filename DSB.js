@@ -115,7 +115,7 @@ function setActiveProject(projectId, coupleName) {
     activeProjectId = projectId;
     activeProjectName = coupleName;
     if (activeClientIndicator) {
-        activeClientIndicator.innerText = `Currently working on: ${coupleName}`;
+        activeClientIndicator.innerText = `Active project: ${coupleName}`;
         activeClientIndicator.style.color = "var(--primary-blue)";
     }
     listenLiveClientPipeline();
@@ -405,7 +405,7 @@ function listenLiveClientPipeline() {
                                 .catch((err) => console.warn("Could not load a selected preview:", file, err));
                         });
                     } else {
-                        selectionStatsStatusSummaryCounter.innerText = "Awaiting client selection pipeline...";
+                        selectionStatsStatusSummaryCounter.innerText = "No selections yet — waiting on your client.";
                     }
                 }
             } else {
@@ -643,14 +643,19 @@ function renderClientRow(projectId, data) {
     tr.setAttribute("data-couple-name", data.coupleName || "Unnamed");
 
     let statusHtml = "";
+    let statusDotClass = "dot-pending";
     if (data.workflowState === "published") {
         statusHtml = `<span class="status-badge success">✅ Published</span>`;
+        statusDotClass = "dot-published";
     } else if (data.selectedPhotoIds && data.selectedPhotoIds.length > 0) {
         statusHtml = `<span class="status-badge success">✅ ${data.selectedPhotoIds.length} Photos Picked</span>`;
+        statusDotClass = "dot-picked";
     } else if (data.workflowState === "selection_open") {
         statusHtml = `<span class="status-badge pending">⏳ Awaiting Selection</span>`;
+        statusDotClass = "dot-pending";
     } else {
         statusHtml = `<span class="status-badge pending">🆕 Not Sent Yet</span>`;
+        statusDotClass = "dot-draft";
     }
 
     const eventClass = data.eventType === "Pre-Wedding" ? "event-tag pre-wed" : "event-tag";
@@ -658,22 +663,29 @@ function renderClientRow(projectId, data) {
     const safeEvent = escapeHtml(data.eventType || "");
     
     tr.innerHTML = `
-        <td data-label="Client Name">
+        <td data-label="Client Name" class="td-name">
             <div class="client-info">
                 <strong>${safeName}</strong>
-                <span>${safeEvent}</span>
+                <span class="client-meta-inline">
+                    ${safeEvent ? `<span class="event-pill-mini">${safeEvent}</span>` : ""}
+                    <span class="mobile-status-dot ${statusDotClass}" title="${statusHtml.replace(/<[^>]+>/g, "")}"></span>
+                </span>
             </div>
+            <i class="fas fa-chevron-down row-expand-chevron" aria-hidden="true"></i>
         </td>
-        <td data-label="Event Type"><span class="${eventClass}">${safeEvent || "N/A"}</span></td>
-        <td data-label="Selection Status">${statusHtml}</td>
-        <td data-label="Action">
-            <button class="action-btn text-btn copy-project-link-btn" data-project-id="${projectId}">
-                <i class="far fa-copy"></i> Copy Link
+        <td data-label="Event Type" class="td-event-detail"><span class="${eventClass}">${safeEvent || "N/A"}</span></td>
+        <td data-label="Selection Status" class="td-status-detail">${statusHtml}</td>
+        <td data-label="Action" class="td-action">
+            <button class="action-btn text-btn manage-project-btn" data-project-id="${projectId}" data-couple-name="${safeName}" title="Manage">
+                <i class="fas fa-gauge"></i>
             </button>
-            <button class="action-btn text-btn edit-project-btn" data-project-id="${projectId}" data-couple-name="${safeName}" data-event-type="${safeEvent}" style="color:#0ea5e9; border-color:#bae6fd;">
+            <button class="action-btn text-btn copy-project-link-btn" data-project-id="${projectId}" title="Copy Link">
+                <i class="far fa-copy"></i>
+            </button>
+            <button class="action-btn text-btn edit-project-btn" data-project-id="${projectId}" data-couple-name="${safeName}" data-event-type="${safeEvent}" style="color:#0ea5e9; border-color:#bae6fd;" title="Edit">
                 <i class="fas fa-pencil-alt"></i>
             </button>
-            <button class="action-btn text-btn delete-project-btn" data-project-id="${projectId}" data-couple-name="${safeName}" style="color:#ef4444; border-color:#fecaca;">
+            <button class="action-btn text-btn delete-project-btn" data-project-id="${projectId}" data-couple-name="${safeName}" style="color:#ef4444; border-color:#fecaca;" title="Delete">
                 <i class="fas fa-trash"></i>
             </button>
         </td>
@@ -843,9 +855,26 @@ if (clientTrackerTableBody) {
             return;
         }
 
-        // 4. ROW SELECTION
+        // 4. MANAGE (mobile expanded-row action, and desktop's direct entry point)
+        const manageBtn = e.target.closest(".manage-project-btn");
+        if (manageBtn) {
+            const projectId = manageBtn.getAttribute("data-project-id");
+            const coupleName = manageBtn.getAttribute("data-couple-name");
+            setActiveProject(projectId, coupleName);
+            document.querySelectorAll("#clientTrackerTableBody tr").forEach(r => r.classList.remove("active-row"));
+            manageBtn.closest("tr")?.classList.add("active-row");
+            const overviewTab = document.querySelector('.nav-item[data-target="view-overview"]');
+            if (overviewTab) overviewTab.click();
+            return;
+        }
+
+        // 5. ROW SELECTION (desktop) — selects the client + jumps to Overview.
+        // On mobile, tapping a row only expands/collapses it (pure UI —
+        // handled in DSBstyle.js); use the Manage button above for that.
         const row = e.target.closest("tr[data-project-id]");
         if (!row) return;
+        if (window.innerWidth <= 768) return;
+
         const projectId = row.getAttribute("data-project-id");
         const coupleName = row.getAttribute("data-couple-name");
         setActiveProject(projectId, coupleName);
@@ -880,44 +909,7 @@ firebase.auth().onAuthStateChanged((user) => {
     }
 });
 
-// SUBSCRIPTION TAB UI
-function updateSubscriptionUI() {
-    if (!currentUid) return;
-    db.collection("users").doc(currentUid).get().then((doc) => {
-        if (!doc.exists) return;
-        const data = doc.data();
-
-        const planNameEl = document.getElementById("currentPlanName");
-        const statusTextEl = document.getElementById("subscriptionStatusText");
-
-        if (data.subscriptionStatus === "active") {
-            if (planNameEl) planNameEl.innerText = data.planName || "Active Plan";
-            if (statusTextEl) {
-                statusTextEl.innerText = "✅ Your subscription is active.";
-                statusTextEl.style.color = "#15803d";
-            }
-        } else {
-            const daysLeft = getTrialDaysLeft(data);
-
-            if (planNameEl) planNameEl.innerText = "Free Trial";
-            if (statusTextEl) {
-                if (daysLeft > 0) {
-                    statusTextEl.innerText = `⏳ ${daysLeft} day(s) left in your free trial.`;
-                    statusTextEl.style.color = "";
-                } else {
-                    statusTextEl.innerText = "❌ Your trial has ended. Please subscribe to continue adding clients.";
-                    statusTextEl.style.color = "#ef4444";
-                }
-            }
-            const banner = document.getElementById("trialStatusBanner");
-            if (banner) {
-                banner.innerText = daysLeft > 0
-                    ? `Your free trial has ${daysLeft} day(s) remaining.`
-                    : "Your 7-day free trial has ended. Subscribe to keep adding new clients.";
-            }
-        }
-    }).catch(err => console.error("Subscription UI error:", err));
-}
+// SUBSCRIPTION TAB UI — logic now lives in subscription.js
 
 function escapeHtml(value) {
     return String(value).replace(/[&<>'\"]/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[char]));

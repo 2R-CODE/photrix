@@ -157,6 +157,28 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 
+// 📱 MOBILE CLIENT LIST ACCORDION — pure UI, no Firebase.
+// On mobile, tapping a client row just expands/collapses it to reveal
+// Event Type / Selection Status / Actions. Backend-tied actions (Copy Link,
+// Edit, Delete, Manage) are handled separately in DSB.js — this listener
+// only toggles the .row-expanded class and gets out of the way for buttons.
+document.addEventListener("DOMContentLoaded", () => {
+    const clientTrackerTableBody = document.getElementById("clientTrackerTableBody");
+    if (!clientTrackerTableBody) return;
+
+    clientTrackerTableBody.addEventListener("click", (e) => {
+        if (window.innerWidth > 768) return;
+        if (e.target.closest("button")) return; // action buttons stay DSB.js's job
+
+        const row = e.target.closest("tr[data-project-id]");
+        if (!row) return;
+
+        const wasExpanded = row.classList.contains("row-expanded");
+        clientTrackerTableBody.querySelectorAll("tr.row-expanded").forEach(r => r.classList.remove("row-expanded"));
+        if (!wasExpanded) row.classList.add("row-expanded");
+    });
+});
+
 // 🆕 WHATSAPP SHARE — gallery link seedha WhatsApp pe pre-filled message ke saath
 const whatsappShareBtn = document.getElementById("whatsappShareBtn");
 if (whatsappShareBtn) {

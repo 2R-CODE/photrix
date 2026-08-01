@@ -718,6 +718,7 @@
 .client-table tbody tr { transition: background var(--transition); cursor: pointer; }
 .client-table tbody tr:hover { background: var(--bg-card-hover); }
 .client-table tbody tr.selected-row { background: var(--accent-soft); }
+.row-expand-chevron { display: none; }
 
 .client-info strong { display: block; font-size: 0.9rem; color: var(--text-main); margin-bottom: 2px; }
 .client-info span   { font-size: 0.78rem; color: var(--text-muted); }
@@ -844,80 +845,9 @@ select.form-control { cursor: pointer; }
 /* ============================================================
    SUBSCRIPTION TAB
    ============================================================ */
-.trial-banner {
-    display: none;
-    background: rgba(245, 158, 11, 0.1);
-    color: var(--warning-orange);
-    padding: 13px 16px;
-    border-radius: var(--radius-md);
-    font-weight: 600;
-    font-size: 0.88rem;
-    margin-top: 14px;
-    border: 1px solid rgba(245, 158, 11, 0.2);
-}
-.subscription-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border-soft);
-    border-radius: var(--radius-lg);
-    padding: 22px;
-    margin-top: 14px;
-}
-.subscription-label {
-    font-size: 0.72rem;
-    text-transform: uppercase;
-    color: var(--text-muted);
-    font-weight: 600;
-    letter-spacing: 0.8px;
-}
-.subscription-card h2 { font-size: 1.5rem; color: var(--text-main); margin: 6px 0 4px; font-weight: 700; }
-.subscription-status-text { color: var(--text-muted); font-size: 0.85rem; }
+/* Subscription tab styling has moved to subscription.css */
 
-.plans-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-top: 18px; }
-.plan-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border-soft);
-    border-radius: var(--radius-lg);
-    padding: 22px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    position: relative;
-    transition: border-color var(--transition), transform var(--transition);
-}
-.plan-card:hover { border-color: var(--border-medium); transform: translateY(-2px); }
-.plan-card h3 { color: var(--text-main); font-size: 1rem; font-weight: 700; }
-.plan-price { font-size: 1.7rem; font-weight: 700; color: var(--primary-blue); }
-.plan-price span { font-size: 0.85rem; font-weight: 400; color: var(--text-muted); }
-.plan-features { list-style: none; display: flex; flex-direction: column; gap: 7px; }
-.plan-features li { font-size: 0.85rem; color: var(--text-muted); display: flex; align-items: center; gap: 8px; }
-.plan-features i { color: var(--success-green); font-size: 0.8rem; }
-.plan-subscribe-btn { justify-content: center; text-decoration: none; margin-top: auto; }
 
-.plan-card.featured { border-color: rgba(255, 59, 48, 0.4); }
-.plan-badge {
-    position: absolute;
-    top: -11px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: var(--primary-blue);
-    color: #FFFFFF;
-    font-size: 0.7rem;
-    font-weight: 700;
-    padding: 3px 12px;
-    border-radius: 20px;
-    white-space: nowrap;
-}
-
-.payment-instructions {
-    margin-top: 20px;
-    background: var(--bg-card);
-    border: 1px solid var(--border-soft);
-    border-radius: var(--radius-md);
-    padding: 16px 18px;
-}
-.payment-instructions h4 { margin-bottom: 5px; color: var(--text-main); font-size: 0.9rem; }
-.payment-instructions p  { font-size: 0.85rem; color: var(--text-muted); }
-.payment-instructions a  { color: var(--primary-blue); font-weight: 600; }
 
 /* ============================================================
    RESPONSIVE — TABLET
@@ -977,12 +907,13 @@ select.form-control { cursor: pointer; }
     .client-table tr,
     .client-table td { display: block; width: 100%; }
     .client-table tr {
-        padding: 14px 16px;
+        padding: 0;
         border-bottom: 1px solid var(--border-soft);
         background: var(--bg-card);
+        overflow: hidden;
     }
     .client-table td {
-        padding: 6px 0;
+        padding: 6px 16px;
         border: none;
         text-align: right;
         display: flex;
@@ -998,13 +929,88 @@ select.form-control { cursor: pointer; }
     }
     .client-info { text-align: right; }
 
+    /* Collapsed-by-default: name row (with inline event pill + status dot)
+       always shows; Event Type / Selection Status columns are redundant
+       with that inline summary on mobile, so they stay hidden. Only
+       Actions expand on tap — keeps the reveal short, not a tall form. */
+    .client-table td.td-name {
+        padding: 14px 16px;
+        cursor: pointer;
+    }
+    .client-table td.td-name::before { content: none; }
+    .client-info {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        text-align: right;
+    }
+    .client-meta-inline { display: flex; align-items: center; gap: 6px; }
+    .event-pill-mini {
+        font-size: 0.68rem;
+        color: var(--text-muted);
+        background: var(--bg-app);
+        border: 1px solid var(--border-soft);
+        border-radius: 20px;
+        padding: 2px 8px;
+        white-space: nowrap;
+    }
+    .mobile-status-dot {
+        width: 9px; height: 9px; border-radius: 50%; display: inline-block;
+        flex-shrink: 0;
+    }
+    .mobile-status-dot.dot-published { background: var(--success-green); }
+    .mobile-status-dot.dot-picked { background: var(--electric-cyan); }
+    .mobile-status-dot.dot-pending { background: var(--warning-orange); }
+    .mobile-status-dot.dot-draft { background: var(--text-subtle); }
+
+    .row-expand-chevron {
+        display: inline-block;
+        color: var(--text-muted);
+        font-size: 0.75rem;
+        margin-left: 10px;
+        transition: transform var(--transition);
+    }
+    .client-table tr.row-expanded .row-expand-chevron { transform: rotate(180deg); }
+
+    .client-table td.td-event-detail,
+    .client-table td.td-status-detail { display: none !important; }
+
+    .client-table td.td-action {
+        max-height: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+        opacity: 0;
+        overflow: hidden;
+        justify-content: center;
+        gap: 10px;
+        transition: max-height var(--transition), opacity var(--transition), padding var(--transition);
+    }
+    .client-table tr.row-expanded td.td-action {
+        max-height: 56px;
+        padding-top: 12px;
+        padding-bottom: 14px;
+        opacity: 1;
+    }
+    .client-table td.td-action .action-btn {
+        width: 40px;
+        height: 40px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    .client-table td.td-action .action-btn span,
+    .client-table td.td-action .manage-project-btn i { margin: 0; }
+    .manage-project-btn {
+        color: var(--primary-blue) !important;
+        border-color: var(--primary-blue) !important;
+    }
+
     /* Link section */
     .generated-link-row { flex-direction: column; }
     .live-tracker-status-row { flex-direction: column; align-items: flex-start; }
     .live-thumbnails-grid { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); }
-
-    /* Plans */
-    .plans-grid { grid-template-columns: 1fr; }
 
     /* Upload section */
     .upload-section .section-heading { flex-direction: column; align-items: flex-start; }
