@@ -16,7 +16,7 @@ body.loaded {
 
 /* Full bleed sections jinka background black/dark rehna chahiye unke liye wrapper fallback */
 body {
-    background-color: #ffffff !important;
+    background-color: #454549 !important;
     background-image: radial-gradient(circle at 80% 95%, rgba(0, 204, 180, 0.12), transparent 35%),
                       radial-gradient(circle at 20% 90%, rgba(15, 23, 42, 0.06), transparent 45%) !important;
     background-attachment: scroll !important;
@@ -37,7 +37,7 @@ html, body {
 
 body {
     font-family: 'Montserrat', sans-serif;
-    background-color: #ffffff;
+    background-color: #454549;
     color: #ffffff;
 }
 

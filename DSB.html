@@ -5,8 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PHOTRIX - Photographer Studio</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="DSB.css">
     <link rel="stylesheet" href="subscription.css">
 </head>
@@ -227,10 +225,10 @@
                 <div id="view-palette" class="view-section">
     <div class="section-heading">
         <h2>Gallery Themes</h2>
-        <p>Select a client first, then choose a theme for their gallery.</p>
+        <p>Pick a look for your client's gallery.</p>
     </div>
     <div id="activeClientForTheme" style="margin-bottom:16px;font-size:0.85rem;color:var(--text-muted);">
-        No client selected — go to Client Projects and select one first.
+        Select a client from Client Projects to get started.
     </div>
     <div id="themesGridContainer" class="themes-grid">
         <p style="color:var(--text-muted);">Loading themes...</p>
@@ -240,7 +238,7 @@
                 <!--SUBSCRIPTION TAB -->
                 <div id="view-subscription" class="view-section">
     <div class="section-heading">
-        <h2>Subscription</h2>
+        <h2>Subscription & Storage</h2>
         <p>Manage your plan and billing.</p>
     </div>
 
@@ -299,15 +297,15 @@
 
     <div class="payment-faq">
         <details class="payment-faq-item" open>
-            <summary>Is there auto-renewal or a surprise charge?</summary>
+            <summary>🔒 Is there auto-renewal or a surprise charge?</summary>
             <p>Never. Every payment is manually verified — your account is never auto-billed or auto-renewed without you reaching out first. Activation usually takes a few hours; if it's been over 24, <a href="https://wa.me/919265536548" target="_blank" rel="noopener noreferrer" class="whatsapp-inline-link"><i class="fab fa-whatsapp"></i> message us on WhatsApp</a>.</p>
         </details>
         <details class="payment-faq-item">
-            <summary>What if I need help?</summary>
+            <summary>💬 What if I need help?</summary>
             <p>Priority support is one WhatsApp message away — no ticket queues, you're talking directly to the team.</p>
         </details>
         <details class="payment-faq-item">
-            <summary>Can I get a refund?</summary>
+            <summary>↩️ Can I get a refund?</summary>
             <p>Yes — refund requests are approved within 24 hours, no back-and-forth required.</p>
         </details>
     </div>
@@ -377,6 +375,18 @@
     <div class="lightbox-overlay" id="photoLightbox">
         <button class="lightbox-close-btn" id="closeLightboxBtn"><i class="fas fa-times"></i></button>
         <img src="" alt="Full Screen Preview" class="lightbox-img" id="lightboxImage">
+    </div>
+
+    <!-- Theme preview slideshow -->
+    <div class="theme-preview-overlay" id="themePreviewOverlay">
+        <button class="lightbox-close-btn" id="closeThemePreviewBtn"><i class="fas fa-times"></i></button>
+        <div class="theme-preview-slideshow">
+            <button class="theme-preview-nav" id="themePreviewPrevBtn"><i class="fas fa-chevron-left"></i></button>
+            <img src="" alt="Theme preview" class="theme-preview-img" id="themePreviewImage">
+            <button class="theme-preview-nav" id="themePreviewNextBtn"><i class="fas fa-chevron-right"></i></button>
+        </div>
+        <div class="theme-preview-dots" id="themePreviewDots"></div>
+        <h3 class="theme-preview-title" id="themePreviewTitle"></h3>
     </div>
 
     <!-- Firebase Scripts Starts Here -->

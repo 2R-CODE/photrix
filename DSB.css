@@ -681,6 +681,85 @@
     transform: rotate(90deg);
 }
 
+.theme-preview-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    background: rgba(0, 0, 0, 0.92);
+    backdrop-filter: blur(8px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 20000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+.theme-preview-overlay.active { opacity: 1; pointer-events: all; }
+.theme-preview-slideshow { display: flex; align-items: center; gap: 16px; max-width: 92vw; }
+.theme-preview-img {
+    max-width: 76vw;
+    max-height: 70vh;
+    border-radius: var(--radius-md);
+    box-shadow: 0 10px 50px rgba(0, 0, 0, 0.8);
+    object-fit: contain;
+}
+.theme-preview-nav {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-main);
+    border: none;
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    font-size: 1.1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition);
+    flex-shrink: 0;
+}
+.theme-preview-nav:hover:not(:disabled) { background: var(--primary-blue); color: #fff; }
+.theme-preview-nav:disabled { opacity: 0.25; cursor: default; }
+.theme-preview-dots { display: flex; gap: 8px; margin-top: 18px; }
+.theme-preview-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    cursor: pointer;
+    transition: background var(--transition);
+}
+.theme-preview-dot.active { background: var(--text-main); }
+.theme-preview-title { margin-top: 14px; color: var(--text-muted); font-size: 0.85rem; }
+
+.theme-card-info {
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+.theme-card-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.theme-preview-eye-btn {
+    flex-shrink: 0;
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    border: 1px solid var(--border-soft);
+    background: var(--bg-app);
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all var(--transition);
+}
+.theme-preview-eye-btn:hover {
+    background: var(--theme-accent, var(--primary-blue));
+    color: #fff;
+    border-color: transparent;
+}
+
 /* WhatsApp button */
 .whatsapp-btn { color: #25D366 !important; border-color: #25D366 !important; }
 .whatsapp-btn:hover { background: #25D366 !important; color: #fff !important; }
@@ -1022,9 +1101,10 @@ select.form-control { cursor: pointer; }
    ============================================================ */
 .themes-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 22px;
     margin-top: 8px;
+    max-width: 1400px;
 }
 .theme-card {
     background: var(--bg-card);
@@ -1032,36 +1112,68 @@ select.form-control { cursor: pointer; }
     border-radius: var(--radius-lg);
     overflow: hidden;
     cursor: pointer;
-    transition: border-color var(--transition), transform var(--transition);
+    transition: border-color var(--transition), transform var(--transition), box-shadow var(--transition);
     position: relative;
 }
-.theme-card:hover { border-color: var(--primary-blue); transform: translateY(-2px); }
-.theme-card-selected { border-color: var(--primary-blue) !important; }
+.theme-card:hover {
+    border-color: var(--theme-accent, var(--primary-blue));
+    transform: translateY(-3px);
+    box-shadow: 0 10px 26px -6px var(--theme-accent-glow, rgba(255,59,48,0.25));
+}
+.theme-card-selected { border-color: var(--theme-accent, var(--primary-blue)) !important; }
 .theme-preview-box {
-    height: 120px;
+    aspect-ratio: 16 / 10;
     display: flex;
     align-items: center;
     justify-content: center;
+    position: relative;
 }
-.theme-preview-placeholder { font-size: 2rem; opacity: 0.3; color: var(--text-main); }
+.theme-preview-placeholder { font-size: 2.2rem; opacity: 0.3; color: var(--text-main); }
 .theme-royal  { background: #0f0f0f; }
 .theme-pastel { background: #fdf6f3; }
-.theme-card-info {
-    padding: 10px 12px;
+.theme-swatches {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
     display: flex;
-    flex-direction: column;
-    gap: 3px;
+    gap: 5px;
 }
-.theme-card-info strong { font-size: 0.88rem; color: var(--text-main); }
-.theme-card-info span   { font-size: 0.75rem; color: var(--text-muted); }
+.theme-swatch-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.5);
+}
+.theme-card-info strong { font-size: 0.92rem; color: var(--text-main); }
+.theme-card-info span   { font-size: 0.78rem; font-weight: 400; color: var(--text-muted); opacity: 0.85; }
 .theme-selected-badge {
     position: absolute;
-    top: 8px;
-    right: 8px;
-    background: var(--primary-blue);
+    top: 10px;
+    right: 10px;
+    background: var(--theme-accent, var(--primary-blue));
     color: #0f0f0f;
     font-size: 0.7rem;
     font-weight: 700;
-    padding: 2px 8px;
+    padding: 3px 10px;
     border-radius: 20px;
 }
+
+/* "More themes coming soon" ghost card — turns leftover grid space
+   (when there are only 1-2 real themes) into an intentional signal
+   that the catalog is growing, instead of looking empty/unfinished. */
+.theme-card-coming-soon {
+    border: 1.5px dashed var(--border-medium);
+    border-radius: var(--radius-lg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 8px;
+    aspect-ratio: 16 / 10;
+    padding: 20px;
+    cursor: default;
+}
+.theme-card-coming-soon i { font-size: 1.6rem; color: var(--text-subtle); }
+.theme-card-coming-soon strong { font-size: 0.88rem; color: var(--text-muted); }
+.theme-card-coming-soon span { font-size: 0.76rem; color: var(--text-subtle); }
