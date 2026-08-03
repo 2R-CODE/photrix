@@ -1,10 +1,4 @@
-// 🎨 THEMES MANAGEMENT MODULE (`themes.js`)
-// Selecting a theme here only sets a PENDING choice on the photographer's
-// own clientProjects doc — it never touches publicGalleries directly.
-// The theme only becomes visible to the client when "Publish Gallery" is
-// pressed (applyThemeAndPublish Cloud Function), which locks it in on both
-// documents atomically. This keeps "photographer's own single-document
-// write" separate from "client-facing, cross-collection write".
+// 🎨 THEMES MANAGEMENT MODULE 
 async function loadGalleryThemes() {
     const container = document.getElementById("themesGridContainer");
     if (!container) return;
@@ -48,7 +42,7 @@ async function loadGalleryThemes() {
                 "theme-royal-gold":   { bg: "#0b0c10", card: "#1f2833", accent: "#d4af37" },
                 "theme-pastel-bloom": { bg: "#fcf8f6", card: "#ffffff", accent: "#e8a598" },
                 "theme-default":      { bg: "#0c0c0c", card: "#141414", accent: "#FF3B30" },
-                "theme-minimal-dark": { bg: "#0c0c0c", card: "#141414", accent: "#FF3B30" },
+                "theme-minimal-dark": { bg: "#0c0c0c", card: "#141414", accent: "#FF3B30" }
             };
             const colors = THEME_COLORS[theme.cssClass] || THEME_COLORS["theme-default"];
             const accentGlow = `${colors.accent}40`; // ~25% alpha hex suffix

@@ -234,6 +234,7 @@ async function renderPreviews(files) {
   } else {
       if (counter) counter.style.display = "none";
       if (footer) footer.style.display = "flex"; // Footer dikhao ZIP button ke liye
+      initCinematicSliderAnimation();
   }
 }
 
@@ -242,7 +243,7 @@ function toggleSelection(item, file) {
     item.classList.remove("selected");
     selected = selected.filter(id => id !== file);
   } else {
-    if (selected.length >= 40) return alert("You can select up to 40 photos.");
+    if (selected.length >= 350) return alert("You can select up to 350 photos.");
     item.classList.add("selected");
     selected.push(file);
   }
@@ -360,4 +361,95 @@ function showSubmittedScreen() {
     `;
   }
 }
+}
+
+// 🎬 UNIVERSAL 3D FLIP CINEMATIC SLIDER (DESKTOP + MOBILE)
+function initCinematicSliderAnimation() {
+    if (typeof ScrollTrigger !== "undefined") {
+        ScrollTrigger.getAll().forEach(t => t.kill());
+    }
+
+    if (document.body.classList.contains("theme-modern-slider")) {
+        gsap.registerPlugin(ScrollTrigger);
+
+        const items = gsap.utils.toArray(".grid-item");
+        const grid = document.getElementById("main-photo-grid");
+
+        if (items.length === 0) return;
+
+        // 1. Initial Entrance Fade-in (Common for all screens)
+        gsap.to(items, {
+            opacity: 1,
+            duration: 1,
+            stagger: 0.1,
+            ease: "power3.out"
+        });
+
+        // 2. Setup MatchMedia for Responsive Animations
+        let mm = gsap.matchMedia();
+
+        // 🖥️ DESKTOP LOGIC (Screen width > 768px)
+        mm.add("(min-width: 769px)", () => {
+            const totalScrollWidth = grid.scrollWidth - window.innerWidth + window.innerWidth * 0.30;
+
+            let scrollTween = gsap.to(grid, {
+                x: -totalScrollWidth,
+                ease: "none",
+                scrollTrigger: {
+                    trigger: ".lookbook-main-container",
+                    pin: true,
+                    scrub: 1.2,
+                    end: () => "+=" + totalScrollWidth,
+                    invalidateOnRefresh: true
+                }
+            });
+
+            // Extreme 3D Flip (45 degrees) for Desktop
+            items.forEach((item) => {
+                gsap.fromTo(item,
+                    { scale: 0.7, opacity: 0.2, rotationY: 45 },
+                    {
+                        scale: 1, opacity: 1, rotationY: 0, ease: "power1.inOut",
+                        scrollTrigger: { trigger: item, containerAnimation: scrollTween, start: "left right", end: "center center", scrub: true }
+                    }
+                );
+                gsap.to(item, {
+                    scale: 0.7, opacity: 0.2, rotationY: -45, ease: "power1.inOut",
+                    scrollTrigger: { trigger: item, containerAnimation: scrollTween, start: "center center", end: "right left", scrub: true }
+                });
+            });
+        });
+
+        // 📱 MOBILE LOGIC (Screen width <= 768px)
+        mm.add("(max-width: 768px)", () => {
+            const mobileScrollWidth = grid.scrollWidth - window.innerWidth + window.innerWidth * 0.10;
+
+            let scrollTween = gsap.to(grid, {
+                x: -mobileScrollWidth,
+                ease: "none",
+                scrollTrigger: {
+                    trigger: ".lookbook-main-container",
+                    pin: true,
+                    scrub: 1, // Halka sa fast scrubbing for mobile
+                    end: () => "+=" + mobileScrollWidth,
+                    invalidateOnRefresh: true
+                }
+            });
+
+            // Subtle 3D Flip (20 degrees) for Mobile - Better performance & UI
+            items.forEach((item) => {
+                gsap.fromTo(item,
+                    { scale: 0.85, opacity: 0.4, rotationY: 20 },
+                    {
+                        scale: 1, opacity: 1, rotationY: 0, ease: "power1.inOut",
+                        scrollTrigger: { trigger: item, containerAnimation: scrollTween, start: "left right", end: "center center", scrub: true }
+                    }
+                );
+                gsap.to(item, {
+                    scale: 0.85, opacity: 0.4, rotationY: -20, ease: "power1.inOut",
+                    scrollTrigger: { trigger: item, containerAnimation: scrollTween, start: "center center", end: "right left", scrub: true }
+                });
+            });
+        });
+    }
 }

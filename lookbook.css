@@ -188,3 +188,73 @@ body {
     vertical-align: middle; margin-right: 4px;
 }
 @keyframes btnSpin { to { transform: rotate(360deg); } }
+
+/* 🎬 ULTIMATE CINEMATIC HIGH-TECH SLIDER FIX */
+body.theme-modern-slider {
+    overflow-x: hidden !important;
+    background-color: #0c0c0c;
+    margin: 0;
+}
+
+body.theme-modern-slider .lookbook-main-container {
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    position: relative;
+    padding: 0;
+}
+
+/* Update your existing CSS for the grid */
+body.theme-modern-slider #main-photo-grid {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    gap: 6vw;
+    padding-left: 15vw; /* Thoda aur center me laane ke liye padding badhai hai */
+    width: max-content;
+    height: 75vh;
+    align-items: center;
+    will-change: transform;
+    perspective: 1500px; /* 🔴 3D FLIP KE LIYE NAYI LINE */
+}
+
+/* Individual Card Styling */
+body.theme-modern-slider .grid-item {
+    width: 70vw; /* Premium wide screen look */
+    height: 75vh;
+    flex: 0 0 auto !important; /* Size shrink ya wrap hone se bachayega */
+    overflow: hidden;
+    border-radius: 20px;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.7);
+    opacity: 0;
+    transform: scale(0.92);
+    background: #141414;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+body.theme-modern-slider .grid-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+body.theme-modern-slider .grid-item:hover img {
+    transform: scale(1.04); /* Smooth high-tech zoom on hover */
+}
+
+/* 📱 MOBILE RESPONSIVENESS FOR CINEMATIC SLIDER */
+@media (max-width: 768px) {
+    body.theme-modern-slider #main-photo-grid {
+        padding-left: 10vw;
+        gap: 8vw; /* Thoda gap badhaya taki swiping clean lage */
+        height: 65vh; /* Mobile par height thodi kam */
+    }
+
+    body.theme-modern-slider .grid-item {
+        width: 80vw; /* Mobile screen ka 80% lega (baaki me agli photo cut ho kar dikhegi) */
+        height: 60vh;
+        border-radius: 12px;
+    }
+}
