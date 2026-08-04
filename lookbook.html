@@ -11,6 +11,12 @@
 </head>
 <body class="theme-default">
 
+    <!-- 🌐 GLOBAL OFFLINE BANNER — same pattern as the dashboard. Shown/hidden
+         by lookbook.js via the browser's online/offline events. -->
+    <div id="lookbookOfflineBanner" style="display:none;">
+        ⚠️ You're offline — reconnect to select, submit, or download photos.
+    </div>
+
     <!-- Top Navigation Bar -->
     <header class="lookbook-header">
         <div class="logo">PHOTRIX</div>
@@ -44,7 +50,7 @@
     <footer id="action-footer" class="floating-dock" style="display: none;">
         <div class="dock-content">
             <div id="counter-zone" class="counter-badge">
-                Selected: <span id="selected-count">0</span> / 40
+                Selected: <span id="selected-count">0</span> / <span id="selection-limit-label">40</span>
             </div>
             <div class="dock-actions">
                 <button id="submit-selection-btn" class="btn-primary">Submit Selection</button>

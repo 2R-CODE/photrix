@@ -451,6 +451,73 @@ exports.createClientProject = onCall({ region: REGION, enforceAppCheck: false },
   return { projectId: projectRef.id };
 });
 
+// 🆕 FIX (client delete didn't fully clean up): previously DSB.js deleted a
+// client's original photos + the clientProjects doc directly from the
+// browser, then TRIED to also delete publicGalleries/{shareId} client-side
+// — but firestore.rules blocks that write (`allow write: if false`), so it
+// silently failed. Net effect: the "deleted" client's gallery link stayed
+// fully live and browsable (isActive was never set false), the watermarked
+// preview photos in gallery-previews/{shareId}/ were never removed, and the
+// gallerySecrets/{shareId} PIN-hash doc (also client-write-blocked by
+// design) was never removed either — all orphaned in Storage/Firestore
+// forever, uncounted, unbilled, unreachable by the daily cleanup job (which
+// only finds galleries via publicGalleries.isActive == false, and that doc
+// no longer existed to be flagged that way).
+//
+// This runs as Admin SDK so it can reach every one of those collections and
+// do the full, real cleanup in one atomic-ish step.
+exports.deleteClientProject = onCall({ region: REGION, enforceAppCheck: false }, async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Please sign in.");
+  const uid = request.auth.uid;
+  const projectId = String(request.data?.projectId || "");
+  if (!/^[A-Za-z0-9_-]{8,128}$/.test(projectId)) throw new HttpsError("invalid-argument", "Invalid project.");
+
+  const projectRef = db.doc(`users/${uid}/clientProjects/${projectId}`);
+  const project = await projectRef.get();
+  if (!project.exists) throw new HttpsError("not-found", "Project not found.");
+  const data = project.data();
+  const shareId = data.shareId || null;
+
+  const bucket = admin.storage().bucket();
+
+  // 1. Original HD photos
+  try {
+    const [files] = await bucket.getFiles({ prefix: `client-albums/${uid}/${projectId}/` });
+    await Promise.all(files.map(file => file.delete().catch(err =>
+      logger.warn("Could not delete an original photo", { projectId, file: file.name, error: err.message })
+    )));
+  } catch (err) {
+    logger.warn("Could not list original photos for deletion", { projectId, error: err.message });
+  }
+
+  if (shareId) {
+    // 2. Watermarked preview photos
+    try {
+      const [previewFiles] = await bucket.getFiles({ prefix: `gallery-previews/${shareId}/` });
+      await Promise.all(previewFiles.map(file => file.delete().catch(err =>
+        logger.warn("Could not delete a preview photo", { shareId, file: file.name, error: err.message })
+      )));
+    } catch (err) {
+      logger.warn("Could not list preview photos for deletion", { shareId, error: err.message });
+    }
+
+    // 3. PIN-hash doc — blocked from client writes by design, only Admin SDK can remove it
+    await db.doc(`gallerySecrets/${shareId}`).delete().catch(err =>
+      logger.warn("Could not delete gallerySecrets", { shareId, error: err.message })
+    );
+
+    // 4. Public gallery doc — same, client writes are blocked by firestore.rules
+    await db.doc(`publicGalleries/${shareId}`).delete().catch(err =>
+      logger.warn("Could not delete publicGalleries", { shareId, error: err.message })
+    );
+  }
+
+  // 5. The client project doc itself
+  await projectRef.delete();
+
+  return { ok: true };
+});
+
 // 🆕 QUOTA ENFORCEMENT — storage counter
 // These two run automatically on every file added/removed anywhere in the
 // bucket, filtered down to client-albums/{uid}/... (a photographer's own HD

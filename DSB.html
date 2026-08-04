@@ -9,6 +9,12 @@
     <link rel="stylesheet" href="subscription.css">
 </head>
 <body>
+    <!-- 🌐 GLOBAL OFFLINE BANNER — one consistent "you're offline" signal
+         for the whole dashboard, instead of each action improvising its
+         own timeout/error behavior. Shown/hidden by DSBstyle.js. -->
+    <div id="globalOfflineBanner" style="display:none;">
+        ⚠️ You're offline — actions like uploading, creating clients, or applying themes won't work until your connection returns.
+    </div>
 
     <div class="studio-app-container">
         
@@ -41,8 +47,13 @@
     <div class="profile-avatar-circle" id="profileToggleBtn">P</div>
     
     <div class="profile-dropdown-menu" id="profileDropdownMenu" style="display: none;">
-        <div class="dropdown-item" onclick="window.location.href='billing.html'">
-            <i class="fas fa-credit-card"></i> Billing & Subscription
+        <!-- FIX: "Billing & Subscription" (billing.html) removed — it duplicated
+             the sidebar's own "Subscription" tab (data-target="view-subscription"),
+             which already shows plan status + upgrade options inside the SPA.
+             Sending people to a separate billing.html page was a second,
+             possibly-stale copy of the same screen. -->
+        <div class="dropdown-item" id="openSettingsBtn">
+            <i class="fas fa-gear"></i> Settings
         </div>
         <div class="dropdown-divider"></div>
         <div class="dropdown-item" id="signOutMasterBtn">

@@ -129,12 +129,36 @@ const MAX_FILE_SIZE_MB = 30;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 const MAX_FILES_PER_UPLOAD = 500;
 
+// 🐞 FIX (duplicate photos on retry): earlier, if some files failed and the
+// photographer clicked "Upload Images" again with the SAME file selection
+// still in the input, EVERY file — including ones that had already
+// uploaded successfully — got re-uploaded under a new Date.now() path,
+// creating visible duplicates in the gallery. This tracks only the files
+// that actually failed, so a retry only re-attempts those.
+let pendingRetryFiles = null;
+const globalProgressWrapper = document.getElementById("globalProgressWrapper");
+const globalPercentageLabel = document.getElementById("globalPercentage");
+const globalProgressBarFill = document.getElementById("globalProgressBarFill");
+
+// Selecting a fresh batch of files always means "start over" — clear any
+// pending retry-only list so it doesn't get mixed with the new selection.
+if (bulkImagePickerFiles) {
+    bulkImagePickerFiles.addEventListener("change", () => {
+        pendingRetryFiles = null;
+        if (uploadImagesBtn) uploadImagesBtn.innerText = "Upload Images";
+    });
+}
+
 if (uploadImagesBtn) {
     uploadImagesBtn.addEventListener("click", async function() {
         if (!activeProjectId) return alert("Please select a client from the table first!");
         if (!(await canManageStudio())) return;
 
-        const files = bulkImagePickerFiles.files;
+        // FIX: use the failed-only list when we're in retry mode, otherwise
+        // whatever is currently selected in the file input.
+        const files = pendingRetryFiles && pendingRetryFiles.length
+            ? pendingRetryFiles
+            : bulkImagePickerFiles.files;
         if (files.length === 0) return alert("Please select files first!");
 
         const isUserLogged = localStorage.getItem('isLoggedIn') === 'true';
@@ -168,11 +192,74 @@ if (uploadImagesBtn) {
             return alert(`❌ Each photo must be under ${MAX_FILE_SIZE_MB}MB.\n\nToo large:\n${oversizedFiles.slice(0, 5).join("\n")}${oversizedFiles.length > 5 ? `\n...and ${oversizedFiles.length - 5} more` : ""}`);
         }
 
+        // 🌐 FIX: fail fast if already offline, instead of letting every
+        // file spend up to ~2 minutes retrying (Firebase Storage's default
+        // maxUploadRetryTime) before anything tells the user what's wrong.
+        if (!navigator.onLine) {
+            alert("⚠️ You're offline. Connect to the internet and try uploading again.");
+            return;
+        }
+
         uploadImagesBtn.innerText = "Uploading Assets...";
         uploadImagesBtn.disabled = true;
-        let uploadCounter = 0;
+        pendingRetryFiles = null; // this attempt owns these files now
+
+        // 🐞 FIX (invisible progress): #globalProgressWrapper already existed
+        // in DSB.html with a percentage label + progress bar, but nothing in
+        // this file ever un-hid it or updated the bar — so uploadStatusText
+        // was being updated the whole time inside a div stuck on
+        // display:none. That's why clicking Upload looked like nothing was
+        // happening. Now it's shown for the duration of the upload and
+        // actually driven by real progress.
+        if (globalProgressWrapper) globalProgressWrapper.style.display = "block";
+        if (globalProgressBarFill) globalProgressBarFill.style.width = "0%";
+        if (globalPercentageLabel) globalPercentageLabel.textContent = "0%";
+        if (uploadStatusNotificationLabel) uploadStatusNotificationLabel.textContent = `Uploading 0 of ${fileArray.length} photos...`;
+
+        let doneCount = 0;      // succeeded
+        let failCount = 0;      // failed
+        const failedFileObjs = []; // FIX: actual File objects, not just names, so a retry can re-use them directly
+        const totalCount = fileArray.length;
 
         const selectedCategory = document.getElementById("photoCategorySelect")?.value || "Wedding";
+
+        const updateProgressUI = () => {
+            const processed = doneCount + failCount;
+            const pct = Math.round((processed / totalCount) * 100);
+            if (globalProgressBarFill) globalProgressBarFill.style.width = `${pct}%`;
+            if (globalPercentageLabel) globalPercentageLabel.textContent = `${pct}%`;
+            if (uploadStatusNotificationLabel) {
+                uploadStatusNotificationLabel.textContent = failCount > 0
+                    ? `Uploading ${processed} of ${totalCount} photos... (${failCount} failed)`
+                    : `Uploading ${processed} of ${totalCount} photos...`;
+            }
+        };
+
+        const finishIfDone = () => {
+            if (doneCount + failCount !== totalCount) return;
+
+            uploadImagesBtn.innerText = "Upload Images";
+            uploadImagesBtn.disabled = false;
+            if (globalProgressWrapper) globalProgressWrapper.style.display = "none";
+            calculateCloudStorageMetrics();
+
+            // FIX: accurate partial-failure summary instead of silently
+            // never showing the "all done" alert when some files fail.
+            if (failCount === 0) {
+                alert("🎉 All assets uploaded securely to Cloud Bucket!");
+            } else if (doneCount === 0) {
+                pendingRetryFiles = failedFileObjs;
+                uploadImagesBtn.innerText = `Retry Failed Uploads (${failCount})`;
+                alert(`❌ Upload failed for all ${totalCount} photo(s). Check your connection, then click "Retry Failed Uploads".`);
+            } else {
+                // FIX: set up retry-only mode instead of leaving the
+                // photographer to re-select the whole batch (which is what
+                // caused duplicates before).
+                pendingRetryFiles = failedFileObjs;
+                uploadImagesBtn.innerText = `Retry Failed Uploads (${failCount})`;
+                alert(`⚠️ Uploaded ${doneCount} of ${totalCount} photos. ${failCount} failed:\n${failedFileObjs.slice(0, 5).map(f => f.name).join("\n")}${failedFileObjs.length > 5 ? `\n...and ${failedFileObjs.length - 5} more` : ""}\n\nClick "Retry Failed Uploads" to upload just those — the ${doneCount} that succeeded won't be re-uploaded.`);
+            }
+        };
 
         fileArray.forEach((file, index) => {
             const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
@@ -185,23 +272,32 @@ if (uploadImagesBtn) {
                 }
             };
 
-            fileRef.put(file, metadata).then(() => {
-                uploadCounter++;
-                if (uploadStatusNotificationLabel) {
-                    uploadStatusNotificationLabel.innerText = `Syncing Progress: ${uploadCounter}/${fileArray.length} Loaded!`;
+            const uploadTask = fileRef.put(file, metadata);
+
+            // FIX: use the resumable upload's own state_changed events so a
+            // connection drop mid-upload updates the status label immediately
+            // ("Connection lost, retrying...") instead of the button just
+            // sitting on "Uploading Assets..." with no explanation until the
+            // internal retry window (~2 min) finally times out.
+            uploadTask.on("state_changed",
+                () => {
+                    if (uploadStatusNotificationLabel && !navigator.onLine) {
+                        uploadStatusNotificationLabel.textContent = `⚠️ Connection lost — retrying ${file.name}...`;
+                    }
+                },
+                (err) => {
+                    console.error("Upload error:", file.name, err);
+                    failCount++;
+                    failedFileObjs.push(file);
+                    updateProgressUI();
+                    finishIfDone();
+                },
+                () => {
+                    doneCount++;
+                    updateProgressUI();
+                    finishIfDone();
                 }
-                if (uploadCounter === fileArray.length) {
-                    alert("🎉 All assets uploaded securely to Cloud Bucket!");
-                    uploadImagesBtn.innerText = "Upload Images";
-                    uploadImagesBtn.disabled = false;
-                    calculateCloudStorageMetrics();
-                }
-            }).catch(err => {
-                console.error("Upload error:", err);
-                alert("❌ Upload blocked. Resetting connection pipeline.");
-                uploadImagesBtn.innerText = "Upload Images";
-                uploadImagesBtn.disabled = false;
-            });
+            );
         });
     });
 }
@@ -210,6 +306,8 @@ if (uploadImagesBtn) {
 if (generateClientLinkBtn) {
     generateClientLinkBtn.addEventListener("click", async function() {
         if (!activeProjectId) return alert("⚠️ Please select a client from the table first!");
+        // 🌐 FIX: same fail-fast pattern as client creation.
+        if (!navigator.onLine) return alert("⚠️ You're offline. Connect to the internet and try again.");
 
         if (!(await canManageStudio())) return;
 
@@ -282,9 +380,31 @@ async function createGalleryPreviews(shareId) {
     const sourceFiles = await sourceFolder.listAll();
     if (!sourceFiles.items.length) throw new Error("Upload photos before generating a gallery.");
 
+    // 🐞 FIX (duplicate photos in client gallery): this generates one preview
+    // per Storage object found here. If the same original photo was ever
+    // physically stored twice under this client (e.g. an old test upload
+    // from before the retry-only-failed-files fix above, or any other
+    // reason), every copy got its own preview — the client would see the
+    // same photo twice, exactly like in the screenshot. Storage object names
+    // are `${timestamp}-${index}-${safeName}`, so de-dupe by that trailing
+    // safeName, keeping only the most recently uploaded copy of each. This
+    // also retroactively fixes clients who already had duplicate previews —
+    // just click "Refresh photos" / re-generate the link.
+    const mostRecentByName = new Map();
+    for (const item of sourceFiles.items) {
+        const match = item.name.match(/^(\d+)-\d+-(.+)$/);
+        const key = match ? match[2] : item.name;
+        const ts = match ? Number(match[1]) : 0;
+        const existing = mostRecentByName.get(key);
+        if (!existing || ts > existing.ts) {
+            mostRecentByName.set(key, { item, ts });
+        }
+    }
+    const dedupedItems = Array.from(mostRecentByName.values()).map(entry => entry.item);
+
     const previews = [];
-    for (let index = 0; index < sourceFiles.items.length; index++) {
-        const source = sourceFiles.items[index];
+    for (let index = 0; index < dedupedItems.length; index++) {
+        const source = dedupedItems[index];
         const [url, metadata] = await Promise.all([source.getDownloadURL(), source.getMetadata()]);
         const response = await fetch(url);
         if (!response.ok) throw new Error("Could not prepare a gallery preview.");
@@ -548,6 +668,9 @@ if (createClientBtn) {
 
         if (!coupleName) return alert("Please enter a client/couple name!");
         if (!currentUid) return alert("Session error — please log in again.");
+        // 🌐 FIX: fail fast + clear message instead of a generic error
+        // string after the Cloud Function call times out.
+        if (!navigator.onLine) return alert("⚠️ You're offline. Connect to the internet and try again.");
 
         if (!(await canManageStudio())) return;
         createClientBtn.innerText = "Creating...";
@@ -814,27 +937,28 @@ if (clientTrackerTableBody) {
         if (deleteBtn) {
             const projectId = deleteBtn.getAttribute("data-project-id");
             const coupleName = deleteBtn.getAttribute("data-couple-name");
-            const project = allClientDocs.find(item => item.id === projectId)?.data;
 
             const confirmed = confirm(`⚠️ Are you sure you want to permanently delete "${coupleName}"?\n\nThis will delete ALL photos and cannot be undone.`);
             if (!confirmed) return;
+
+            // 🌐 FIX: fail fast if offline.
+            if (!navigator.onLine) return alert("⚠️ You're offline. Connect to the internet and try again.");
 
             deleteBtn.innerText = "Deleting...";
             deleteBtn.disabled = true;
 
             try {
-                // Remove Storage Assets
-                const folderRef = storage.ref().child(`client-albums/${currentUid}/${projectId}`);
-                const res = await folderRef.listAll();
-                await Promise.all(res.items.map(item => item.delete()));
-
-                // Remove Client Project Doc
-                await db.collection("users").doc(currentUid).collection("clientProjects").doc(projectId).delete();
-
-                // 🛠️ NEW: Remove Orphan Public Gallery to prevent leaks
-                if (project && project.shareId) {
-                    await db.collection("publicGalleries").doc(project.shareId).delete().catch(e => console.warn("Failed to delete public gallery data:", e));
-                }
+                // 🐞 FIX: this used to do the deletion piece-by-piece directly
+                // from the browser — original photos + clientProjects doc
+                // deleted fine, but the publicGalleries doc delete silently
+                // FAILED every time (firestore.rules blocks browser writes to
+                // it) and gallery-previews/ + gallerySecrets/ were never even
+                // attempted (also blocked by rules, on purpose). The
+                // photographer still saw "✅ deleted" regardless. Now the
+                // whole thing runs server-side in one Cloud Function so
+                // nothing is left behind — see index.js: deleteClientProject.
+                const deleteProject = firebase.app().functions("asia-south1").httpsCallable("deleteClientProject");
+                await deleteProject({ projectId });
 
                 if (activeProjectId === projectId) {
                     activeProjectId = null;

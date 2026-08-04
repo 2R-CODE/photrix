@@ -27,7 +27,26 @@ const undoBar = document.getElementById("undo-submit-bar");
 const undoBtn = document.getElementById("undo-submit-btn");
 const undoSecondsEl = document.getElementById("undo-seconds");
 
+// 🐞 FIX: lookbook.html had "/ 40" hardcoded in the counter badge, but the
+// actual enforced limit below was 350 — a client would see "0 / 40" while
+// really being allowed up to 350, and would have no idea why the counter
+// never matched what they could actually select. One constant, used both
+// places, so they can never drift apart again.
+const MAX_SELECTABLE_PHOTOS = 350;
+const selectionLimitLabel = document.getElementById("selection-limit-label");
+if (selectionLimitLabel) selectionLimitLabel.textContent = MAX_SELECTABLE_PHOTOS;
+
 const UNDO_WINDOW_SECONDS = 30;
+
+// 🌐 GLOBAL OFFLINE BANNER — one clear signal for the client instead of
+// each button separately discovering "no internet" at click time.
+function updateLookbookOfflineBanner() {
+  const banner = document.getElementById("lookbookOfflineBanner");
+  if (banner) banner.style.display = navigator.onLine ? "none" : "block";
+}
+window.addEventListener("online", updateLookbookOfflineBanner);
+window.addEventListener("offline", updateLookbookOfflineBanner);
+updateLookbookOfflineBanner();
 
 let selected = [];
 let galleryData = {};
@@ -35,6 +54,7 @@ let pendingPreviewFiles = [];
 let pinVerified = false;
 let verifiedPin = "";
 let undoTimer = null;
+let isVerifyingPin = false; // 🐞 FIX: guards against a fast typer/paste firing verifyGalleryPin multiple times at once
 
 function setError(message) {
   if (nameEl) nameEl.textContent = "Gallery unavailable";
@@ -69,8 +89,18 @@ function startUndoCountdown(submittedAtMs) {
 }
 
 function applyThemeClass(themeId) {
-  if (!themeId) return;
-  db.collection("themes").doc(themeId).get().then(themeDoc => {
+  // 🐞 FIX (broken/frozen theme): returns a Promise now, and callers below
+  // await it before rendering. Previously this ran un-awaited — if
+  // renderPreviews() (which checks document.body.classList at the very end
+  // to decide whether to start the cinematic slider animation) finished its
+  // own network calls first, it would find the OLD theme class still on
+  // <body>, skip starting the GSAP/ScrollTrigger animation, and then the
+  // theme class would flip in moments later — leaving every photo frozen at
+  // its animation's starting position (scaled down, rotated, faded) forever,
+  // since nothing ever ran the animation that was supposed to bring them to
+  // their normal state. This is what produced the distorted/frozen slider.
+  if (!themeId) return Promise.resolve();
+  return db.collection("themes").doc(themeId).get().then(themeDoc => {
     if (themeDoc.exists && themeDoc.data().cssClass) {
       document.body.className = themeDoc.data().cssClass;
     }
@@ -81,7 +111,7 @@ if (!galleryId || !/^[A-Za-z0-9_-]{20,}$/.test(galleryId)) {
   setError("This gallery link is invalid. Please ask your photographer for a new link.");
 } else {
   // Real-time listener — single source of truth: gallery.workflowState
-  db.collection("publicGalleries").doc(galleryId).onSnapshot(doc => {
+  db.collection("publicGalleries").doc(galleryId).onSnapshot(async doc => {
     if (!doc.exists) return setError("This gallery was not found.");
 
     const gallery = doc.data();
@@ -115,10 +145,12 @@ if (!galleryId || !/^[A-Za-z0-9_-]{20,}$/.test(galleryId)) {
       if (submit) submit.style.display = "none";
 
       pendingPreviewFiles = Array.isArray(gallery.previewFiles) ? gallery.previewFiles : [];
-      applyThemeClass(gallery.selectedThemeId);
+      // 🐞 FIX: await the theme so <body>'s class is settled before
+      // renderPreviews() checks it to decide whether to run the slider animation.
+      await applyThemeClass(gallery.selectedThemeId);
 
       if (pinVerified && pendingPreviewFiles.length > 0) {
-        renderPreviews(pendingPreviewFiles);
+        await renderPreviews(pendingPreviewFiles);
         checkDownloadAvailability();
       }
       return;
@@ -131,10 +163,11 @@ if (!galleryId || !/^[A-Za-z0-9_-]{20,}$/.test(galleryId)) {
     if (submit) submit.style.display = "block";
 
     pendingPreviewFiles = Array.isArray(gallery.previewFiles) ? gallery.previewFiles : [];
-    applyThemeClass(gallery.selectedThemeId);
+    // 🐞 FIX: same ordering fix as above.
+    await applyThemeClass(gallery.selectedThemeId);
 
     if (pinVerified && pendingPreviewFiles.length > 0) {
-      renderPreviews(pendingPreviewFiles);
+      await renderPreviews(pendingPreviewFiles);
     }
   }, err => setError("This gallery cannot be opened right now."));
 
@@ -142,6 +175,22 @@ if (pinInput) {
   pinInput.addEventListener("input", async () => {
     const pin = pinInput.value.trim();
     if (pin.length !== 6) return;
+
+    // 🐞 FIX: without this, pasting a 6-digit PIN (which can fire the
+    // "input" event more than once) could send two verifyGalleryPin calls
+    // at the same time — harmless most of the time, but wastes one of the
+    // limited PIN attempts for no reason.
+    if (isVerifyingPin) return;
+    isVerifyingPin = true;
+
+    // 🌐 FIX: fail fast with a friendly message if already offline,
+    // instead of waiting for the Cloud Function call to time out and then
+    // showing a raw technical error message to the client.
+    if (!navigator.onLine) {
+      alert("You're not connected to the internet right now. Please check your connection and try again.");
+      isVerifyingPin = false;
+      return;
+    }
 
     try {
       // PIN check backend pe hi chalega for security
@@ -176,14 +225,23 @@ if (pinInput) {
       }
     } catch (error) {
       console.error("Firebase Function Error:", error);
+      // 🐞 FIX: a network drop mid-call used to fall through to the generic
+      // "Verification failed: " + error.message branch, which shows a raw
+      // Firebase error string (e.g. "functions/unavailable") to the client —
+      // confusing for someone who isn't technical. Now it gets the same
+      // plain-language message as the offline pre-check above.
       if (error.code === "functions/resource-exhausted") {
         alert("Too many incorrect attempts. Please wait a few minutes and try again.");
       } else if (error.code === "functions/permission-denied") {
         alert("Incorrect gallery PIN.");
+      } else if (error.code === "functions/unavailable" || !navigator.onLine) {
+        alert("Connection problem — please check your internet and try again.");
       } else {
         alert("Verification failed: " + error.message);
       }
       pinInput.value = "";
+    } finally {
+      isVerifyingPin = false;
     }
   });
 }
@@ -198,6 +256,12 @@ async function renderPreviews(files) {
   } else {
       if (statusEl) statusEl.textContent = "Select your favorite photos below:";
   }
+
+  // 🐞 FIX: previously each failed image just logged a console.warn and
+  // was silently skipped — if the connection is bad enough that EVERY
+  // photo fails to load, the client just sees an empty grid with no
+  // explanation. Now we track failures and show a clear message instead.
+  let loadFailCount = 0;
 
   for (let index = 0; index < files.length; index++) {
     const file = files[index];
@@ -223,7 +287,26 @@ async function renderPreviews(files) {
       grid.appendChild(item);
     } catch (err) {
       console.warn(`Could not load preview image: ${file}`, err);
+      loadFailCount++;
     }
+  }
+
+  if (loadFailCount === files.length && files.length > 0) {
+    // Every single photo failed to load — near-certainly a connection
+    // problem on the client's end, not a real "no photos" situation.
+    grid.style.display = "none";
+    if (statusEl) {
+      statusEl.innerHTML = `
+        <div style="text-align:center;padding:20px;">
+          <p>⚠️ Your photos couldn't load. Please check your internet connection and refresh the page.</p>
+          <button id="retryLoadPreviewsBtn" class="btn-secondary" style="margin-top:12px;">Retry</button>
+        </div>`;
+      const retryBtn = document.getElementById("retryLoadPreviewsBtn");
+      if (retryBtn) retryBtn.addEventListener("click", () => renderPreviews(files));
+    }
+    return;
+  } else if (loadFailCount > 0) {
+    console.warn(`${loadFailCount} of ${files.length} preview photos failed to load.`);
   }
 
   if (galleryData.workflowState !== 'published') {
@@ -243,7 +326,7 @@ function toggleSelection(item, file) {
     item.classList.remove("selected");
     selected = selected.filter(id => id !== file);
   } else {
-    if (selected.length >= 350) return alert("You can select up to 350 photos.");
+    if (selected.length >= MAX_SELECTABLE_PHOTOS) return alert(`You can select up to ${MAX_SELECTABLE_PHOTOS} photos.`);
     item.classList.add("selected");
     selected.push(file);
   }
@@ -254,6 +337,9 @@ if (submit) {
   submit.addEventListener("click", async () => {
     if (!pinVerified || !verifiedPin) return alert("Enter and verify the 6-digit PIN first.");
     if (!selected.length) return alert("Please select at least one photo.");
+    // 🌐 FIX: fail fast with a clear message instead of the call hanging
+    // and then showing a technical error after timing out.
+    if (!navigator.onLine) return alert("You're not connected to the internet. Please check your connection and try again.");
 
     submit.disabled = true;
     submit.innerHTML = '<span class="btn-spinner"></span> Submitting...';
@@ -267,7 +353,12 @@ if (submit) {
       showSubmittedScreen();
     } catch (error) {
       console.error("Submit selection error:", error);
-      alert("Could not submit selection: " + (error.message || "Please check your connection and try again."));
+      // 🐞 FIX: friendlier message for a network-related failure instead of
+      // always appending the raw error.message.
+      const msg = (error.code === "functions/unavailable" || !navigator.onLine)
+        ? "Could not submit your selection — please check your internet connection and try again."
+        : "Could not submit selection: " + (error.message || "Please check your connection and try again.");
+      alert(msg);
       submit.disabled = false;
       submit.textContent = "Submit Selection";
     }
@@ -277,6 +368,10 @@ if (submit) {
 if (undoBtn) {
   undoBtn.addEventListener("click", async () => {
     if (!pinVerified || !verifiedPin) return;
+    // 🌐 FIX: same fail-fast pattern — the undo window is only 30 seconds,
+    // so a slow/hanging network call here is especially costly.
+    if (!navigator.onLine) return alert("You're not connected to the internet. Please check your connection and try again.");
+
     undoBtn.disabled = true;
     undoBtn.textContent = "Undoing...";
     try {
@@ -315,11 +410,21 @@ async function checkDownloadAvailability() {
 }
 
 async function downloadAsZip(files) {
+  // 🌐 FIX: fail fast instead of starting to fetch dozens of HD photos
+  // only to fail partway through with no connection.
+  if (!navigator.onLine) {
+    return alert("You're not connected to the internet. Please check your connection and try again.");
+  }
+
   const originalLabel = downloadZipBtn.innerHTML;
   downloadZipBtn.innerHTML = "Preparing ZIP...";
   try {
     const zip = new JSZip();
-    for (const item of files) {
+    for (let i = 0; i < files.length; i++) {
+      const item = files[i];
+      // 🐞 FIX: show progress so a slow/large gallery doesn't look frozen,
+      // and so a connection drop mid-way is easier for the client to place.
+      downloadZipBtn.innerHTML = `Preparing ZIP... (${i + 1}/${files.length})`;
       const response = await fetch(item.url);
       if (!response.ok) throw new Error("A photo could not be downloaded.");
       zip.file(item.name, await response.blob());
@@ -335,7 +440,12 @@ async function downloadAsZip(files) {
     URL.revokeObjectURL(blobUrl);
   } catch (error) {
     console.error("ZIP download failed:", error);
-    alert("Could not prepare the download. Please try again.");
+    // 🐞 FIX: friendlier message specifically for a connection drop
+    // mid-download, instead of the same generic line every time.
+    const msg = !navigator.onLine
+      ? "Your connection dropped while preparing the download. Please check your internet and try again."
+      : "Could not prepare the download. Please try again.";
+    alert(msg);
   } finally {
     downloadZipBtn.innerHTML = originalLabel;
   }
@@ -364,9 +474,28 @@ function showSubmittedScreen() {
 }
 
 // 🎬 UNIVERSAL 3D FLIP CINEMATIC SLIDER (DESKTOP + MOBILE)
+let sliderMatchMediaContext = null; // 🐞 FIX: see note below
+
 function initCinematicSliderAnimation() {
     if (typeof ScrollTrigger !== "undefined") {
         ScrollTrigger.getAll().forEach(t => t.kill());
+    }
+
+    // 🐞 FIX (broken/warped theme-modern-slider layout): this function can
+    // legitimately run more than once for the same page view — the
+    // publicGalleries onSnapshot listener re-fires on ANY write to that
+    // doc (a theme change, a storage-quota update, etc.), and each fire
+    // calls renderPreviews() → initCinematicSliderAnimation() again while
+    // the gallery is already open. gsap.matchMedia() was called fresh
+    // every time WITHOUT reverting the previous one, so a second (then
+    // third...) full set of scroll-linked 3D-flip animations stacked on
+    // top of the first, fighting over the same transform — that's what
+    // produced the sheared, overlapping "broken" look in testing. Reverting
+    // the previous context before creating a new one keeps exactly one
+    // active set of animations at a time.
+    if (sliderMatchMediaContext) {
+        sliderMatchMediaContext.revert();
+        sliderMatchMediaContext = null;
     }
 
     if (document.body.classList.contains("theme-modern-slider")) {
@@ -387,6 +516,7 @@ function initCinematicSliderAnimation() {
 
         // 2. Setup MatchMedia for Responsive Animations
         let mm = gsap.matchMedia();
+        sliderMatchMediaContext = mm; // FIX: keep a reference so the next call can revert it
 
         // 🖥️ DESKTOP LOGIC (Screen width > 768px)
         mm.add("(min-width: 769px)", () => {

@@ -258,3 +258,17 @@ body.theme-modern-slider .grid-item:hover img {
         border-radius: 12px;
     }
 }
+/* 🌐 GLOBAL OFFLINE BANNER (see lookbook.html + lookbook.js) */
+#lookbookOfflineBanner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background: #b91c1c;
+    color: #fff;
+    text-align: center;
+    padding: 9px 14px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    z-index: 999999;
+}

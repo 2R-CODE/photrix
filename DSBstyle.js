@@ -140,6 +140,48 @@ navItems.forEach((item) => {
     });
 });
 
+// 🎨 "Choose Theme" SHORTCUT BUTTON (Overview tab) — FIX
+// Bug: button existed in DSB.html but had zero click listener anywhere,
+// so nothing happened on click. Fix: reuse the real Gallery Themes
+// nav-item's own click handler (tab switch in this file + loadGalleryThemes()
+// in themes.js) instead of duplicating that logic here.
+document.addEventListener("DOMContentLoaded", () => {
+    const goToThemesShortcutBtn = document.getElementById("goToThemesShortcutBtn");
+    const themesNavItem = document.querySelector('.nav-item[data-target="view-palette"]');
+
+    if (goToThemesShortcutBtn && themesNavItem) {
+        goToThemesShortcutBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            themesNavItem.click(); // triggers tab switch + loadGalleryThemes() together
+        });
+    }
+});
+
+// 🌐 GLOBAL OFFLINE BANNER
+// One shared "you're offline" signal (see DSB.html + DSB.css) instead of
+// every action figuring out its own way to say the same thing.
+function updatePhotrixOfflineBanner() {
+    const banner = document.getElementById("globalOfflineBanner");
+    if (!banner) return;
+    banner.style.display = navigator.onLine ? "none" : "block";
+}
+window.addEventListener("online", updatePhotrixOfflineBanner);
+window.addEventListener("offline", updatePhotrixOfflineBanner);
+document.addEventListener("DOMContentLoaded", updatePhotrixOfflineBanner);
+
+// ⚙️ SETTINGS (profile dropdown) — STUB ONLY
+// No Settings screen exists yet — wiring this to a real view/tab is a
+// separate decision (see chat: what should actually live here). Placeholder
+// so the item isn't a silent dead click in the meantime.
+document.addEventListener("DOMContentLoaded", () => {
+    const openSettingsBtn = document.getElementById("openSettingsBtn");
+    if (openSettingsBtn) {
+        openSettingsBtn.addEventListener("click", () => {
+            alert("⚙️ Settings — coming soon.");
+        });
+    }
+});
+
 
 // ================= LIGHTBOX CLOSE LOGIC =================
 document.addEventListener("DOMContentLoaded", () => {

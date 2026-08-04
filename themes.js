@@ -84,7 +84,27 @@ async function loadGalleryThemes() {
                 openThemePreview(theme.name, Array.isArray(theme.previewGallery) ? theme.previewGallery : []);
             });
 
-            card.addEventListener("click", () => applyThemeToClient(themeId, theme.cssClass, theme.name));
+            card.addEventListener("click", () => {
+                // 🛑 CONFIRMATION GATE — FIX
+                // Bug: clicking a theme card applied it instantly (a real
+                // Firestore write to the active client's clientProjects doc)
+                // with zero confirmation. Easy to misclick or click while
+                // just browsing looks, and it silently overwrites whatever
+                // theme was already pending for that client.
+                if (!activeProjectId) {
+                    return alert("⚠️ Please select a client from Client Projects first!");
+                }
+                const clientLabel = activeProjectName || "this client";
+                const alreadyPending = isPending; // captured from this card's render pass
+                const confirmMsg = alreadyPending
+                    ? `"${theme.name}" is already the pending theme for ${clientLabel}. Nothing to change.`
+                    : `Set "${theme.name}" as the theme for ${clientLabel}?\n\nIt won't go live until you hit "Publish Gallery", but it will replace any other pending theme for this client.`;
+
+                if (alreadyPending) { alert(confirmMsg); return; }
+                if (!confirm(confirmMsg)) return;
+
+                applyThemeToClient(themeId, theme.cssClass, theme.name);
+            });
             container.appendChild(card);
         });
 
@@ -106,6 +126,11 @@ async function loadGalleryThemes() {
 async function applyThemeToClient(themeId, cssClass, themeName) {
     if (typeof activeProjectId === 'undefined' || !activeProjectId) {
         return alert("⚠️ Please select a client from Client Projects first!");
+    }
+    // 🌐 FIX: fail fast if offline, instead of the write silently sitting
+    // there (Firestore's own retry behavior) with no clear signal.
+    if (!navigator.onLine) {
+        return alert("⚠️ You're offline. Connect to the internet and try again.");
     }
     // canManageStudio check (coming from DSB.js)
     if (typeof canManageStudio === 'function' && !(await canManageStudio())) return;
