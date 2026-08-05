@@ -118,6 +118,25 @@ function setActiveProject(projectId, coupleName) {
         activeClientIndicator.innerText = `Active project: ${coupleName}`;
         activeClientIndicator.style.color = "var(--primary-blue)";
     }
+
+    // 🐞 CRITICAL FIX (wrong-client upload risk): none of this was reset on
+    // client switch before. A stale file selection (still sitting in the
+    // hidden <input type=file> from a previous client) or a leftover
+    // pendingRetryFiles list (from an earlier failed batch) stayed alive
+    // across the switch — and since the upload click handler always uses
+    // whatever activeProjectId is CURRENT at click time, clicking "Upload
+    // Images"/"Retry Failed Uploads" after switching clients could silently
+    // upload one client's photos into a completely different client's
+    // folder. Every client switch now starts upload state from a clean slate.
+    pendingRetryFiles = null;
+    if (bulkImagePickerFiles) bulkImagePickerFiles.value = "";
+    if (uploadImagesBtn) {
+        uploadImagesBtn.style.display = "none";
+        uploadImagesBtn.innerText = "Upload Images";
+        uploadImagesBtn.disabled = false;
+    }
+    if (globalProgressWrapper) globalProgressWrapper.style.display = "none";
+
     listenLiveClientPipeline();
     restoreExistingLinkIfValid(projectId);
     calculateCloudStorageMetrics();
@@ -160,6 +179,14 @@ if (uploadImagesBtn) {
             ? pendingRetryFiles
             : bulkImagePickerFiles.files;
         if (files.length === 0) return alert("Please select files first!");
+
+        // 🐞 FIX: extra safety net on top of the state-reset fix above —
+        // names the exact client before anything uploads, so a photographer
+        // managing many clients back-to-back gets one last clear checkpoint
+        // instead of trusting silent state.
+        if (!confirm(`Upload ${files.length} photo(s) to "${activeProjectName || activeProjectId}"?`)) {
+            return;
+        }
 
         const isUserLogged = localStorage.getItem('isLoggedIn') === 'true';
         if (!isUserLogged) {
