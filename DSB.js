@@ -611,17 +611,37 @@ if (revertToEditingBtn) {
 }
 
 // 🎛️ FEATURE 5: STORAGE METRICS CALCULATOR
+// 🐞 FIX (wrong number shown): this used to list files in just the
+// CURRENTLY ACTIVE client's own Storage folder and show "X MB in this
+// project" — not useful for "how full is my 20GB plan?" since a
+// photographer manages many clients at once, each a different size.
+// users/{uid}.storageUsedBytes is already the real ACCOUNT-WIDE total,
+// kept accurate in real time by the onPhotoUploaded/onPhotoDeleted Storage
+// triggers (see index.js) — so this just reads that directly instead of
+// recomputing anything, and listens live so it self-updates within moments
+// of any upload/delete anywhere in the account (not just the active one).
+let studioStorageListenerAttached = false;
 function calculateCloudStorageMetrics() {
-    if (!storageTextCounter || !storage || !currentUid || !activeProjectId) return;
-    const folderRef = storage.ref().child(`client-albums/${currentUid}/${activeProjectId}`);
-    folderRef.listAll().then(async (res) => {
-        const metadata = await Promise.all(res.items.map(item => item.getMetadata()));
-        const bytesUsed = metadata.reduce((total, item) => total + (item.size || 0), 0);
-        const megabytesUsed = bytesUsed / (1024 * 1024);
-        if (storageTextCounter) storageTextCounter.innerText = `${megabytesUsed.toFixed(1)} MB in this project`;
-        const progress = document.querySelector(".metric-card .progress-bar-fill");
-        if (progress) progress.style.width = `${Math.min(100, (megabytesUsed / (20 * 1024)) * 100)}%`;
-    }).catch(() => {});
+    if (!storageTextCounter || !currentUid) return;
+    if (studioStorageListenerAttached) return; // listener (below) handles every future update
+    studioStorageListenerAttached = true;
+
+    db.collection("users").doc(currentUid).onSnapshot(doc => {
+        if (!doc.exists) return;
+        const data = doc.data();
+        const usedBytes = Number(data.storageUsedBytes) || 0;
+        const limitBytes = Number(data.storageLimitBytes) || (20 * 1024 * 1024 * 1024); // 20GB fallback
+        const usedGB = usedBytes / (1024 ** 3);
+        const limitGB = limitBytes / (1024 ** 3);
+        const percent = limitBytes > 0 ? Math.min(100, (usedBytes / limitBytes) * 100) : 0;
+
+        storageTextCounter.innerText = `${usedGB.toFixed(2)} GB of ${limitGB.toFixed(0)} GB used`;
+        const progress = document.getElementById("studioStorageProgressFill");
+        if (progress) {
+            progress.style.width = `${percent.toFixed(1)}%`;
+            progress.style.background = percent >= 90 ? "#ef4444" : "";
+        }
+    }, err => console.warn("Storage metrics listener error:", err));
 }
 
 // 🚪 SECURE LOGOUT PIPELINE
@@ -1030,6 +1050,7 @@ firebase.auth().onAuthStateChanged((user) => {
         dashboardStarted = true;
         listenClientTrackerTable();
         updateSubscriptionUI();
+        calculateCloudStorageMetrics(); // 🐞 FIX: show account-wide storage on load, no client selection needed
     }
 });
 

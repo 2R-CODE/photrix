@@ -432,11 +432,23 @@ exports.createClientProject = onCall({ region: REGION, enforceAppCheck: false },
   const coercedLimit = Number(rawLimit);
   const galleryLimit = Number.isFinite(coercedLimit) && coercedLimit > 0 ? coercedLimit : 10;
 
-  const countSnap = await db.collection(`users/${uid}/clientProjects`).count().get();
+  // 🐞 FIX (pricing tagline problem): "Up to 50 client galleries" was being
+  // enforced as a lifetime total — a photographer's 40th-ever client (even
+  // if 35 of those weddings were long finished and archived) would get
+  // blocked. That also made the number meaningless as a sales pitch, since
+  // gallery size in GB varies wildly per client — it wasn't really telling
+  // the photographer anything about their real constraint (storage).
+  // Now it only counts ACTIVE galleries (not yet archived) — this makes
+  // "Up to 50 active client galleries" both true and a genuinely different
+  // axis of value from the GB storage cap (concurrent workload capacity,
+  // not total-ever), and gives a real reason to archive finished weddings.
+  const countSnap = await db.collection(`users/${uid}/clientProjects`)
+    .where("workflowState", "!=", "archived")
+    .count().get();
   if (countSnap.data().count >= galleryLimit) {
     throw new HttpsError(
       "resource-exhausted",
-      `You've reached your plan's limit of ${galleryLimit} client galleries. Upgrade to add more.`
+      `You've reached your plan's limit of ${galleryLimit} active client galleries. Archive a completed one, or upgrade to add more.`
     );
   }
 
@@ -587,6 +599,26 @@ exports.getDownloadUrls = onCall({ region: REGION, enforceAppCheck: false }, asy
   if (!selectedPhotoIds.length) {
     throw new HttpsError("failed-precondition", "No photos have been selected for this gallery yet.");
   }
+
+  // 🐞 FIX (unlimited free downloads): previously this had no rate limit at
+  // all — the same gallery link could trigger a full HD re-download as many
+  // times a day as anyone wanted, and every HD photo re-fetched from
+  // Storage is real egress cost. dailyDownloadLimit is set on the
+  // photographer's own users/{uid} doc the same manual way as
+  // galleryLimit/storageLimitBytes when their plan is activated (e.g. 6 for
+  // Starter, 12 for Growth) — falls back to 6/day if never set.
+  const rawDownloadLimit = Number(userData.dailyDownloadLimit);
+  const dailyDownloadLimit = Number.isFinite(rawDownloadLimit) && rawDownloadLimit > 0 ? rawDownloadLimit : 6;
+  const todayStr = new Date().toISOString().slice(0, 10); // YYYY-MM-DD (UTC)
+  const downloadsToday = projectData.downloadCountDate === todayStr ? (projectData.downloadCount || 0) : 0;
+
+  if (downloadsToday >= dailyDownloadLimit) {
+    throw new HttpsError(
+      "resource-exhausted",
+      `This gallery has reached its download limit for today (${dailyDownloadLimit}). Please try again tomorrow, or ask your photographer.`
+    );
+  }
+  await projectRef.update({ downloadCount: downloadsToday + 1, downloadCountDate: todayStr });
 
   const previewFiles = Array.isArray(galleryData.previewFiles) ? galleryData.previewFiles : [];
   const previewOriginalFiles = Array.isArray(galleryData.previewOriginalFiles) ? galleryData.previewOriginalFiles : [];

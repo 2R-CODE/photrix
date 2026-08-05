@@ -2,15 +2,26 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
+    // 🐞 FIX: mirrors firestore.rules' hasStudioAccess() 
+    function hasStudioAccess(uid) {
+      let user = firestore.get(/databases/(default)/documents/users/$(uid)).data;
+      return (
+        user.subscriptionStatus == "active"
+        && (!("subscriptionExpiresAt" in user) || request.time < user.subscriptionExpiresAt)
+      )
+        || (
+          user.subscriptionStatus == "trial"
+          && request.time < user.trialStartDate + duration.value(7, "d")
+        );
+    }
+
     // Original HD uploads — sirf owner access kar sakta hai.
-    // Size + type limits create pe enforce hote hain.
-    // Storage quota bhi check hoti hai — onPhotoUploaded/onPhotoDeleted
-    // functions storageUsedBytes real-time me update karte hain.
     match /client-albums/{uid}/{projectId}/{fileName} {
       allow read: if request.auth != null && request.auth.uid == uid;
 
       allow create: if request.auth != null
                     && request.auth.uid == uid
+                    && hasStudioAccess(uid)
                     && request.resource.size < 30 * 1024 * 1024
                     && request.resource.contentType.matches("image/.*")
                     && request.resource.size <= (
