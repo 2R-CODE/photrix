@@ -26,6 +26,19 @@ let dashboardStarted = false;
 let verificationEmailAttempted = false;
 const TRIAL_DAYS = 7;
 
+// 🛑 FIX: listenLiveClientPipeline() used to be called (setActiveProject,
+// new client, rename, etc.) without ever closing the previous onSnapshot
+// listener. Each call stacked a NEW listener on top of old ones — with 2+
+// listeners live on the same doc, each one independently clears + redraws
+// liveClientSelectionThumbnailsGrid, and their async getDownloadURL() calls
+// interleave, so photos got double-rendered (e.g. 3 selected -> 6 shown).
+// unsubscribeLiveClientPipeline: closes the previous listener before a new
+// one is attached. livePipelineRenderToken: guards against a *single*
+// listener's own stale async renders landing after a newer snapshot already
+// cleared the grid (same race, just within one listener instead of across two).
+let unsubscribeLiveClientPipeline = null;
+let livePipelineRenderToken = 0;
+
 // DOM SELECTORS
 const bulkImagePickerFiles = document.getElementById("realFileInput");
 const uploadImagesBtn = document.getElementById("startCloudUploadBtn");
@@ -475,9 +488,23 @@ function resizePreview(blob) {
 function listenLiveClientPipeline() {
     if (!activeProjectId || !currentUid) return;
 
-    db.collection("users").doc(currentUid).collection("clientProjects").doc(activeProjectId)
+    // 🛑 FIX: close the previous listener (if any) before attaching a new
+    // one — otherwise switching/reselecting a client stacks listeners on
+    // the old project's doc forever, each still firing in the background.
+    if (unsubscribeLiveClientPipeline) {
+        unsubscribeLiveClientPipeline();
+        unsubscribeLiveClientPipeline = null;
+    }
+
+    unsubscribeLiveClientPipeline = db.collection("users").doc(currentUid).collection("clientProjects").doc(activeProjectId)
         .onSnapshot((doc) => {
             if (liveClientSelectionThumbnailsGrid) liveClientSelectionThumbnailsGrid.innerHTML = "";
+            // 🛑 FIX: bump the render token on every snapshot. Any
+            // getDownloadURL().then() callback still in flight from a
+            // PREVIOUS snapshot checks this before appending — if it's
+            // stale (a newer snapshot already cleared the grid), it skips
+            // instead of appending a leftover thumbnail into the new render.
+            const myRenderToken = ++livePipelineRenderToken;
 
             if (doc.exists) {
                 const data = doc.data();
@@ -504,6 +531,11 @@ function listenLiveClientPipeline() {
                         data.selectedPhotoIds.forEach((file) => {
                             storage.ref(`gallery-previews/${data.shareId}/${file}`).getDownloadURL()
                                 .then((url) => {
+                                    // 🛑 FIX: a newer snapshot already fired and cleared the
+                                    // grid while this URL was still loading — drop it instead
+                                    // of appending a stale thumbnail on top of the new render.
+                                    if (myRenderToken !== livePipelineRenderToken) return;
+
                                     const wrapper = document.createElement("div");
                                     wrapper.className = "thumbnail-wrapper";
 

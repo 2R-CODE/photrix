@@ -561,6 +561,59 @@ exports.onPhotoDeleted = onObjectDeleted({ region: REGION }, async (event) => {
   }).catch(err => logger.warn("Could not decrement storageUsedBytes", { uid, error: err.message }));
 });
 
+// 🆕 READ-ONLY AVAILABILITY CHECK — used only to decide whether to SHOW the
+// "Download HD ZIP" button (called once per gallery load, and again after
+// a workflowState change). Mirrors every gate in getDownloadUrls (PIN,
+// active link, subscription, published) but never touches downloadCount —
+// so simply opening the gallery page no longer eats into the client's
+// daily download allowance. The actual download click still calls
+// getDownloadUrls, which is the only function that increments the counter.
+exports.checkDownloadAvailable = onCall({ region: REGION, enforceAppCheck: false }, async (request) => {
+  const { shareId, pin } = request.data || {};
+  if (typeof shareId !== "string" || !/^\d{6}$/.test(String(pin || ""))) {
+    throw new HttpsError("invalid-argument", "Invalid request.");
+  }
+
+  const galleryRef = db.doc(`publicGalleries/${shareId}`);
+  const gallery = await galleryRef.get();
+  if (!gallery.exists) throw new HttpsError("not-found", "Gallery not found.");
+  const galleryData = gallery.data();
+  if (galleryData.isActive !== true) {
+    throw new HttpsError("failed-precondition", "This gallery link is no longer active.");
+  }
+
+  if (!(await checkGalleryPin(shareId, pin))) {
+    throw new HttpsError("permission-denied", "Incorrect PIN.");
+  }
+
+  const userDoc = await db.doc(`users/${galleryData.uid}`).get();
+  const userData = userDoc.exists ? userDoc.data() : {};
+  const subscriptionActive = userData.subscriptionStatus === "active"
+    && (() => { const ms = getExpiryMillisOrNull(userData.subscriptionExpiresAt); return ms === null || ms > Date.now(); })();
+  if (!subscriptionActive) {
+    throw new HttpsError("permission-denied", "HD download is not available for this gallery.");
+  }
+
+  const projectRef = db.doc(`users/${galleryData.uid}/clientProjects/${galleryData.projectId}`);
+  const project = await projectRef.get();
+  if (!project.exists || project.data().workflowState !== "published") {
+    throw new HttpsError("failed-precondition", "This gallery hasn't been published for download yet.");
+  }
+  const projectData = project.data();
+  const selectedPhotoIds = Array.isArray(projectData.selectedPhotoIds) ? projectData.selectedPhotoIds : [];
+  if (!selectedPhotoIds.length) {
+    throw new HttpsError("failed-precondition", "No photos have been selected for this gallery yet.");
+  }
+
+  // Read-only preview of the same limit getDownloadUrls enforces — no write.
+  const rawDownloadLimit = Number(userData.dailyDownloadLimit);
+  const dailyDownloadLimit = Number.isFinite(rawDownloadLimit) && rawDownloadLimit > 0 ? rawDownloadLimit : 6;
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const downloadsToday = projectData.downloadCountDate === todayStr ? (projectData.downloadCount || 0) : 0;
+
+  return { available: downloadsToday < dailyDownloadLimit, remaining: Math.max(0, dailyDownloadLimit - downloadsToday) };
+});
+
 // 🆕 HD ZIP DOWNLOAD — returns short-lived signed URLs for a 
 exports.getDownloadUrls = onCall({ region: REGION, enforceAppCheck: false }, async (request) => {
   const { shareId, pin } = request.data || {};
@@ -607,18 +660,33 @@ exports.getDownloadUrls = onCall({ region: REGION, enforceAppCheck: false }, asy
   // photographer's own users/{uid} doc the same manual way as
   // galleryLimit/storageLimitBytes when their plan is activated (e.g. 6 for
   // Starter, 12 for Growth) — falls back to 6/day if never set.
+  //
+  // 🛑 FIX (race condition): the read (downloadsToday) and the write
+  // (downloadCount: downloadsToday + 1) used to be two separate steps, not
+  // atomic. Two near-simultaneous calls (double-click, two tabs/devices on
+  // the same link) could both read the same downloadsToday before either
+  // wrote — both would then pass the limit check and both write the SAME
+  // downloadCount, silently swallowing one of the two downloads instead of
+  // counting both. Wrapping the read+write in a single transaction makes
+  // the whole check-and-increment atomic, so concurrent calls are always
+  // counted correctly and the limit can't be raced past.
   const rawDownloadLimit = Number(userData.dailyDownloadLimit);
   const dailyDownloadLimit = Number.isFinite(rawDownloadLimit) && rawDownloadLimit > 0 ? rawDownloadLimit : 6;
   const todayStr = new Date().toISOString().slice(0, 10); // YYYY-MM-DD (UTC)
-  const downloadsToday = projectData.downloadCountDate === todayStr ? (projectData.downloadCount || 0) : 0;
 
-  if (downloadsToday >= dailyDownloadLimit) {
-    throw new HttpsError(
-      "resource-exhausted",
-      `This gallery has reached its download limit for today (${dailyDownloadLimit}). Please try again tomorrow, or ask your photographer.`
-    );
-  }
-  await projectRef.update({ downloadCount: downloadsToday + 1, downloadCountDate: todayStr });
+  await db.runTransaction(async (transaction) => {
+    const freshProjectSnap = await transaction.get(projectRef);
+    const freshData = freshProjectSnap.data() || {};
+    const downloadsToday = freshData.downloadCountDate === todayStr ? (freshData.downloadCount || 0) : 0;
+
+    if (downloadsToday >= dailyDownloadLimit) {
+      throw new HttpsError(
+        "resource-exhausted",
+        `This gallery has reached its download limit for today (${dailyDownloadLimit}). Please try again tomorrow, or ask your photographer.`
+      );
+    }
+    transaction.update(projectRef, { downloadCount: downloadsToday + 1, downloadCountDate: todayStr });
+  });
 
   const previewFiles = Array.isArray(galleryData.previewFiles) ? galleryData.previewFiles : [];
   const previewOriginalFiles = Array.isArray(galleryData.previewOriginalFiles) ? galleryData.previewOriginalFiles : [];

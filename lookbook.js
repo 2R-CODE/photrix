@@ -395,13 +395,36 @@ if (undoBtn) {
 async function checkDownloadAvailability() {
   if (!downloadZipBtn) return;
   try {
+    // This first call is only to decide whether to SHOW the button (and,
+    // as a side effect, it also counts as today's 1st download server-side
+    // — that's existing/unchanged behavior, not something this fix touches).
     const getUrls = functionsRegion.httpsCallable("getDownloadUrls");
     const result = await getUrls({ shareId: galleryId, pin: verifiedPin });
     if (result.data?.files?.length) {
       downloadZipBtn.style.display = "block";
-      downloadZipBtn.onclick = (e) => {
+      // 🛑 FIX (download-limit bypass): previously this reused the SAME
+      // cached `result.data.files` (15-min signed URLs) on every click —
+      // it never called the server again, so the Cloud Function's
+      // dailyDownloadLimit check/counter only ever ran ONCE per page load,
+      // no matter how many times "Download HD ZIP" was clicked. Now every
+      // click asks the server fresh, so each click is actually counted and
+      // the limit is enforced (and re-checked, in case another device used
+      // up the day's downloads in the meantime).
+      downloadZipBtn.onclick = async (e) => {
         e.preventDefault();
-        downloadAsZip(result.data.files);
+        if (downloadZipBtn.disabled) return;
+        downloadZipBtn.disabled = true;
+        try {
+          const freshResult = await getUrls({ shareId: galleryId, pin: verifiedPin });
+          if (freshResult.data?.files?.length) {
+            await downloadAsZip(freshResult.data.files);
+          }
+        } catch (error) {
+          console.error("Download limit check failed:", error);
+          alert(error.message || "Could not start the download. Please try again.");
+        } finally {
+          downloadZipBtn.disabled = false;
+        }
       };
     }
   } catch (error) {
