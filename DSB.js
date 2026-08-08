@@ -55,7 +55,37 @@ const storageTextCounter = document.getElementById("storageTextSpan");
 
 let activeProjectId = null;
 let activeProjectName = null;
-const activeClientIndicator = document.getElementById("activeClientIndicator");
+const activeClientIndicator = document.getElementById("activeClientIndicator"); // 🗒️ element removed from HTML (replaced by the picker below) — kept as a guarded no-op so nothing here breaks if referenced elsewhere
+
+// 🆕 CLIENT PICKER (Overview UX fix) — the single control for selecting,
+// switching, or creating a client. Populated from allClientDocs (declared
+// further below, but only READ inside functions below, never at this
+// top-level point, so there's no temporal-dead-zone issue — see notes on
+// each function). Visibility of the upload/link empty-states is delegated
+// to DSBstyle.js's window.setOverviewClientSelectedState(), which is pure
+// UI and knows nothing about Firestore — this file only tells it true/false.
+const overviewClientQuickPicker = document.getElementById("overviewClientQuickPicker");
+
+function populateOverviewClientQuickPicker() {
+    if (!overviewClientQuickPicker) return;
+    overviewClientQuickPicker.innerHTML = `<option value="">— Select or create a client —</option>`;
+    allClientDocs.forEach(({ id, data }) => {
+        const opt = document.createElement("option");
+        opt.value = id;
+        opt.textContent = data.coupleName || "Unnamed";
+        overviewClientQuickPicker.appendChild(opt);
+    });
+    overviewClientQuickPicker.value = activeProjectId || "";
+}
+
+if (overviewClientQuickPicker) {
+    overviewClientQuickPicker.addEventListener("change", () => {
+        const selectedId = overviewClientQuickPicker.value;
+        if (!selectedId) return;
+        const match = allClientDocs.find(item => item.id === selectedId);
+        setActiveProject(selectedId, match ? match.data.coupleName : "Client");
+    });
+}
 
 function getTrialDaysLeft(data) {
     const start = data?.trialStartDate || data?.createdAt;
@@ -130,6 +160,15 @@ function setActiveProject(projectId, coupleName) {
     if (activeClientIndicator) {
         activeClientIndicator.innerText = `Active project: ${coupleName}`;
         activeClientIndicator.style.color = "var(--primary-blue)";
+    }
+
+    // 🆕 Client is now selected — swap the Overview empty-states for the
+    // real upload/link content (pure UI toggle, lives in DSBstyle.js).
+    if (typeof window.setOverviewClientSelectedState === "function") {
+        window.setOverviewClientSelectedState(true);
+    }
+    if (overviewClientQuickPicker && overviewClientQuickPicker.value !== projectId) {
+        overviewClientQuickPicker.value = projectId;
     }
 
     // 🐞 CRITICAL FIX (wrong-client upload risk): none of this was reset on
@@ -513,10 +552,10 @@ function listenLiveClientPipeline() {
                 if (paymentStatusBadgeIndicator) {
                     if (data.workflowState === "published") {
                         paymentStatusBadgeIndicator.innerText = "Published ✅";
-                        paymentStatusBadgeIndicator.style.color = "#00cca3";
+                        paymentStatusBadgeIndicator.style.color = "var(--success-green)";
                     } else if (data.workflowState === "selection_completed") {
                         paymentStatusBadgeIndicator.innerText = "Review Compiled! (Choose theme & Publish)";
-                        paymentStatusBadgeIndicator.style.color = "#ef4444";
+                        paymentStatusBadgeIndicator.style.color = "var(--warning-orange)";
                     } else {
                         paymentStatusBadgeIndicator.innerText = "Awaiting Client Action";
                         paymentStatusBadgeIndicator.style.color = "";
@@ -698,7 +737,7 @@ function calculateCloudStorageMetrics() {
         const progress = document.getElementById("studioStorageProgressFill");
         if (progress) {
             progress.style.width = `${percent.toFixed(1)}%`;
-            progress.style.background = percent >= 90 ? "#ef4444" : "";
+            progress.style.background = percent >= 90 ? "var(--danger-red)" : "";
         }
     }, err => console.warn("Storage metrics listener error:", err));
 }
@@ -719,31 +758,20 @@ document.addEventListener("click", (e) => {
 });
 
 // 🆕 STEP A: NEW CLIENT MODAL
-const newClientModal = document.getElementById("newClientModal");
-const closeModalBtn = document.getElementById("closeModalBtn");
-const cancelModalBtn = document.getElementById("cancelModalBtn");
 const createClientBtn = document.getElementById("createClientBtn");
-const clientNameInput = document.getElementById("clientNameInput");
-const eventTypeInput = document.getElementById("eventTypeInput");
-const newClientTriggerBtn = document.querySelector(".tracker-section .btn-primary-small"); 
-
-function openNewClientModal() {
-    if (newClientModal) newClientModal.classList.add("active");
-}
-function closeNewClientModal() {
-    if (newClientModal) newClientModal.classList.remove("active");
-    if (clientNameInput) clientNameInput.value = "";
-    if (eventTypeInput) eventTypeInput.value = "Wedding";
-}
-
-if (newClientTriggerBtn) newClientTriggerBtn.addEventListener("click", openNewClientModal);
-if (closeModalBtn) closeModalBtn.addEventListener("click", closeNewClientModal);
-if (cancelModalBtn) cancelModalBtn.addEventListener("click", closeNewClientModal);
+// 🆕 Modal open/close (openNewClientModal, closeNewClientModal, closeEditModal)
+// and ALL their DOM selectors (newClientModal, closeModalBtn, cancelModalBtn,
+// clientNameInput, eventTypeInput, editClientModal, closeEditModalBtn,
+// cancelEditModalBtn) now live in DSBstyle.js as pure frontend UI — this
+// file only calls the close functions after a successful Firebase write,
+// and re-queries the two input fields locally below (rather than a
+// duplicate top-level const, which two plain <script> files sharing one
+// global scope would collide on).
 
 if (createClientBtn) {
     createClientBtn.addEventListener("click", async function() {
-        const coupleName = clientNameInput.value.trim();
-        const eventType = eventTypeInput.value;
+        const coupleName = document.getElementById("clientNameInput").value.trim();
+        const eventType = document.getElementById("eventTypeInput").value;
 
         if (!coupleName) return alert("Please enter a client/couple name!");
         if (!currentUid) return alert("Session error — please log in again.");
@@ -773,19 +801,10 @@ if (createClientBtn) {
 }
 
 // 🚀 EDIT CLIENT MODAL LOGIC
-const editClientModal = document.getElementById("editClientModal");
-const closeEditModalBtn = document.getElementById("closeEditModalBtn");
-const cancelEditModalBtn = document.getElementById("cancelEditModalBtn");
+// closeEditModal() and its trigger-button bindings now live in DSBstyle.js
+// (pure UI, no Firebase) — saveClientEditBtn's handler below is the only
+// backend-tied piece, and it calls that same global closeEditModal().
 const saveClientEditBtn = document.getElementById("saveClientEditBtn");
-
-function closeEditModal() {
-    if(editClientModal) {
-        editClientModal.classList.remove("active");
-    }
-}
-
-if (closeEditModalBtn) closeEditModalBtn.addEventListener("click", closeEditModal);
-if (cancelEditModalBtn) cancelEditModalBtn.addEventListener("click", closeEditModal);
 
 if (saveClientEditBtn) {
     saveClientEditBtn.addEventListener("click", async () => {
@@ -884,10 +903,10 @@ function renderClientRow(projectId, data) {
             <button class="action-btn text-btn copy-project-link-btn" data-project-id="${projectId}" title="Copy Link">
                 <i class="far fa-copy"></i>
             </button>
-            <button class="action-btn text-btn edit-project-btn" data-project-id="${projectId}" data-couple-name="${safeName}" data-event-type="${safeEvent}" style="color:#0ea5e9; border-color:#bae6fd;" title="Edit">
+            <button class="action-btn text-btn edit-project-btn" data-project-id="${projectId}" data-couple-name="${safeName}" data-event-type="${safeEvent}" style="color:var(--primary-blue); border-color:var(--border-medium);" title="Edit">
                 <i class="fas fa-pencil-alt"></i>
             </button>
-            <button class="action-btn text-btn delete-project-btn" data-project-id="${projectId}" data-couple-name="${safeName}" style="color:#ef4444; border-color:#fecaca;" title="Delete">
+            <button class="action-btn text-btn delete-project-btn" data-project-id="${projectId}" data-couple-name="${safeName}" style="color:var(--danger-red); border-color:rgba(248,113,113,0.35);" title="Delete">
                 <i class="fas fa-trash"></i>
             </button>
         </td>
@@ -913,7 +932,7 @@ function renderTablePage() {
     clientTrackerTableBody.innerHTML = "";
 
     if (pageItems.length === 0) {
-        clientTrackerTableBody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:30px; color:#94a3b8;">${query ? "No clients match your search." : "No clients yet. Click \"New Client\" to add one."}</td></tr>`;
+        clientTrackerTableBody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:30px; color:var(--text-subtle);">${query ? "No clients match your search." : "No clients yet. Click \"New Client\" to add one."}</td></tr>`;
     } else {
         pageItems.forEach(item => {
             const row = renderClientRow(item.id, item.data);
@@ -952,6 +971,7 @@ function listenClientTrackerTable() {
 
             updateDashboardMetrics(activeLinksCount, readyToDeliverCount);
             renderTablePage();
+            populateOverviewClientQuickPicker();
         }, (err) => {
             console.error("Error loading client tracker:", err);
         });

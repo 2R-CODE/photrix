@@ -1,3 +1,34 @@
+:root {
+    /* Same locked tokens as DSB.css — home page must never invent its own
+       shades. Copy this block verbatim if DSB.css's :root ever changes. */
+    --bg-app:        #0B0C0E;
+    --bg-surface:    #0B0C0E;
+    --bg-card:       #17181B;
+    --bg-card-hover: #1E2024;
+
+    --border-soft:   rgba(255, 255, 255, 0.07);
+    --border-medium: rgba(255, 255, 255, 0.16);
+
+    --text-main:     #F5F5F7;
+    --text-muted:    #A0A3A8;
+    --text-subtle:   #6B6E73;
+
+    --primary-blue:        #3B6EF6;
+    --primary-blue-hover:  #5C87FF;
+    --accent-soft:         rgba(59, 110, 246, 0.15);
+
+    --success-green:  #22C55E;
+    --warning-orange: #F5A524;
+    --danger-red:     #F04438;
+    --success-green-strong: #15803D;
+    --danger-red-strong:    #B42318;
+
+    --radius-sm:  6px;
+    --radius-md:  10px;
+    --radius-lg:  14px;
+    --transition: 0.2s ease;
+}
+
 body {
     opacity: 0;
     transition: opacity 0.2s ease-in-out;
@@ -16,8 +47,8 @@ body.loaded {
 
 /* Full bleed sections jinka background black/dark rehna chahiye unke liye wrapper fallback */
 body {
-    background-color: #454549 !important;
-    background-image: radial-gradient(circle at 80% 95%, rgba(0, 204, 180, 0.12), transparent 35%),
+    background-color: var(--bg-app) !important;
+    background-image: radial-gradient(circle at 80% 95%, rgba(59, 110, 246, 0.12), transparent 35%),
                       radial-gradient(circle at 20% 90%, rgba(15, 23, 42, 0.06), transparent 45%) !important;
     background-attachment: scroll !important;
     
@@ -37,8 +68,8 @@ html, body {
 
 body {
     font-family: 'Montserrat', sans-serif;
-    background-color: #454549;
-    color: #ffffff;
+    background-color: var(--bg-app);
+    color: var(--text-main);
 }
 
 /*Global Section Wrapper & Layouts */
@@ -49,7 +80,7 @@ body {
 }
 
 .bg-light {
-    background-color: #141419;
+    background-color: var(--bg-app);
 }
 
 .section-title {
@@ -63,7 +94,7 @@ body {
 
 .section-subtitle {
     font-size: 1rem;
-    color: #8a8a93;
+    color: var(--text-muted);
     text-align: center;
     margin-bottom: 60px;
     font-weight: 300;
@@ -131,7 +162,7 @@ body {
     font-size: 0.9rem;
     text-transform: uppercase;
     letter-spacing: 3px;
-    color: #00ccb4;
+    color: var(--primary-blue);
     margin-bottom: 20px;
     text-align: left; /* Left lock */
 }
@@ -147,7 +178,7 @@ body {
 
 .hero-description {
     font-size: 1.1rem;
-    color: #a1a1aa;
+    color: var(--text-muted);
     line-height: 1.6;
     margin-bottom: 40px;
     font-weight: 300;
@@ -184,7 +215,7 @@ body {
     font-family: 'Montserrat', sans-serif;
     font-size: 1.15rem !important;
     font-weight: 500 !important;
-    color: #ffffff;
+    color: var(--text-main);
     text-decoration: none;
     letter-spacing: 4.5px !important;
     text-transform: uppercase;
@@ -202,7 +233,7 @@ body {
 }
 
 .nav-links a, .login-link {
-    color: #ffffff !important;
+    color: var(--text-main) !important;
     text-decoration: none;
     font-size: 0.85rem !important;
     font-weight: 500 !important;
@@ -212,7 +243,7 @@ body {
 }
 
 .nav-links a:hover, .login-link:hover {
-    color: #00ccb4 !important;
+    color: var(--primary-blue) !important;
 }
 
 .nav-actions {
@@ -223,7 +254,7 @@ body {
 }
 
 .get-started-btn {
-    background: #00ccb4;
+    background: var(--primary-blue);
     color: #000 !important;
     padding: 12px 26px;
     border-radius: 4px;
@@ -234,7 +265,7 @@ body {
 }
 
 .get-started-btn:hover {
-    background: #00b39e;
+    background: var(--primary-blue-hover);
 }
 
 .menu-toggle-cb, 
@@ -267,7 +298,7 @@ body {
     top: 100%;
     left: 50%;
     transform: translateX(-50%) translateY(15px);
-    background-color: #121214;
+    background-color: var(--bg-app);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 8px;
     min-width: 240px;
@@ -303,14 +334,14 @@ body {
 
 .dropdown-menu a:hover {
     background-color: rgba(255, 255, 255, 0.05) !important;
-    color: #00ccb4 !important;
+    color: var(--primary-blue) !important;
     padding-left: 25px !important;
 }
 
 .dropdown-menu a i {
     font-size: 0.85rem;
     width: 16px;
-    color: #00ccb4;
+    color: var(--primary-blue);
 }
 
 /* ==========================================================================
@@ -335,7 +366,7 @@ body {
 }
 
 .navbar.scrolled .dropdown-menu a {
-    color: #4a4a4a !important;
+    color: var(--text-subtle) !important;
 }
 
 .navbar.scrolled .dropdown-menu a:hover {
@@ -348,7 +379,7 @@ body {
     font-size: 0.9rem;
     text-transform: uppercase;
     letter-spacing: 3px;
-    color: #ffffff; 
+    color: var(--text-main); 
     margin-bottom: 100px;
     text-align:left
 }
@@ -378,7 +409,7 @@ body {
     font-size: 1rem;
     font-weight: 500;
     color: #000000;
-    background-color: #00ccb4;
+    background-color: var(--primary-blue);
     border: none;
     border-radius: 4px;
     text-decoration: none;
@@ -389,15 +420,15 @@ body {
 
 .hero-action-btn:hover {
     transform: translateY(-2px);
-    background: #00b39e;
+    background: var(--primary-blue-hover);
 }
 
 /* ==========================================================================
    💎 4. SERVICES (OUR ECOSYSTEM) CARDS
    ========================================================================== */
 .service-card {
-    background: #16161a;
-    border: 1px solid #24242d;
+    background: var(--bg-app);
+    border: 1px solid var(--border-soft);
     padding: 40px 30px;
     border-radius: 8px;
     text-align: left;
@@ -406,12 +437,12 @@ body {
 
 .service-card:hover {
     transform: translateY(-5px);
-    border-color: #00ccb4;
+    border-color: var(--primary-blue);
 }
 
 .service-icon {
     font-size: 2.5rem;
-    color: #00ccb4;
+    color: var(--primary-blue);
     margin-bottom: 20px;
     display: inline-block;
 }
@@ -424,7 +455,7 @@ body {
 }
 
 .service-card p {
-    color: #a1a1aa;
+    color: var(--text-muted);
     font-size: 0.95rem;
     line-height: 1.6;
     font-weight: 300;
@@ -434,7 +465,7 @@ body {
      🏆 5. LEADERBOARD SLIDER (TOP CREATORS MARQUEE - PREMIUM UPDATED)
 ========================================================================== */
 .bg-dark-leaderboard {
-    background-color: #050507 !important;
+    background-color: var(--bg-app) !important;
     padding: 100px 0 !important;
     overflow: hidden;
     font-family: 'Montserrat', sans-serif;
@@ -452,13 +483,13 @@ body {
 .bg-dark-leaderboard .section-subtitle {
     text-align: center;
     font-size: 1rem;
-    color: #8a8a93 !important;
+    color: var(--text-muted) !important;
     font-weight: 300;
     margin-bottom: 50px;
 }
 
-.text-white { color: #ffffff !important; }
-.text-muted { color: #8a8a93 !important; }
+.text-white { color: var(--text-main) !important; }
+.text-muted { color: var(--text-muted) !important; }
 
 /* 🎚️ Smooth Infinite Marquee Wrapper */
 .leaderboard-slider {
@@ -483,8 +514,8 @@ body {
 
 /* 📇 Luxury Creator Cards Styling */
 .creator-card {
-    background: #111114 !important;
-    border: 1px solid #1f1f26 !important;
+    background: var(--bg-app) !important;
+    border: 1px solid var(--border-soft) !important;
     border-radius: 16px !important;
     padding: 30px !important;
     width: 280px !important;
@@ -498,8 +529,8 @@ body {
 
 .creator-card:hover {
     transform: translateY(-8px) !important;
-    border-color: #00ccb4 !important; /* Premium brand accent interaction */
-    box-shadow: 0 20px 40px rgba(0, 204, 180, 0.08);
+    border-color: var(--primary-blue) !important; /* Premium brand accent interaction */
+    box-shadow: 0 20px 40px rgba(59, 110, 246, 0.08);
 }
 
 /* Rank Tag Badge Style Updated */
@@ -507,7 +538,7 @@ body {
     position: absolute !important;
     top: 25px !important;
     right: 25px !important;
-    background: linear-gradient(135deg, #00ccb4 0%, #00aa94 100%) !important;
+    background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-hover) 100%) !important;
     color: #000000 !important;
     font-size: 0.75rem !important;
     font-weight: 600 !important;
@@ -521,14 +552,14 @@ body {
     font-family: 'Cormorant Garamond', serif !important;
     font-size: 1.7rem;
     font-weight: 400;
-    color: #ffffff !important;
+    color: var(--text-main) !important;
     margin-top: 25px !important;
     margin-bottom: 8px !important;
 }
 
 .creator-meta {
     font-size: 0.85rem !important;
-    color: #a1a1aa !important;
+    color: var(--text-muted) !important;
     display: flex;
     align-items: center;
     gap: 6px;
@@ -536,7 +567,7 @@ body {
 }
 
 .creator-meta i {
-    color: #00ccb4 !important;
+    color: var(--primary-blue) !important;
 }
 
 /* Modernized Inner Tags */
@@ -547,12 +578,12 @@ body {
 }
 
 .creator-tags span {
-    background: #18181b !important;
+    background: var(--bg-app) !important;
     color: #e4e4e7 !important;
     font-size: 0.75rem !important;
     padding: 6px 14px !important;
     border-radius: 6px !important;
-    border: 1px solid #27272a !important;
+    border: 1px solid var(--border-soft) !important;
     font-weight: 300;
 }
 
@@ -613,7 +644,7 @@ body {
     }
 
     .navbar.scrolled .hamburger-icon span {
-        background-color: #121214 !important;
+        background-color: var(--bg-app) !important;
     }
 
     .nav-container {
@@ -799,7 +830,7 @@ body {
     .bg-light, .section-wrapper {
         position: relative;
         z-index: 10;
-        background-color: #141419 !important;
+        background-color: var(--bg-app) !important;
     }
 }
 
@@ -821,12 +852,12 @@ body {
    📢 10. FLOATING UTILITIES & FOOTER UTILS
    ========================================================================== */
 .footer {
-    background: #060608;
-    border-top: 1px solid #1c1c24;
+    background: var(--bg-app);
+    border-top: 1px solid var(--border-soft);
     padding: 40px 20px;
     text-align: center;
     font-size: 0.85rem;
-    color: #71717a;
+    color: var(--text-subtle);
 }
 
 .footer .social-links {
@@ -839,13 +870,13 @@ body {
 }
 
 .footer .social-links a {
-    color: #00ccb4;
+    color: var(--primary-blue);
     text-decoration: none;
     transition: color 0.2s;
 }
 
 .footer .social-links a:hover {
-    color: #ffffff;
+    color: var(--text-main);
 }
 
 /* 🔥 GLOBAL CLEAN ICON OVERRIDE:*/
@@ -853,7 +884,7 @@ header ~ section svg,
 header ~ div svg,
 .hero-container ~ div svg {
     fill: #ffffff !important;
-    color: #ffffff !important;
+    color: var(--text-main) !important;
     opacity: 0.9;               
 }
 
@@ -865,7 +896,7 @@ header ~ div svg,
     background-color: #fcfcfcfc; /* Clean deep pitch dark tone */
     padding: 100px 40px;
     font-family: 'Montserrat', sans-serif;
-    color: #ffffff;
+    color: var(--text-main);
     overflow: hidden;
 }
 
@@ -891,7 +922,7 @@ header ~ div svg,
 
 .showcase-subtitle {
     font-size: 1.05rem;
-    color: #94a3b8; /* Muted soft grey */
+    color: var(--text-muted); /* Muted soft grey */
     max-width: 650px;
     margin: 0 auto;
     font-weight: 300;
@@ -909,8 +940,8 @@ header ~ div svg,
 
 .showcase-tab-btn {
     background: transparent;
-    border: 1px solid #27272a; /* Flat minimal border */
-    color: #a1a1aa;
+    border: 1px solid var(--border-soft); /* Flat minimal border */
+    color: var(--text-muted);
     padding: 12px 24px;
     font-size: 0.9rem;
     font-weight: 400;
@@ -920,22 +951,22 @@ header ~ div svg,
 }
 
 .showcase-tab-btn:hover {
-    color: #4c4545;
-    border-color: #52525b;
+    color: var(--text-subtle);
+    border-color: var(--border-medium);
 }
 
 /* Active tab sets our branding glow color */
 .showcase-tab-btn.active {
     background-color: #ffffff;
     color: #000000;
-    border-color: #717171;
+    border-color: var(--text-subtle);
     font-weight: 500;
 }
 
 /* 💻 Premium Browser Window Mockup Frame */
 .showcase-mockup-frame {
-    background: #18181b;
-    border: 1px solid #27272a;
+    background: var(--bg-app);
+    border: 1px solid var(--border-soft);
     border-radius: 12px;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
     overflow: hidden;
@@ -944,11 +975,11 @@ header ~ div svg,
 
 /* Browser Navigation Top bar mimicking actual software */
 .mockup-browser-header {
-    background: #202024;
+    background: var(--bg-app);
     padding: 14px 20px;
     display: flex;
     align-items: center;
-    border-bottom: 1px solid #27272a;
+    border-bottom: 1px solid var(--border-soft);
     position: relative;
 }
 
@@ -963,13 +994,13 @@ header ~ div svg,
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    background: #3f3f46;
+    background: var(--border-medium);
 }
 
 .browser-address-bar {
     margin: 0 auto;
-    background: #09090b;
-    color: #71717a;
+    background: var(--bg-app);
+    color: var(--text-subtle);
     font-size: 0.8rem;
     padding: 6px 40px;
     border-radius: 6px;
@@ -983,7 +1014,7 @@ header ~ div svg,
 .mockup-content-window {
     padding: 30px;
     min-height: 400px;
-    background: #121214;
+    background: var(--bg-app);
 }
 
 /* Content Panel Toggling Base Rules */
@@ -1006,7 +1037,7 @@ header ~ div svg,
 .grid-item {
     overflow: hidden;
     border-radius: 6px;
-    background: #1c1c1f;
+    background: var(--bg-app);
 }
 
 .grid-item img {
@@ -1052,7 +1083,7 @@ header ~ div svg,
 }
 
 .delivery-status-box p, .cloud-status-box p, .secure-lock-box p {
-    color: #a1a1aa;
+    color: var(--text-muted);
     max-width: 450px;
     font-size: 1rem;
     line-height: 1.6;
@@ -1063,7 +1094,7 @@ header ~ div svg,
     font-size: 2.5rem;
     display: inline-block;
     margin-bottom: 15px;
-    color: #00ccb4;
+    color: var(--primary-blue);
 }
 
 /* 🎬 Smooth Tab Transition Animation */
@@ -1130,10 +1161,10 @@ header ~ div svg,
 ========================================================================== */
 
 .creators-split-section {
-    background-color: #0c0c0e; /* Matte black matching background */
+    background-color: var(--bg-app); /* Matte black matching background */
     padding: 80px 40px 120px 40px;
     font-family: 'Montserrat', sans-serif;
-    color: #ffffff;
+    color: var(--text-main);
 }
 
 .split-container {
@@ -1155,8 +1186,8 @@ header ~ div svg,
 .luxury-phone-mockup {
     width: 320px;
     height: 600px;
-    background: #18181b;
-    border: 8px solid #27272a;
+    background: var(--bg-app);
+    border: 8px solid var(--border-soft);
     border-radius: 40px; /* Rounded premium smartphone finish */
     padding: 0;
     overflow: hidden;
@@ -1196,7 +1227,7 @@ header ~ div svg,
 
 .phone-overlay-text p {
     font-size: 0.75rem;
-    color: #a1a1aa;
+    color: var(--text-muted);
     letter-spacing: 1px;
     text-transform: uppercase;
 }
@@ -1206,7 +1237,7 @@ header ~ div svg,
     font-size: 0.8rem;
     text-transform: uppercase;
     letter-spacing: 2px;
-    color: #00ccb4; /* Clear branding accent track */
+    color: var(--primary-blue); /* Clear branding accent track */
     display: inline-block;
     margin-bottom: 15px;
 }
@@ -1220,7 +1251,7 @@ header ~ div svg,
 }
 
 .split-desc {
-    color: #a1a1aa;
+    color: var(--text-muted);
     font-size: 1rem;
     line-height: 1.6;
     font-weight: 300;
@@ -1237,8 +1268,8 @@ header ~ div svg,
 .segment-item {
     font-size: 1.1rem;
     padding: 14px 0;
-    border-bottom: 1px solid #1c1c1f;
-    color: #71717a;
+    border-bottom: 1px solid var(--border-soft);
+    color: var(--text-subtle);
     display: flex;
     align-items: center;
     gap: 12px;
@@ -1251,12 +1282,12 @@ header ~ div svg,
 }
 
 .segment-item:hover, .segment-item.active {
-    color: #ffffff;
-    border-bottom-color: #27272a;
+    color: var(--text-main);
+    border-bottom-color: var(--border-soft);
 }
 
 .segment-item.active i {
-    color: #00ccb4; /* Active icon indicator glow */
+    color: var(--primary-blue); /* Active icon indicator glow */
 }
 
 
@@ -1332,7 +1363,7 @@ header ~ div svg,
 .showcase-subtitle {
     font-family: 'Montserrat', sans-serif !important;
     font-size: 1rem !important;
-    color: #666666 !important;
+    color: var(--text-subtle) !important;
     margin-bottom: 40px !important;
 }
 
@@ -1373,20 +1404,20 @@ header ~ div svg,
 .step-text p {
     font-family: 'Montserrat', sans-serif !important;
     font-size: 0.9rem !important;
-    color: #666666 !important;
+    color: var(--text-subtle) !important;
     line-height: 1.6 !important;
 }
 
 /* Active State Desktop Effects */
 .step-item:hover, .step-item.active {
     background: #ffffff !important;
-    border-color: rgba(0, 204, 180, 0.3) !important;
-    box-shadow: 0 15px 30px rgba(0, 204, 180, 0.05) !important;
+    border-color: rgba(59, 110, 246, 0.3) !important;
+    box-shadow: 0 15px 30px rgba(59, 110, 246, 0.05) !important;
     transform: translateX(5px) !important;
 }
 
 .step-item:hover .step-number, .step-item.active .step-number {
-    color: #00ccb4 !important; /* Active step changes to cyan */
+    color: var(--primary-blue) !important; /* Active step changes to cyan */
 }
 
 /* Mobile Visual Boxes (Desktop par hidden rahenge) */
@@ -1404,7 +1435,7 @@ header ~ div svg,
 .visual-window {
     width: 100% !important;
     height: 100% !important;
-    background: #111111 !important; /* Premium Dark Contrast Screen */
+    background: var(--bg-app) !important; /* Premium Dark Contrast Screen */
     border-radius: 24px !important;
     position: relative !important;
     box-shadow: 0 30px 60px rgba(0,0,0,0.12) !important;
@@ -1438,7 +1469,7 @@ header ~ div svg,
     border: 1px solid rgba(255, 255, 255, 0.1) !important;
     border-radius: 16px !important;
     padding: 30px !important;
-    color: #ffffff !important;
+    color: var(--text-main) !important;
     width: 100% !important;
     text-align: left !important;
 }
@@ -1447,7 +1478,7 @@ header ~ div svg,
     font-family: 'Montserrat', sans-serif !important;
     font-size: 0.75rem !important;
     text-transform: uppercase !important;
-    background: #00ccb4 !important;
+    background: var(--primary-blue) !important;
     color: #111111 !important;
     padding: 4px 10px !important;
     border-radius: 20px !important;
@@ -1497,7 +1528,7 @@ header ~ div svg,
         font-weight: 500 !important;
     }
 
-    .visual-s1 { background: linear-gradient(135deg, #00ccb4, #008080) !important; }
+    .visual-s1 { background: linear-gradient(135deg, var(--primary-blue), var(--primary-blue)) !important; }
     .visual-s2 { background: linear-gradient(135deg, #1e293b, #0f172a) !important; }
     .visual-s3 { background: linear-gradient(135deg, #7c3aed, #4c1d95) !important; }
 }
@@ -1537,7 +1568,7 @@ header ~ div svg,
     font-weight: 600 !important;
     text-transform: uppercase !important; 
     letter-spacing: 3px !important; 
-    color: #777777 !important;
+    color: var(--text-subtle) !important;
     line-height: 1 !important;
 }
 
@@ -1620,8 +1651,8 @@ header ~ div svg,
 }
 
 .triple-navigation-deck .deck-arrow-btn:hover {
-    background-color: #111111 !important;
-    color: #ffffff !important;
+    background-color: var(--bg-app) !important;
+    color: var(--text-main) !important;
 }
 
 /* Hide Mobile Elements on Desktop */
@@ -1709,7 +1740,7 @@ header ~ div svg,
     }
 
     .triple-dot.active {
-        background-color: #111111 !important; 
+        background-color: var(--bg-app) !important; 
         transform: scale(1.25) !important;
     }
 }
@@ -1865,8 +1896,8 @@ header ~ div svg,
 .submit-btn {
     width: 100% !important;
     padding: 14px 28px !important; /* Perfect luxury cushion padding */
-    background-color: #0f172a !important; /* Rich Dark Pixieset Character Color */
-    color: #ffffff !important;
+    background-color: var(--primary-blue) !important; /* Rich Dark Pixieset Character Color */
+    color: var(--text-main) !important;
     border: none !important;
     border-radius: 6px !important; /* Ultra-clean matched sharpness */
     
@@ -1887,7 +1918,7 @@ header ~ div svg,
 
 /* Luxury Interactive Hover Animation */
 .submit-btn:hover {
-    background-color: #1e293b !important;
+    background-color: var(--primary-blue-hover) !important;
     letter-spacing: 1.8px !important; /* Smoothly expands text just a micro-bit on hover */
     box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08) !important;
 }
@@ -1936,7 +1967,7 @@ header ~ div svg,
     font-size: 1.1rem !important;
     font-weight: 600 !important;
     letter-spacing: 3.5px !important;
-    color: #ffffff !important; /* 🔄 CHANGED: Swapped Black to Sharp White */
+    color: var(--text-main) !important; /* 🔄 CHANGED: Swapped Black to Sharp White */
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
     margin-bottom: 20px !important;
 }
@@ -1964,7 +1995,7 @@ header ~ div svg,
 }
 
 .footer-social-icons a:hover {
-    color: #00ccb4 !important; /* Signature Cyan Accent Pop on Hover */
+    color: var(--primary-blue) !important; /* Signature Cyan Accent Pop on Hover */
     transform: translateY(-4px) scale(1.1) !important;
 }
 
@@ -1977,7 +2008,7 @@ header ~ div svg,
 
 .footer-link-col h4 {
     font-family: 'Montserrat', sans-serif !important;
-    color: #ffffff !important;
+    color: var(--text-main) !important;
     font-size: 0.9rem !important;
     font-weight: 600 !important;
     margin-bottom: 20px !important;
@@ -2004,7 +2035,7 @@ header ~ div svg,
 }
 
 .footer-link-col ul li a:hover {
-    color: #00ccb4 !important;
+    color: var(--primary-blue) !important;
     transform: translateX(4px) !important;
 }
 
@@ -2078,7 +2109,7 @@ header ~ div svg,
     }
     
     footer.footer-premium .footer-social-icons a {
-        color: #ffffff !important; /* 🔄 CHANGED: White icons on mobile view too */
+        color: var(--text-main) !important; /* 🔄 CHANGED: White icons on mobile view too */
     }
 
     /* 4️⃣ COPYRIGHT TEXT AREA */

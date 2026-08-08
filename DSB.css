@@ -5,37 +5,73 @@
    ============================================================ */
 
 :root {
-    /* Core palette — Lookbook Tech Theme */
-    --bg-app:        #0C0C0C; /* Deep Obsidian Black */
-    --bg-surface:    #0C0C0C; 
-    --bg-card:       #141414; /* Card / Surface Dark */
-    --bg-card-hover: #1a1a1a;
-    --border-soft:   rgba(255, 255, 255, 0.08); /* Glass Border / Lines */
-    --border-medium: rgba(255, 255, 255, 0.15);
+    /* --- PROFESSIONAL SAAS THEME (v2) ---
+       Neutral graphite base (not pure black — softer, less "cheap")
+       + one confident blue accent, same structure the Digital Agency
+       reference palette uses: neutral grays doing 90% of the work,
+       one accent color carrying all interactive/brand meaning. */
+    --bg-app:        #0B0C0E; /* Deep neutral graphite, not pure black */
+    --bg-surface:    #0B0C0E;
+    --bg-card:       #17181B;
+    --bg-card-hover: #1E2024;
+
+    --border-soft:   rgba(255, 255, 255, 0.07);
+    --border-medium: rgba(255, 255, 255, 0.16);
 
     /* Text */
-    --text-main:     #FFFFFF; /* Pure Clean White */
-    --text-muted:    #888888; /* Muted Grey Text */
-    --text-subtle:   #AAAAAA;
+    --text-main:     #F5F5F7; /* Off-white, easier on the eye than pure #fff */
+    --text-muted:    #A0A3A8; /* Neutral gray secondary text */
+    --text-subtle:   #6B6E73; /* Neutral gray tertiary text */
 
-    /* Brand accent — Power Red (Primary) & Electric Cyan (Accent) */
-    --primary-blue:        #FF3B30; /* Mapped to Power Red */
-    --primary-blue-hover:  #e03228;
-    --accent-soft:         rgba(255, 59, 48, 0.1);
-    
-    /* Electric Cyan Tech Accents */
-    --electric-cyan:       #00F0FF;
+    /* Brand accent — Blue (Primary) */
+    --primary-blue:        #3B6EF6; /* Confident SaaS blue */
+    --primary-blue-hover:  #5C87FF;
+    --accent-soft:         rgba(59, 110, 246, 0.15);
+
+    /* Highlight Accents — cool-toned, used for metric labels etc. */
+    --electric-cyan:       #8B93A6;
 
     /* Status colors */
-    --success-green:  #22c55e;
-    --warning-orange: #f59e0b;
-    --danger-red:     #FF3B30;
+    --success-green:  #22C55E;
+    --warning-orange: #F5A524;
+    --danger-red:     #F04438;
+
+    /* Solid-fill variants — for banners/badges where text sits directly on
+       a full-color background (the bright versions above are for text/icon
+       use on the dark app background and read too low-contrast as a fill). */
+    --success-green-strong: #15803D;
+    --danger-red-strong:    #B42318;
 
     /* Misc */
     --radius-sm:  6px;
     --radius-md:  10px;
     --radius-lg:  14px;
     --transition: 0.2s ease;
+
+    /* ============================================================
+       SPACING & TYPE SCALES (Unchanged & Safe)
+       ============================================================ */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-7: 32px;
+    --space-8: 40px;
+
+    --text-2xs: 0.68rem;
+    --text-xs:  0.75rem;
+    --text-sm:  0.82rem;
+    --text-base:0.88rem;
+    --text-md:  0.95rem;
+    --text-lg:  1.1rem;
+    --text-xl:  1.4rem;
+    --text-2xl: 1.9rem;
+
+    --btn-pad-lg: 12px 24px;
+    --btn-pad-md: 10px 18px;
+    --btn-pad-sm: 8px 14px;
 }
 
 /* ============================================================
@@ -46,6 +82,30 @@
     padding: 0;
     box-sizing: border-box;
     font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    line-height: 1.4;
+}
+h1, h2, h3, h4 { line-height: 1.25; }
+
+/* 🛡️ SAFETY NET: any heading/paragraph/label/span living inside a flex
+   or grid module (which is every module on this dashboard) must be
+   able to shrink and wrap — otherwise one long line of text silently
+   forces its whole card wider than the screen, and on mobile
+   overflow-x:hidden just clips it instead of wrapping it. This is a
+   blanket fix for the exact bug class reported (Client Gallery Link
+   heading, empty-state text, storage line, metric-label spans all cut
+   off on mobile). Pill-badges (.status-badge / .feature-new-tag /
+   .plan-badge-inline) are excluded on purpose — those are meant to
+   stay short, compact, single-line labels. */
+.dashboard-module h1,
+.dashboard-module h2,
+.dashboard-module h3,
+.dashboard-module h4,
+.dashboard-module p,
+.dashboard-module label,
+.dashboard-module span:not(.status-badge):not(.feature-new-tag):not(.plan-badge-inline) {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: break-word;
 }
 
 /* Custom scrollbar */
@@ -155,7 +215,7 @@
 .nav-item.active {
     background: var(--accent-soft);
     color: var(--primary-blue);
-    border: 1px solid rgba(255, 59, 48, 0.2);
+    border: 1px solid rgba(59, 110, 246, 0.2);
 }
 .setup-link { margin-top: auto; }
 
@@ -164,7 +224,7 @@
     margin-top: auto;
     padding: 10px 14px;
     background: var(--accent-soft);
-    border: 1px solid rgba(255, 59, 48, 0.2);
+    border: 1px solid rgba(59, 110, 246, 0.2);
     border-radius: var(--radius-md);
     font-size: 0.78rem;
 }
@@ -207,7 +267,7 @@
     width: 34px;
     height: 34px;
     background: var(--primary-blue);
-    color: #FFFFFF;
+    color: var(--text-main);
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -253,23 +313,38 @@
     left: 0; right: 0; bottom: 0;
     overflow-y: auto;
     overflow-x: hidden;
-    padding: 28px 32px;
+    padding: var(--space-7) var(--space-7);
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: var(--space-6);
 }
-.dashboard-module { width: 100%; }
+.dashboard-module { width: 100%; min-width: 0; }
 .section-heading {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 14px;
+    margin-bottom: var(--space-4);
     flex-wrap: wrap;
-    gap: 10px;
+    gap: var(--space-2);
+    min-width: 0;
 }
-.section-heading h2 { font-size: 1.1rem; color: var(--text-main); font-weight: 600; }
-.section-heading h3 { font-size: 0.95rem; color: var(--text-main); font-weight: 600; }
-.section-heading p { font-size: 0.85rem; color: var(--text-muted); }
+/* 🐞 FIX: h2/h3/p here are flex ITEMS (children of a flex row). Flex
+   items default to min-width:auto, which means "never shrink below
+   my own text's natural single-line width" — so long headings like
+   "Client Gallery Link & Live Selection" refused to wrap and instead
+   forced the whole box wider than the screen. On mobile, the parent's
+   overflow-x:hidden then just silently clipped the overflow instead
+   of wrapping it. min-width:0 + overflow-wrap lets them wrap normally
+   like any regular block text. */
+.section-heading h2,
+.section-heading h3,
+.section-heading p {
+    min-width: 0;
+    overflow-wrap: break-word;
+}
+.section-heading h2 { font-size: var(--text-lg); color: var(--text-main); font-weight: 600; letter-spacing: 0.2px; }
+.section-heading h3 { font-size: var(--text-md); color: var(--text-main); font-weight: 600; letter-spacing: 0.2px; }
+.section-heading p { font-size: var(--text-sm); color: var(--text-muted); margin-top: 2px; }
 
 /* ============================================================
    METRICS GRID
@@ -277,23 +352,24 @@
 .metrics-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
+    gap: var(--space-4);
 }
 .metric-card {
     background: var(--bg-card);
     border: 1px solid var(--border-soft);
     border-radius: var(--radius-lg);
-    padding: 20px;
+    padding: var(--space-5);
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: var(--space-3);
+    min-width: 0; /* grid items default to min-width:auto — without this, long metric text (storage line, "Pending Galleries" label) refuses to shrink and forces the card wider than its grid column */
     transition: border-color var(--transition), transform var(--transition);
 }
 .metric-card:hover {
     border-color: var(--border-medium);
     transform: translateY(-1px);
 }
-.metric-header { display: flex; align-items: center; gap: 10px; }
+.metric-header { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
 .metric-header i {
     width: 32px;
     height: 32px;
@@ -304,29 +380,36 @@
     font-size: 0.9rem;
     flex-shrink: 0;
 }
-.color-blue  { background: rgba(255, 59, 48, 0.1); color: var(--primary-blue); }
+.color-blue  { background: rgba(59, 110, 246, 0.1); color: var(--primary-blue); }
 .color-green { background: rgba(34, 197, 94, 0.1);  color: var(--success-green); }
 .color-orange{ background: rgba(245, 158, 11, 0.1); color: var(--warning-orange); }
-.metric-header h4 { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+.metric-header h4 { font-size: var(--text-xs); color: var(--text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; min-width: 0; overflow-wrap: break-word; }
 .metric-body h2 {
-    font-size: 1.9rem;
+    font-size: var(--text-2xl);
     color: var(--text-main);
-    font-weight: 600;
+    font-weight: 700;
+    letter-spacing: -0.3px;
     display: flex;
     align-items: baseline;
-    gap: 8px;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    min-width: 0;
 }
-.metric-label { font-size: 0.8rem; color: var(--electric-cyan); font-weight: 500; }
+.metric-label { font-size: var(--text-xs); color: var(--electric-cyan); font-weight: 500; text-transform: none; min-width: 0; overflow-wrap: break-word; }
 
 /* Storage bar */
 .storage-stats {
     display: flex;
     justify-content: space-between;
-    font-size: 0.82rem;
+    flex-wrap: wrap;
+    gap: var(--space-1) var(--space-3);
+    font-size: var(--text-sm);
     color: var(--text-muted);
-    margin-bottom: 8px;
+    margin-bottom: var(--space-2);
     font-weight: 500;
+    min-width: 0;
 }
+.storage-stats span { min-width: 0; overflow-wrap: break-word; }
 .progress-bar-bg {
     width: 100%;
     height: 4px;
@@ -336,23 +419,114 @@
 }
 .progress-bar-fill {
     height: 100%;
+    width: 0%; /* JS sets the real value at runtime (studioStorageProgressFill / globalProgressBarFill) — this is just the safe starting state so no inline style is needed in HTML */
     background: var(--electric-cyan);
     border-radius: 4px;
     transition: width 0.5s ease;
 }
 
 /* ============================================================
+   CLIENT PICKER BAR (Overview) — single entry point to select,
+   switch, or create a client. Nothing else on the page depends
+   on any other selector for "which client" — this is it.
+   ============================================================ */
+.client-picker-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    background: var(--bg-card);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5); /* matches metric-card/link-tracker-section/upload-section exactly */
+}
+.client-picker-left {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex: 1;
+    min-width: 0;
+}
+.picker-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-md);
+    background: rgba(59, 110, 246, 0.1);
+    color: var(--primary-blue);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 0.95rem;
+}
+.picker-text-group { display: flex; flex-direction: column; gap: var(--space-1); flex: 1; min-width: 0; }
+.picker-text-group label {
+    font-size: var(--text-2xs);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+#overviewClientQuickPicker { min-width: 220px; max-width: 360px; }
+
+/* ============================================================
+   EMPTY STATE CARD — replaces (not overlays) a section's real
+   content when there's nothing to act on yet. No blur, no lock
+   icon, no pointer-events tricks: DSB.js toggles which of the
+   two (empty state vs real content) is display:none.
+   ============================================================ */
+.empty-state-card {
+    display: none; /* shown via JS by adding a client-selected/not-selected state */
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: var(--space-2);
+    padding: var(--space-7) var(--space-6);
+    background: var(--bg-card);
+    border: 1px dashed var(--border-medium);
+    border-radius: var(--radius-lg);
+    min-width: 0;
+    max-width: 100%;
+}
+.empty-state-icon {
+    font-size: 1.5rem;
+    color: var(--text-muted);
+    margin-bottom: var(--space-2);
+}
+.empty-state-card h4 {
+    color: var(--text-main);
+    font-size: var(--text-md);
+    font-weight: 600;
+    margin: 0;
+    max-width: 100%;
+    overflow-wrap: break-word;
+}
+.empty-state-card p {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    line-height: 1.5;
+    max-width: 320px;
+    width: 100%;
+    margin: 0 0 var(--space-2);
+    overflow-wrap: break-word;
+}
+
+/* ============================================================
    UPLOAD SECTION
    ============================================================ */
-#activeClientIndicator {
-    font-size: 0.8rem;
-    color: var(--text-muted);
-    font-weight: 500;
+.upload-section {
+    /* Same card treatment (border/background/padding) as metric-card
+       and link-tracker-section — one consistent card language across
+       every module on the dashboard. */
+    background: var(--bg-card);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
 }
 .dropzone-area {
     border: 1px dashed var(--border-medium);
     border-radius: var(--radius-lg);
-    padding: 40px 20px;
+    padding: var(--space-8) var(--space-5);
     text-align: center;
     background: var(--bg-card);
     transition: border-color var(--transition), background var(--transition);
@@ -361,22 +535,34 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 10px;
-    margin-top: 12px;
+    gap: var(--space-3);
+    margin-top: var(--space-3);
+    min-width: 0;
 }
 .dropzone-area:hover {
     border-color: var(--electric-cyan);
     background: var(--bg-card-hover);
 }
-.dropzone-icon { font-size: 2.4rem; color: var(--text-subtle); margin-bottom: 4px; }
-.dropzone-area h3 { font-size: 1rem; color: var(--text-main); font-weight: 600; }
-.dropzone-area p  { font-size: 0.85rem; color: var(--text-muted); }
+.dropzone-icon { font-size: 2.4rem; color: var(--text-subtle); margin-bottom: var(--space-1); }
+.dropzone-area h3 { font-size: var(--text-md); color: var(--text-main); font-weight: 600; max-width: 100%; overflow-wrap: break-word; }
+.dropzone-area p  { font-size: var(--text-sm); color: var(--text-muted); max-width: 100%; overflow-wrap: break-word; }
 
+/* Options row (watermark toggle + category select) — grouped and
+   centered as a single unit, then the two primary buttons + progress
+   bar + file list all inherit the same vertical rhythm below. */
+.upload-options-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-3);
+    margin-bottom: var(--space-2);
+}
 .watermark-toggle {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 0.85rem;
+    justify-content: center;
+    gap: var(--space-2);
+    font-size: var(--text-sm);
     color: var(--text-muted);
     cursor: pointer;
 }
@@ -389,90 +575,127 @@
 .category-select-wrapper {
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    align-items: center;
+    gap: var(--space-1);
     width: 100%;
     max-width: 260px;
 }
 .category-select-wrapper label {
-    font-size: 0.8rem;
+    font-size: var(--text-sm);
     color: var(--text-muted);
     font-weight: 500;
 }
+.category-select-wrapper select { width: 100%; }
 
 /* ============================================================
-   BUTTONS
+   BUTTON SYSTEM
+   Three consistent sizes across the whole dashboard:
+     LARGE  — .btn-primary / #browseFilesBtn / #startCloudUploadBtn
+              (the Browse Files + Upload Images CTA pair)
+     MEDIUM — .btn-primary-small
+              (New Client, Generate Link, Publish Gallery, Save…)
+     SMALL  — .action-btn (with .text-btn / .btn-green / .whatsapp-btn
+              as color variants layered on top)
+              (Copy, Share, Choose Theme, Regenerate…)
+     GHOST  — .btn-text (Cancel / low-emphasis actions)
+   Every size shares the same base shape (radius, weight, transition,
+   :active feedback) so a button never looks like it wandered in from
+   a different design — only size + color vary by role.
    ============================================================ */
+   /* Shared base: shape + feel, identical across every button role */
 .btn-primary,
-#browseFilesBtn {
-    background: var(--primary-blue);
-    color: #FFFFFF;
-    border: none;
-    padding: 10px 22px;
-    border-radius: var(--radius-md);
-    font-weight: 700;
-    font-size: 0.88rem;
+#browseFilesBtn,
+#startCloudUploadBtn,
+.btn-primary-small,
+.action-btn,
+.btn-text {
+    border: 1px solid transparent; /* UI FIX: Keeps height perfectly consistent */
+    box-sizing: border-box; /* UI FIX: Prevents border from adding extra visual height */
     cursor: pointer;
-    transition: background var(--transition), transform var(--transition);
     display: inline-flex;
     align-items: center;
-    gap: 7px;
+    justify-content: center;
+    white-space: nowrap;
+    border-radius: var(--radius-md);
+    transition: background var(--transition), border-color var(--transition), transform var(--transition), opacity var(--transition);
 }
+/* LARGE — primary CTA pair (Browse Files / Upload Images) */
+.btn-primary,
+#browseFilesBtn,
+#startCloudUploadBtn {
+    background: var(--primary-blue);
+    color: var(--text-main);
+    padding: var(--btn-pad-lg);
+    font-weight: 700;
+    font-size: var(--text-base);
+    gap: var(--space-2);
+    min-width: 170px; /* UI FIX: Keeps both upload buttons exactly the same width */
+}
+.btn-primary:active,
+#browseFilesBtn:active,
+#startCloudUploadBtn:active,
+.btn-primary-small:active,
+.action-btn:active,
+.btn-text:active { transform: translateY(0) scale(0.98); }
 .btn-primary:hover,
-#browseFilesBtn:hover {
+#browseFilesBtn:hover,
+#startCloudUploadBtn:hover {
     background: var(--primary-blue-hover);
     transform: translateY(-1px);
 }
 
+/* MEDIUM — standard actions */
 .btn-primary-small {
-    padding: 8px 16px;
+    padding: var(--btn-pad-md);
     background: var(--primary-blue);
-    color: #FFFFFF;
-    border: none;
-    border-radius: var(--radius-md);
-    cursor: pointer;
+    color: var(--text-main);
     font-weight: 700;
-    font-size: 0.82rem;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    transition: background var(--transition);
+    font-size: var(--text-sm);
+    gap: var(--space-2);
     text-decoration: none;
 }
-.btn-primary-small:hover { background: var(--primary-blue-hover); }
+.btn-primary-small:hover { background: var(--primary-blue-hover); transform: translateY(-1px); }
 
+/* SMALL — compact outline actions */
 .action-btn {
-    padding: 7px 13px;
-    border-radius: var(--radius-sm);
-    font-size: 0.82rem;
+    padding: var(--btn-pad-sm);
+    font-size: var(--text-sm);
     font-weight: 600;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    border: none;
-    transition: all var(--transition);
+    gap: var(--space-2);
 }
 .text-btn {
     background: var(--bg-card);
-    border: 1px solid var(--border-medium);
+    border-color: var(--border-medium); /* UI FIX: Changed from full border declaration to just color */
     color: var(--text-main);
 }
 .text-btn:hover { background: var(--bg-card-hover); border-color: var(--border-soft); }
 
-.btn-green { background: var(--success-green); color: #fff; }
-.btn-green:hover { background: #16a34a; }
+/* Color variant — layers on top of whichever size class it's paired
+   with (.btn-green alone = LARGE, .action-btn.btn-green = SMALL) */
+.btn-green { background: var(--success-green); color: var(--text-main); border-color: transparent; }
+.btn-green:hover { background: var(--success-green-strong); }
 
+/* GHOST — lowest-emphasis action (Cancel, dismiss) */
 .btn-text {
     background: none;
-    border: none;
-    padding: 8px 14px;
+    padding: var(--btn-pad-md);
     font-weight: 600;
     color: var(--text-muted);
-    cursor: pointer;
-    transition: color var(--transition);
-    font-size: 0.88rem;
+    font-size: var(--text-base);
 }
 .btn-text:hover { color: var(--text-main); }
+
+/* Disabled state — consistent across every button role */
+.btn-primary:disabled,
+#browseFilesBtn:disabled,
+#startCloudUploadBtn:disabled,
+.btn-primary-small:disabled,
+.action-btn:disabled,
+.btn-text:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+}
 
 /* ============================================================
    UPLOAD PROGRESS
@@ -518,17 +741,26 @@
     background: var(--bg-card);
     border: 1px solid var(--border-soft);
     border-radius: var(--radius-lg);
-    padding: 20px;
+    padding: var(--space-5);
 }
 .link-generator-box {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    margin-bottom: 16px;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+}
+.link-actions-row {
+    /* These buttons live in their own row container (not a direct
+       flex-column child) so they size to their own content instead
+       of stretching full-width. */
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    align-items: center; /* UI FIX: Perfectly aligns buttons vertically */
 }
 .generated-link-row {
     display: flex;
-    gap: 8px;
+    gap: var(--space-2);
 }
 .generated-link-row .form-control {
     flex: 1;
@@ -540,13 +772,13 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 12px;
-    padding: 14px 0;
+    gap: var(--space-3);
+    padding: var(--space-4) 0;
     border-top: 1px solid var(--border-soft);
     border-bottom: 1px solid var(--border-soft);
-    margin-bottom: 16px;
+    margin-bottom: var(--space-4);
 }
-.selection-stats-text { font-size: 0.85rem; color: var(--electric-cyan); flex: 1; min-width: 160px; }
+.selection-stats-text { font-size: var(--text-sm); color: var(--electric-cyan); flex: 1; min-width: 0; overflow-wrap: break-word; }
 .live-thumbnails-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
@@ -602,7 +834,7 @@
     right: 6px;
     background: rgba(12, 12, 12, 0.8); /* Dark glass */
     color: var(--danger-red);
-    border: 1px solid rgba(255, 59, 48, 0.4);
+    border: 1px solid rgba(240, 68, 56, 0.4);
     border-radius: 50%;
     width: 26px;
     height: 26px;
@@ -621,7 +853,7 @@
 }
 .remove-photo-btn:hover {
     background: var(--danger-red);
-    color: #fff;
+    color: var(--text-main);
     border-color: var(--danger-red);
     transform: scale(1.1) !important;
 }
@@ -677,7 +909,7 @@
 }
 .lightbox-close-btn:hover {
     background: var(--danger-red);
-    color: #fff;
+    color: var(--text-main);
     transform: rotate(90deg);
 }
 
@@ -719,7 +951,7 @@
     transition: all var(--transition);
     flex-shrink: 0;
 }
-.theme-preview-nav:hover:not(:disabled) { background: var(--primary-blue); color: #fff; }
+.theme-preview-nav:hover:not(:disabled) { background: var(--primary-blue); color: var(--text-main); }
 .theme-preview-nav:disabled { opacity: 0.25; cursor: default; }
 .theme-preview-dots { display: flex; gap: 8px; margin-top: 18px; }
 .theme-preview-dot {
@@ -756,18 +988,18 @@
 }
 .theme-preview-eye-btn:hover {
     background: var(--theme-accent, var(--primary-blue));
-    color: #fff;
+    color: var(--text-main);
     border-color: transparent;
 }
 
 /* WhatsApp button */
 .whatsapp-btn { color: #25D366 !important; border-color: #25D366 !important; }
-.whatsapp-btn:hover { background: #25D366 !important; color: #fff !important; }
+.whatsapp-btn:hover { background: #25D366 !important; color: var(--text-main) !important; }
 
 /* ============================================================
    CLIENT TRACKER TABLE
    ============================================================ */
-.search-bar-wrapper { margin-bottom: 14px; }
+.search-bar-wrapper { margin-bottom: var(--space-4); }
 .table-responsive {
     background: var(--bg-card);
     border: 1px solid var(--border-soft);
@@ -778,8 +1010,8 @@
 .client-table { width: 100%; border-collapse: collapse; text-align: left; }
 .client-table th {
     background: var(--bg-surface);
-    padding: 13px 18px;
-    font-size: 0.75rem;
+    padding: var(--space-3) var(--space-5);
+    font-size: var(--text-xs);
     color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.8px;
@@ -787,10 +1019,10 @@
     font-weight: 600;
 }
 .client-table td {
-    padding: 14px 18px;
+    padding: var(--space-4) var(--space-5);
     border-bottom: 1px solid var(--border-soft);
     vertical-align: middle;
-    font-size: 0.88rem;
+    font-size: var(--text-base);
     color: var(--text-main);
 }
 .client-table tr:last-child td { border-bottom: none; }
@@ -827,10 +1059,10 @@
    FORM CONTROLS
    ============================================================ */
 .form-control {
-    padding: 10px 14px;
+    padding: var(--space-3) var(--space-4);
     border: 1px solid var(--border-medium);
     border-radius: var(--radius-md);
-    font-size: 0.88rem;
+    font-size: var(--text-base);
     outline: none;
     transition: all var(--transition);
     color: var(--text-main);
@@ -840,7 +1072,7 @@
 .form-control::placeholder { color: var(--text-subtle); }
 .form-control:focus {
     border-color: var(--primary-blue);
-    box-shadow: 0 0 0 3px rgba(255, 59, 48, 0.15);
+    box-shadow: 0 0 0 3px rgba(59, 110, 246, 0.15);
 }
 select.form-control { cursor: pointer; }
 
@@ -876,13 +1108,13 @@ select.form-control { cursor: pointer; }
 }
 .modal-overlay.active .modal-content { transform: translateY(0); }
 .modal-header {
-    padding: 18px 22px;
+    padding: var(--space-5) var(--space-6);
     border-bottom: 1px solid var(--border-soft);
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
-.modal-header h3 { font-size: 1rem; color: var(--text-main); font-weight: 600; }
+.modal-header h3 { font-size: var(--text-lg); color: var(--text-main); font-weight: 600; }
 .close-modal-btn {
     background: none;
     border: none;
@@ -893,32 +1125,33 @@ select.form-control { cursor: pointer; }
     padding: 4px;
 }
 .close-modal-btn:hover { color: var(--text-main); }
-.modal-body { padding: 22px; display: flex; flex-direction: column; gap: 18px; }
-.form-group { display: flex; flex-direction: column; gap: 7px; }
+.modal-body { padding: var(--space-6); display: flex; flex-direction: column; gap: var(--space-4); }
+.form-group { display: flex; flex-direction: column; gap: var(--space-2); }
 .form-group label {
-    font-size: 0.75rem;
+    font-size: var(--text-xs);
     font-weight: 600;
     color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
 .modal-footer {
-    padding: 14px 22px;
+    padding: var(--space-4) var(--space-6);
     background: var(--bg-surface);
     border-top: 1px solid var(--border-soft);
     display: flex;
     justify-content: flex-end;
-    gap: 10px;
+    gap: var(--space-3);
 }
 
 /* ============================================================
    VIEW SWITCHING (SPA)
    ============================================================ */
 .view-section { display: none; animation: fadeInView 0.25s ease; }
-.view-section.active-view { display: block; }
-@keyframes fadeInView {
-    from { opacity: 0; transform: translateY(8px); }
-    to   { opacity: 1; transform: translateY(0); }
+.view-section.active-view { 
+    display: flex; 
+    flex-direction: column;
+    gap: var(--space-6); /* Ye tumhare saare modules k beech me perfect 24px ka space layega */
+    width: 100%;
 }
 
 /* ============================================================
@@ -932,14 +1165,39 @@ select.form-control { cursor: pointer; }
    RESPONSIVE — TABLET
    ============================================================ */
 @media (max-width: 991px) {
+    .workspace-scroll-viewport { padding: var(--space-5) var(--space-5); gap: var(--space-5); }
     .metrics-grid { grid-template-columns: repeat(2, 1fr); }
     .metrics-grid .metric-card:last-child { grid-column: span 2; }
+    .view-section.active-view { gap: var(--space-5); }
 }
 
 /* ============================================================
    RESPONSIVE — MOBILE
    ============================================================ */
 @media (max-width: 768px) {
+    /* Consistent, slightly tighter card padding on mobile — applies to
+       every card type (metric-card already used 20px on all screens;
+       this keeps them all in sync instead of some shrinking and others not) */
+    .client-picker-bar,
+    .upload-section,
+    .link-tracker-section,
+    .metric-card { padding: var(--space-4); }
+    .view-section.active-view { gap: var(--space-4); }
+
+    /* Client picker bar: stack picker + button, full-width select */
+    .client-picker-bar { flex-direction: column; align-items: stretch; }
+    .client-picker-left { width: 100%; }
+    #overviewClientQuickPicker { min-width: 0; max-width: none; width: 100%; }
+    .client-picker-bar .btn-primary-small { width: 100%; justify-content: center; }
+    .empty-state-card { padding: 24px 16px; }
+
+    /* Link action buttons: stack full-width for easy tapping instead of
+       a wrapped row of small buttons (Fitts's Law — bigger targets on
+       touch screens beat a tidy row that's easy to mis-tap). */
+    .link-actions-row { flex-direction: column; }
+    .link-actions-row .btn-primary-small,
+    .link-actions-row .action-btn { width: 100%; justify-content: center; }
+
     /* Sidebar slide-in */
     .studio-sidebar {
         position: fixed;
@@ -973,7 +1231,7 @@ select.form-control { cursor: pointer; }
 
     /* Navbar */
     .workspace-top-navbar { padding-left: 60px; height: 58px; }
-    .workspace-scroll-viewport { top: 58px; padding: 18px 16px; gap: 18px; }
+    .workspace-scroll-viewport { top: 58px; padding: var(--space-4) var(--space-4); gap: var(--space-4); }
 
     /* Metrics */
     .metrics-grid { grid-template-columns: 1fr; }
@@ -1151,7 +1409,7 @@ select.form-control { cursor: pointer; }
     top: 10px;
     right: 10px;
     background: var(--theme-accent, var(--primary-blue));
-    color: #0f0f0f;
+    color: var(--bg-app);
     font-size: 0.7rem;
     font-weight: 700;
     padding: 3px 10px;
@@ -1179,15 +1437,76 @@ select.form-control { cursor: pointer; }
 .theme-card-coming-soon span { font-size: 0.76rem; color: var(--text-subtle); }
 /* 🌐 GLOBAL OFFLINE BANNER (see DSB.html + DSBstyle.js) */
 #globalOfflineBanner {
+    display: none; /* DSBstyle.js toggles this directly via el.style.display on/offline */
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
-    background: #b91c1c;
-    color: #fff;
+    background: var(--danger-red-strong);
+    color: var(--text-main);
     text-align: center;
     padding: 9px 14px;
     font-size: 0.82rem;
     font-weight: 600;
     z-index: 999999;
 }
+
+/* ============================================================
+   INLINE-STYLE CLEANUP — every rule below replaces a style="..."
+   attribute that used to live directly in DSB.html. Moving them
+   here means DSB.css is the single source of truth for every
+   pixel on the dashboard; DSB.html only carries structure + IDs,
+   and JS only ever touches display/width at runtime (still via
+   inline style, which is fine — that's genuinely dynamic state,
+   not competing with a CSS rule).
+   ============================================================ */
+
+/* Sidebar brand icon color */
+.brand-left-content i { color: var(--primary-blue); }
+
+/* Profile dropdown — starts closed, DSBstyle.js opens/closes via style.display */
+.profile-dropdown-menu { display: none; }
+
+/* Upload row — Start Cloud Upload starts hidden (DSB.js reveals it once
+   files are picked). No margin-left needed: dropzone-area is a centered
+   flex column with its own gap, so the old row-layout margin was dead
+   weight that only ever pushed this button off-center. */
+#startCloudUploadBtn { display: none; }
+
+/* Upload progress bar — starts hidden until an upload begins */
+#globalProgressWrapper { display: none; }
+
+/* "Choose Theme" shortcut — kept as an accent-colored outline (distinct
+   from the plain Copy/Share outline buttons next to it) since it's a
+   cross-tab navigation shortcut, not a same-context action. */
+#goToThemesShortcutBtn { color: var(--primary-blue); border-color: var(--primary-blue); }
+
+/* Regenerate link — only shown once a link already exists */
+#regenerateLinkBtn { display: none; }
+
+/* Client gallery PIN — only shown once a link has been generated */
+#clientGalleryPinDisplay {
+    display: none;
+    margin: var(--space-3) 0 0;
+    color: var(--primary-blue);
+    font-weight: 700;
+}
+
+/* Revert-to-editing — warning-colored outline variant, only shown once
+   a gallery has been published */
+#revertToEditingBtn {
+    display: none;
+    color: var(--warning-orange);
+    border-color: var(--warning-orange);
+}
+
+/* Gallery Themes tab — active-client helper line */
+#activeClientForTheme {
+    margin-bottom: var(--space-4);
+    font-size: var(--text-sm);
+    color: var(--text-muted);
+}
+#themesGridContainer p { color: var(--text-muted); }
+
+/* Subscription plan cards — muted "(N/day per gallery)" note */
+.plan-limit-note { color: var(--text-muted); font-weight: 400; }

@@ -233,3 +233,72 @@ if (whatsappShareBtn) {
         window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, "_blank");
     });
 }
+
+// ============================================================
+// 🆕 NEW CLIENT / EDIT CLIENT MODALS — pure open/close UI (no
+// Firebase). Moved here from DSB.js per the DSB.js = backend,
+// DSBstyle.js = frontend split. The actual Firebase create/save
+// calls stay in DSB.js and call these same open/close functions
+// (safe: this file loads before DSB.js, so they're already
+// defined on window by the time DSB.js's own listeners run).
+// ============================================================
+const newClientModal = document.getElementById("newClientModal");
+const closeModalBtn = document.getElementById("closeModalBtn");
+const cancelModalBtn = document.getElementById("cancelModalBtn");
+const clientNameInput = document.getElementById("clientNameInput");
+const eventTypeInput = document.getElementById("eventTypeInput");
+const newClientTriggerBtn = document.querySelector(".tracker-section .btn-primary-small");
+const overviewNewClientBtn = document.getElementById("overviewNewClientBtn");
+const uploadEmptyStateCreateBtn = document.getElementById("uploadEmptyStateCreateBtn");
+
+function openNewClientModal() {
+    if (newClientModal) newClientModal.classList.add("active");
+}
+function closeNewClientModal() {
+    if (newClientModal) newClientModal.classList.remove("active");
+    if (clientNameInput) clientNameInput.value = "";
+    if (eventTypeInput) eventTypeInput.value = "Wedding";
+}
+
+if (newClientTriggerBtn) newClientTriggerBtn.addEventListener("click", openNewClientModal);
+if (overviewNewClientBtn) overviewNewClientBtn.addEventListener("click", openNewClientModal);
+if (uploadEmptyStateCreateBtn) uploadEmptyStateCreateBtn.addEventListener("click", openNewClientModal);
+if (closeModalBtn) closeModalBtn.addEventListener("click", closeNewClientModal);
+if (cancelModalBtn) cancelModalBtn.addEventListener("click", closeNewClientModal);
+
+const editClientModal = document.getElementById("editClientModal");
+const closeEditModalBtn = document.getElementById("closeEditModalBtn");
+const cancelEditModalBtn = document.getElementById("cancelEditModalBtn");
+
+function closeEditModal() {
+    if (editClientModal) editClientModal.classList.remove("active");
+}
+if (closeEditModalBtn) closeEditModalBtn.addEventListener("click", closeEditModal);
+if (cancelEditModalBtn) cancelEditModalBtn.addEventListener("click", closeEditModal);
+
+// ============================================================
+// 🆕 OVERVIEW EMPTY-STATE SWAP — pure UI: shows the empty-state
+// card OR the real section content, never both, never a blurred
+// overlay. DSB.js calls window.setOverviewClientSelectedState(bool)
+// whenever activeProjectId changes (client picked/created/switched)
+// or on initial dashboard load (no client yet). This function only
+// toggles visibility — it has no idea what a "client" or Firestore
+// even is, which is the whole point of it living here.
+// ============================================================
+const uploadEmptyState = document.getElementById("uploadEmptyState");
+const mainDropzone = document.getElementById("mainDropzone");
+const linkEmptyState = document.getElementById("linkEmptyState");
+const linkRealContent = document.getElementById("linkRealContent");
+
+function setOverviewClientSelectedState(hasClient) {
+    if (uploadEmptyState) uploadEmptyState.style.display = hasClient ? "none" : "flex";
+    if (mainDropzone) mainDropzone.style.display = hasClient ? "block" : "none";
+    if (linkEmptyState) linkEmptyState.style.display = hasClient ? "none" : "flex";
+    if (linkRealContent) linkRealContent.style.display = hasClient ? "block" : "none";
+}
+// Exposed on window so DSB.js (which owns activeProjectId) can call it
+// without this file needing to know anything about Firebase state.
+window.setOverviewClientSelectedState = setOverviewClientSelectedState;
+
+// Start in the "no client" empty state until DSB.js says otherwise.
+document.addEventListener("DOMContentLoaded", () => setOverviewClientSelectedState(false));

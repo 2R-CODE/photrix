@@ -12,7 +12,7 @@
     <!-- 🌐 GLOBAL OFFLINE BANNER — one consistent "you're offline" signal
          for the whole dashboard, instead of each action improvising its
          own timeout/error behavior. Shown/hidden by DSBstyle.js. -->
-    <div id="globalOfflineBanner" style="display:none;">
+    <div id="globalOfflineBanner">
         ⚠️ You're offline — actions like uploading, creating clients, or applying themes won't work until your connection returns.
     </div>
 
@@ -21,7 +21,7 @@
         <aside class="studio-sidebar" id="testSidebar">
             <div class="sidebar-brand-node-new">
                 <div class="brand-left-content">
-                    <i class="fas fa-camera-retro fa-lg" style="color: #00ccb4;"></i>
+                    <i class="fas fa-camera-retro fa-lg"></i>
                     <span class="brand-title-text">PHOTRIX</span>
                 </div>
                 <button class="sidebar-toggle-btn" id="testToggleBtn">
@@ -46,7 +46,7 @@
                 <div class="profile-menu-container">
     <div class="profile-avatar-circle" id="profileToggleBtn">P</div>
     
-    <div class="profile-dropdown-menu" id="profileDropdownMenu" style="display: none;">
+    <div class="profile-dropdown-menu" id="profileDropdownMenu">
         <!-- FIX: "Billing & Subscription" (billing.html) removed — it duplicated
              the sidebar's own "Subscription" tab (data-target="view-subscription"),
              which already shows plan status + upgrade options inside the SPA.
@@ -67,7 +67,7 @@
             <div class="workspace-scroll-viewport">
                 
                 <div id="view-overview" class="view-section active-view">
-                    
+
                     <section class="dashboard-module metrics-grid">
     <div class="metric-card">
         <div class="metric-header">
@@ -99,50 +99,73 @@
                 <span id="storageTextSpan">Loading...</span>
             </div>
             <div class="progress-bar-bg">
-                <div id="studioStorageProgressFill" class="progress-bar-fill" style="width: 0%;"></div>
+                <div id="studioStorageProgressFill" class="progress-bar-fill"></div>
             </div>
         </div>
     </div>
 </section>
 
+                    <section class="dashboard-module client-picker-bar">
+                        <div class="client-picker-left">
+                            <i class="fas fa-user-check picker-icon"></i>
+                            <div class="picker-text-group">
+                                <label for="overviewClientQuickPicker">Working On</label>
+                                <select id="overviewClientQuickPicker" class="form-control">
+                                    <option value="">— Select or create a client —</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button class="btn-primary-small" id="overviewNewClientBtn"><i class="fas fa-plus"></i> New Client</button>
+                    </section>
+
                     <section class="dashboard-module upload-section">
                         <div class="section-heading">
-<span id="activeClientIndicator" style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">
-    No client selected — click a row in the table above
-</span>
                             <h3>Secure Cloud Upload</h3>
                         </div>
-                        
+
+                        <!-- 🆕 EMPTY STATE — shown instead of the upload zone when no client
+                             is selected. No blur/lock overlay: this fully replaces the content
+                             below (display:none/block toggle in DSB.js), it isn't layered on
+                             top of it. -->
+                        <div class="empty-state-card" id="uploadEmptyState">
+                            <i class="fas fa-user-plus empty-state-icon"></i>
+                            <h4>No client selected yet</h4>
+                            <p>Pick an existing client above or create a new one to start uploading photos.</p>
+                            <button class="btn-primary-small" id="uploadEmptyStateCreateBtn"><i class="fas fa-plus"></i> Create your first client</button>
+                        </div>
+
                         <div class="dropzone-area" id="mainDropzone">
                             <input type="file" id="realFileInput" multiple hidden accept="image/*">
                             <i class="fas fa-cloud-upload-alt dropzone-icon"></i>
                             <h3>Drag & Drop high-res photos here</h3>
                             <p>or click to browse — up to 500 photos at a time</p>
                             
-                            <div class="watermark-toggle">
-                                <input type="checkbox" id="watermarkCheck" checked>
-                                <label for="watermarkCheck">Apply Studio Watermark</label>
-                            </div>
+                            <div class="upload-options-group">
+                                <div class="watermark-toggle">
+                                    <input type="checkbox" id="watermarkCheck" checked>
+                                    <label for="watermarkCheck">Apply Studio Watermark</label>
+                                </div>
 
-                            <div class="category-select-wrapper">
-    <label for="photoCategorySelect">Photos belong to:</label>
-    <select id="photoCategorySelect" class="form-control">
-        <option value="Engagement">💍 Engagement</option>
-        <option value="Pre-Wedding">🌸 Pre-Wedding</option>
-        <option value="Wedding" selected>💒 Wedding Day</option>
-    </select>
-</div>
+                                <div class="category-select-wrapper">
+                                    <label for="photoCategorySelect">Photos belong to:</label>
+                                    <select id="photoCategorySelect" class="form-control">
+                                        <option value="Engagement">💍 Engagement</option>
+                                        <option value="Pre-Wedding">🌸 Pre-Wedding</option>
+                                        <option value="Wedding" selected>💒 Wedding Day</option>
+                                    </select>
+                                </div>
+                            </div>
                             
                             <button class="btn-primary" id="browseFilesBtn">Browse Files</button>
-                            <button class="btn-green" id="startCloudUploadBtn" style="display: none; margin-left: 10px;">Start Cloud Upload</button>
+                            <button class="btn-green" id="startCloudUploadBtn">Start Cloud Upload</button>
                             
-                            <div id="globalProgressWrapper" class="global-progress-wrapper" style="display: none;">
+                            <div id="globalProgressWrapper" class="global-progress-wrapper">
                                 <div class="progress-info">
                                     <span id="uploadStatusText">Uploading 3 of 45 photos...</span>
                                     <span id="globalPercentage">42%</span>
                                 </div>
                                 <div class="progress-bar-container">
-                                    <div id="globalProgressBarFill" class="progress-bar-fill" style="width: 42%;"></div>
+                                    <div id="globalProgressBarFill" class="progress-bar-fill"></div>
                                 </div>
                             </div>
 
@@ -156,20 +179,28 @@
                             <h3>Client Gallery Link & Live Selection</h3>
                         </div>
 
-                        <div class="link-generator-box">
-    <button class="btn-primary-small" id="generateClientLinkBtn">
-        <i class="fas fa-link"></i> Generate Client Link
-    </button>
-    
-    <!-- NAYA SHORTCUT BUTTON ADD KIYA HAI YAHAN 👇 -->
-    <button class="action-btn text-btn" id="goToThemesShortcutBtn" style="color:var(--primary-blue); border: 1px solid var(--primary-blue); margin-left: 10px;">
-        <i class="fas fa-palette"></i> Choose Theme
-    </button>
-    <!-- UPAR WALA BUTTON -->
+                        <!-- 🆕 EMPTY STATE — same pattern as the upload section above. -->
+                        <div class="empty-state-card" id="linkEmptyState">
+                            <i class="fas fa-link empty-state-icon"></i>
+                            <h4>No client selected yet</h4>
+                            <p>Select or create a client above to generate their gallery link.</p>
+                        </div>
 
-    <button class="action-btn text-btn" id="regenerateLinkBtn" style="display:none;">
-        <i class="fas fa-rotate"></i> Regenerate (Extend 24hrs)
-    </button>
+                        <div id="linkRealContent">
+                        <div class="link-generator-box">
+    <div class="link-actions-row">
+        <button class="btn-primary-small" id="generateClientLinkBtn">
+            <i class="fas fa-link"></i> Generate Client Link
+        </button>
+
+        <button class="action-btn text-btn" id="goToThemesShortcutBtn">
+            <i class="fas fa-palette"></i> Choose Theme
+        </button>
+
+        <button class="action-btn text-btn" id="regenerateLinkBtn">
+            <i class="fas fa-rotate"></i> Regenerate (Extend 24hrs)
+        </button>
+    </div>
 
 <div class="generated-link-row">
     <input type="text" id="clientGeneratedUrlDisplayField" class="form-control" readonly placeholder="Your client link will appear here once generated...">
@@ -180,7 +211,7 @@
         <i class="fab fa-whatsapp"></i> Share
     </button>
 </div>
-<p id="clientGalleryPinDisplay" style="display:none; margin:12px 0 0; color:var(--primary-blue); font-weight:700;"></p>
+<p id="clientGalleryPinDisplay"></p>
 </div>
 
                         <div class="live-tracker-status-row">
@@ -189,12 +220,13 @@
                             <button class="action-btn btn-green" id="unlockPremiumGalleryBtn">
                                 <i class="fas fa-unlock"></i> Publish Gallery
                             </button>
-                            <button class="action-btn text-btn" id="revertToEditingBtn" style="display:none; color:#f59e0b; border-color:#f59e0b;">
+                            <button class="action-btn text-btn" id="revertToEditingBtn">
                                 <i class="fas fa-rotate-left"></i> Revert to Editing
                             </button>
                         </div>
 
                         <div id="liveClientSelectionThumbnailsGrid" class="live-thumbnails-grid"></div>
+                        </div>
                     </section>
                 
                 </div>
@@ -238,11 +270,11 @@
         <h2>Gallery Themes</h2>
         <p>Pick a look for your client's gallery.</p>
     </div>
-    <div id="activeClientForTheme" style="margin-bottom:16px;font-size:0.85rem;color:var(--text-muted);">
+    <div id="activeClientForTheme">
         Select a client from Client Projects to get started.
     </div>
     <div id="themesGridContainer" class="themes-grid">
-        <p style="color:var(--text-muted);">Loading themes...</p>
+        <p>Loading themes...</p>
     </div>
 </div>
 
@@ -279,7 +311,7 @@
                     <li><i class="fas fa-check"></i> Up to 50 active client galleries</li>
                     <li><i class="fas fa-check"></i> 20 GB storage</li>
                     <li><i class="fas fa-check"></i> Secure client links</li>
-                    <li><i class="fas fa-check"></i> ZIP downloads <span style="color:var(--text-muted); font-weight:400;">(6/day per gallery)</span></li>
+                    <li><i class="fas fa-check"></i> ZIP downloads <span class="plan-limit-note">(6/day per gallery)</span></li>
                 </ul>
                 <a href="https://wa.me/919265536548?text=Hi%20PHOTRIX%2C%20I%20want%20to%20subscribe%20to%20the%20Starter%20plan." target="_blank" rel="noopener noreferrer" class="btn-primary-small plan-subscribe-btn plan-btn-secondary" data-plan-name="Starter" data-plan-storage="20">
                     <i class="fas fa-crown"></i> Subscribe Now
@@ -296,7 +328,7 @@
                     <li><i class="fas fa-check"></i> <strong>Up to 150 active client galleries</strong></li>
                     <li><i class="fas fa-check"></i> <strong>50 GB storage</strong></li>
                     <li><i class="fas fa-check"></i> Secure client links</li>
-                    <li><i class="fas fa-check"></i> ZIP downloads <span style="color:var(--text-muted); font-weight:400;">(12/day per gallery)</span></li>
+                    <li><i class="fas fa-check"></i> ZIP downloads <span class="plan-limit-note">(12/day per gallery)</span></li>
                     <li><i class="fas fa-check"></i> <strong>Priority support</strong> <span class="feature-new-tag">New</span></li>
                 </ul>
                 <a href="https://wa.me/919265536548?text=Hi%20PHOTRIX%2C%20I%20want%20to%20subscribe%20to%20the%20Growth%20plan." target="_blank" rel="noopener noreferrer" class="btn-primary-small plan-subscribe-btn" data-plan-name="Growth" data-plan-storage="50">
