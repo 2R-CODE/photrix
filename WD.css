@@ -26,7 +26,34 @@
     --radius-sm:  6px;
     --radius-md:  10px;
     --radius-lg:  14px;
+    --radius-xl:  20px;
     --transition: 0.2s ease;
+
+    /* ---- POLISH SYSTEM ----
+       Same rules everywhere on the page — this is what makes the site
+       feel machine-consistent instead of hand-assembled. */
+
+    /* Spacing scale — every gap/padding/margin should be one of these. */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 24px;
+    --space-6: 32px;
+    --space-7: 48px;
+    --space-8: 64px;
+    --space-9: 96px;
+
+    /* One motion language for every hover/transition on the page. */
+    --motion-ease: cubic-bezier(0.16, 1, 0.3, 1);
+    --motion-duration: 0.25s;
+    --motion-duration-fast: 0.15s;
+
+    /* Depth scale — subtle, layered shadows instead of flat boxes. */
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.24);
+    --shadow-md: 0 12px 32px -8px rgba(0, 0, 0, 0.45);
+    --shadow-lg: 0 24px 60px -12px rgba(0, 0, 0, 0.55);
+    --shadow-glow: 0 12px 32px -6px rgba(59, 110, 246, 0.25);
 }
 
 body {
@@ -36,6 +63,39 @@ body {
 
 body.loaded {
     opacity: 1;
+}
+
+/* ==========================================================================
+   ✨ SCROLL-REVEAL SYSTEM
+   The single biggest thing separating "hand-assembled" from "premium" —
+   content should arrive gently as you scroll, not just pop into place.
+   Placed early in the file on purpose: any component's own hover/active
+   transform (defined further down) should win over this resting state
+   once both apply to the same element.
+   ========================================================================== */
+.reveal-up {
+    opacity: 0;
+    transform: translateY(28px);
+    transition: opacity 0.7s var(--motion-ease), transform 0.7s var(--motion-ease);
+}
+.reveal-up.in-view {
+    opacity: 1;
+    transform: translateY(0);
+}
+/* Gentle stagger for card/step grids — pure CSS, no JS bookkeeping needed */
+.grid-3 .service-card:nth-child(1) { transition-delay: 0ms; }
+.grid-3 .service-card:nth-child(2) { transition-delay: 100ms; }
+.grid-3 .service-card:nth-child(3) { transition-delay: 200ms; }
+.steps-list .step-item:nth-child(1) { transition-delay: 0ms; }
+.steps-list .step-item:nth-child(2) { transition-delay: 100ms; }
+.steps-list .step-item:nth-child(3) { transition-delay: 200ms; }
+
+@media (prefers-reduced-motion: reduce) {
+    .reveal-up {
+        opacity: 1 !important;
+        transform: none !important;
+        transition: none !important;
+    }
 }
 
 /* LOCK GLOBAL CONTAINER WIDTH */
@@ -74,13 +134,9 @@ body {
 
 /*Global Section Wrapper & Layouts */
 .section-wrapper {
-    padding: 100px 40px;
+    padding: var(--space-9) 40px;
     max-width: 1200px;
     margin: 0 auto;
-}
-
-.bg-light {
-    background-color: var(--bg-app);
 }
 
 .section-title {
@@ -88,7 +144,7 @@ body {
     font-size: 3rem;
     font-weight: 400;
     text-align: center;
-    margin-bottom: 10px;
+    margin-bottom: var(--space-3);
     letter-spacing: 1px;
 }
 
@@ -96,14 +152,14 @@ body {
     font-size: 1rem;
     color: var(--text-muted);
     text-align: center;
-    margin-bottom: 60px;
+    margin-bottom: var(--space-8);
     font-weight: 300;
 }
 
 .grid-3 {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 30px;
+    gap: var(--space-5);
 }
 
 /* ==========================================================================
@@ -135,14 +191,20 @@ body {
     z-index: 1; 
 }
 
-/* Overlay dark mask middle layer */
+/* Overlay dark mask middle layer — a left-to-right gradient reads more
+   editorial/premium than a flat tint: strong where the text sits, soft
+   enough on the right to let the photo's warmth actually show through. */
 .video-overlay {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.6);
+    background: linear-gradient(100deg,
+                    rgba(6, 7, 9, 0.82) 0%,
+                    rgba(6, 7, 9, 0.55) 42%,
+                    rgba(6, 7, 9, 0.22) 75%,
+                    rgba(6, 7, 9, 0.35) 100%);
     z-index: 2; 
 }
 
@@ -186,6 +248,43 @@ body {
     max-width: 600px; /* Text line length reading comfort ke liye limit ki */
 }
 
+/* Hero Action Button - Desktop Layout */
+.hero-action-btn {
+    display: inline-block;
+    padding: 15px 34px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #0B0C0E;
+    background-color: var(--primary-blue);
+    border: none;
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+    transition: transform var(--motion-duration) var(--motion-ease),
+                background var(--motion-duration) var(--motion-ease),
+                box-shadow var(--motion-duration) var(--motion-ease);
+    text-align: center;
+    margin-top: 10px;
+    box-shadow: 0 8px 24px rgba(59, 110, 246, 0.25);
+}
+
+.hero-action-btn:hover {
+    transform: translateY(-2px);
+    background: var(--primary-blue-hover);
+    box-shadow: 0 12px 32px rgba(59, 110, 246, 0.35);
+}
+
+/* Global keyboard-navigation focus ring — every interactive element gets
+   visible feedback, not just the ones with a hand-written :focus rule. */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+    outline: 2px solid var(--primary-blue);
+    outline-offset: 3px;
+    border-radius: var(--radius-sm);
+}
+
 /* --- Premium Navbar Default State --- */
 .navbar {
     position: fixed;
@@ -205,7 +304,6 @@ body {
 
 .nav-container {
     display: flex !important;
-    justify-content: space-between !important;
     align-items: center !important;
     width: 100%;
     margin-left: 60px;
@@ -226,9 +324,11 @@ body {
 
 .nav-links {
     display: flex !important;
+    flex: 1 1 auto;
     flex-direction: row !important;
     list-style: none;
     gap: 40px !important;
+    justify-content: center !important;
     align-items: center !important;
 }
 
@@ -255,93 +355,26 @@ body {
 
 .get-started-btn {
     background: var(--primary-blue);
-    color: #000 !important;
+    color: #0B0C0E !important;
     padding: 12px 26px;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     text-decoration: none;
     font-size: 0.85rem;
     font-weight: 600;
-    transition: background 0.3s ease;
+    transition: background var(--motion-duration) var(--motion-ease),
+                transform var(--motion-duration) var(--motion-ease),
+                box-shadow var(--motion-duration) var(--motion-ease);
 }
 
 .get-started-btn:hover {
     background: var(--primary-blue-hover);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-glow);
 }
 
 .menu-toggle-cb, 
 .hamburger-icon {
     display: none !important;
-}
-
-/* ==========================================================================
-   🎯 ✨ NEW DROP-DOWN SYSTEM FOR FEATURES
-   ========================================================================== */
-.nav-dropdown {
-    position: relative;
-    display: inline-block;
-}
-
-.dropdown-trigger {
-    display: flex !important;
-    align-items: center;
-    gap: 6px;
-    cursor: pointer;
-}
-
-.drop-arrow {
-    font-size: 0.7rem;
-    transition: transform 0.3s ease;
-}
-
-.dropdown-menu {
-    position: absolute;
-    top: 100%;
-    left: 50%;
-    transform: translateX(-50%) translateY(15px);
-    background-color: var(--bg-app);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 8px;
-    min-width: 240px;
-    padding: 10px 0;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-    opacity: 0;
-    visibility: hidden;
-    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    z-index: 1000;
-}
-
-.dropdown-menu a {
-    display: flex !important;
-    align-items: center !important;
-    gap: 12px !important;
-    padding: 12px 20px !important;
-    color: rgba(255, 255, 255, 0.7) !important;
-    font-size: 0.8rem !important;
-    font-weight: 400 !important;
-    text-transform: uppercase;
-    text-align: left;
-}
-
-.nav-dropdown:hover .dropdown-menu {
-    opacity: 1;
-    visibility: visible;
-    transform: translateX(-50%) translateY(5px);
-}
-
-.nav-dropdown:hover .drop-arrow {
-    transform: rotate(180deg);
-}
-
-.dropdown-menu a:hover {
-    background-color: rgba(255, 255, 255, 0.05) !important;
-    color: var(--primary-blue) !important;
-    padding-left: 25px !important;
-}
-
-.dropdown-menu a i {
-    font-size: 0.85rem;
-    width: 16px;
-    color: var(--primary-blue);
 }
 
 /* ==========================================================================
@@ -359,92 +392,45 @@ body {
     color: #121214 !important; 
 }
 
-.navbar.scrolled .dropdown-menu {
-    background-color: #ffffff;
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-}
-
-.navbar.scrolled .dropdown-menu a {
-    color: var(--text-subtle) !important;
-}
-
-.navbar.scrolled .dropdown-menu a:hover {
-    background-color: rgba(0, 0, 0, 0.03) !important;
-    color: #121214 !important;
-}
-
-/* --- Hero Typography Styles --- */
-.hero-tagline {
-    font-size: 0.9rem;
-    text-transform: uppercase;
-    letter-spacing: 3px;
-    color: var(--text-main); 
-    margin-bottom: 100px;
-    text-align:left
-}
-
-.hero-title {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 3.5rem;
-    font-weight: 200;
-    line-height: 1.2;
-    margin-bottom: 25px;
-}
-
-.hero-description {
-    font-size: 1.1rem;
-    color: #cbd5e1; /* 👈 Balanced soft gray */
-    line-height: 1.6;
-    margin-bottom: 40px;
-    font-weight: 300;
-    text-align: left;
-    max-width: 600px;
-}
-
-/* Hero Action Button - Desktop Layout */
-.hero-action-btn {
-    display: inline-block; /* 👈 Isse button poori width nahi lega, sirf content jitna chhota rahega */
-    padding: 14px 32px;
-    font-size: 1rem;
-    font-weight: 500;
-    color: #000000;
-    background-color: var(--primary-blue);
-    border: none;
-    border-radius: 4px;
-    text-decoration: none;
-    transition: all 0.3s ease;
-    text-align: center;
-    margin-top: 10px; /* Text se thoda distance banane ke liye */
-}
-
-.hero-action-btn:hover {
-    transform: translateY(-2px);
-    background: var(--primary-blue-hover);
-}
-
 /* ==========================================================================
    💎 4. SERVICES (OUR ECOSYSTEM) CARDS
    ========================================================================== */
 .service-card {
-    background: var(--bg-app);
+    background: var(--bg-card);
     border: 1px solid var(--border-soft);
-    padding: 40px 30px;
-    border-radius: 8px;
+    padding: var(--space-6) var(--space-5);
+    border-radius: var(--radius-md);
     text-align: left;
-    transition: transform 0.3s, border-color 0.3s;
+    box-shadow: var(--shadow-sm);
+    transition: transform var(--motion-duration) var(--motion-ease),
+                border-color var(--motion-duration) var(--motion-ease),
+                box-shadow var(--motion-duration) var(--motion-ease),
+                background var(--motion-duration) var(--motion-ease);
 }
 
 .service-card:hover {
-    transform: translateY(-5px);
-    border-color: var(--primary-blue);
+    transform: translateY(-6px);
+    border-color: rgba(59, 110, 246, 0.35);
+    background: var(--bg-card-hover);
+    box-shadow: var(--shadow-md), var(--shadow-glow);
 }
 
 .service-icon {
-    font-size: 2.5rem;
+    font-size: 1.3rem;
     color: var(--primary-blue);
-    margin-bottom: 20px;
-    display: inline-block;
+    margin-bottom: var(--space-5);
+    width: 52px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent-soft);
+    border-radius: var(--radius-md);
+    transition: transform var(--motion-duration) var(--motion-ease);
+}
+
+.service-card:hover .service-icon {
+    transform: scale(1.08);
 }
 
 .service-card h3 {
@@ -461,155 +447,6 @@ body {
     font-weight: 300;
 }
 
-/* ==========================================================================
-     🏆 5. LEADERBOARD SLIDER (TOP CREATORS MARQUEE - PREMIUM UPDATED)
-========================================================================== */
-.bg-dark-leaderboard {
-    background-color: var(--bg-app) !important;
-    padding: 100px 0 !important;
-    overflow: hidden;
-    font-family: 'Montserrat', sans-serif;
-}
-
-.bg-dark-leaderboard .section-title {
-    font-family: 'Cormorant Garamond', serif !important;
-    font-size: 3rem;
-    font-weight: 300;
-    text-align: center;
-    letter-spacing: -0.5px;
-    margin-bottom: 10px;
-}
-
-.bg-dark-leaderboard .section-subtitle {
-    text-align: center;
-    font-size: 1rem;
-    color: var(--text-muted) !important;
-    font-weight: 300;
-    margin-bottom: 50px;
-}
-
-.text-white { color: var(--text-main) !important; }
-.text-muted { color: var(--text-muted) !important; }
-
-/* 🎚️ Smooth Infinite Marquee Wrapper */
-.leaderboard-slider {
-    width: 100%;
-    margin-top: 50px;
-    position: relative;
-    display: flex;
-    overflow: hidden;
-}
-
-/* Track running your custom animation logic safely */
-.slider-track {
-    display: flex !important;
-    width: calc(310px * 10);
-    animation: scrollMarquee 25s linear infinite;
-}
-
-/* Pauses layout motion beautifully on hover interaction */
-.slider-track:hover {
-    animation-play-state: paused;
-}
-
-/* 📇 Luxury Creator Cards Styling */
-.creator-card {
-    background: var(--bg-app) !important;
-    border: 1px solid var(--border-soft) !important;
-    border-radius: 16px !important;
-    padding: 30px !important;
-    width: 280px !important;
-    margin: 0 15px !important;
-    flex-shrink: 0;
-    position: relative;
-    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.4s ease !important;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-    text-align: left;
-}
-
-.creator-card:hover {
-    transform: translateY(-8px) !important;
-    border-color: var(--primary-blue) !important; /* Premium brand accent interaction */
-    box-shadow: 0 20px 40px rgba(59, 110, 246, 0.08);
-}
-
-/* Rank Tag Badge Style Updated */
-.creator-card .badge {
-    position: absolute !important;
-    top: 25px !important;
-    right: 25px !important;
-    background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-hover) 100%) !important;
-    color: #000000 !important;
-    font-size: 0.75rem !important;
-    font-weight: 600 !important;
-    padding: 5px 14px !important;
-    border-radius: 20px !important;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.creator-card h4 {
-    font-family: 'Cormorant Garamond', serif !important;
-    font-size: 1.7rem;
-    font-weight: 400;
-    color: var(--text-main) !important;
-    margin-top: 25px !important;
-    margin-bottom: 8px !important;
-}
-
-.creator-meta {
-    font-size: 0.85rem !important;
-    color: var(--text-muted) !important;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-bottom: 25px !important;
-}
-
-.creator-meta i {
-    color: var(--primary-blue) !important;
-}
-
-/* Modernized Inner Tags */
-.creator-tags {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-
-.creator-tags span {
-    background: var(--bg-app) !important;
-    color: #e4e4e7 !important;
-    font-size: 0.75rem !important;
-    padding: 6px 14px !important;
-    border-radius: 6px !important;
-    border: 1px solid var(--border-soft) !important;
-    font-weight: 300;
-}
-
-/* 🔄 Animation Frame Rule */
-@keyframes scrollMarquee {
-    0% { transform: translateX(0); }
-    100% { transform: translateX(calc(-310px * 3)); }
-}
-
-/* ==========================================================================
-     📱 MOBILE LEADERBOARD OPTIMIZATION
-========================================================================== */
-@media (max-width: 768px) {
-    .bg-dark-leaderboard {
-        padding: 60px 0 !important;
-    }
-
-    .bg-dark-leaderboard .section-title {
-        font-size: 2.2rem !important;
-        padding: 0 20px;
-    }
-    
-    .bg-dark-leaderboard .section-subtitle {
-        padding: 0 20px;
-    }
-}
 /* ==========================================================================
    📱 8. MASTER PIXIESET MOBILE DRAWER NAVIGATION (Max-width: 992px)
    ========================================================================== */
@@ -666,44 +503,11 @@ body {
     }
 
     .nav-links {
+        flex: none !important; /* undo desktop's flex:1 centering trick */
         flex-direction: column !important;
         gap: 25px !important;
         align-items: center !important;
         width: 100%;
-    }
-
-    .nav-dropdown {
-        display: block;
-        width: 100%;
-        text-align: center;
-    }
-    
-    .dropdown-trigger {
-        justify-content: center !important;
-    }
-
-    .dropdown-menu {
-        position: relative;
-        top: 0;
-        left: 0;
-        transform: none !important;
-        opacity: 1;
-        visibility: visible;
-        box-shadow: none;
-        background: transparent !important;
-        border: none;
-        padding: 10px 0 0 0;
-        display: none;
-    }
-
-    .nav-dropdown:hover .dropdown-menu {
-        display: block;
-    }
-
-    .dropdown-menu a {
-        justify-content: center !important;
-        padding: 8px 0 !important;
-        color: rgba(255, 255, 255, 0.6) !important;
     }
 
     .nav-links a {
@@ -790,7 +594,7 @@ body {
         left: 0 !important;
         width: 100% !important;
         height: 100% !important;
-        background: rgba(0, 0, 0, 0.6) !important;
+        background: rgba(6, 7, 9, 0.68) !important; /* flat on mobile — a directional gradient doesn't track reliably across narrow crops */
         z-index: 2 !important; 
     }
 
@@ -827,7 +631,7 @@ body {
         padding: 30px 20px;
     }
 
-    .bg-light, .section-wrapper {
+    .section-wrapper {
         position: relative;
         z-index: 10;
         background-color: var(--bg-app) !important;
@@ -849,35 +653,8 @@ body {
 }
 
 /* ==========================================================================
-   📢 10. FLOATING UTILITIES & FOOTER UTILS
+   📢 10. FLOATING UTILITIES
    ========================================================================== */
-.footer {
-    background: var(--bg-app);
-    border-top: 1px solid var(--border-soft);
-    padding: 40px 20px;
-    text-align: center;
-    font-size: 0.85rem;
-    color: var(--text-subtle);
-}
-
-.footer .social-links {
-    list-style: none;
-    padding: 0;
-    margin: 15px 0 0 0;
-    display: flex;
-    justify-content: center;
-    gap: 20px;
-}
-
-.footer .social-links a {
-    color: var(--primary-blue);
-    text-decoration: none;
-    transition: color 0.2s;
-}
-
-.footer .social-links a:hover {
-    color: var(--text-main);
-}
 
 /* 🔥 GLOBAL CLEAN ICON OVERRIDE:*/
 header ~ section svg, 
@@ -893,8 +670,8 @@ header ~ div svg,
 ========================================================================== */
 
 .product-showcase-section {
-    background-color: #fcfcfcfc; /* Clean deep pitch dark tone */
-    padding: 100px 40px;
+    background-color: var(--bg-app); /* Clean deep pitch dark tone */
+    padding: var(--space-9) 40px;
     font-family: 'Montserrat', sans-serif;
     color: var(--text-main);
     overflow: hidden;
@@ -947,28 +724,28 @@ header ~ div svg,
     font-weight: 400;
     border-radius: 30px; /* Fully rounded elegant pill buttons */
     cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all var(--motion-duration) var(--motion-ease);
 }
 
 .showcase-tab-btn:hover {
-    color: var(--text-subtle);
+    color: var(--text-main);
     border-color: var(--border-medium);
 }
 
 /* Active tab sets our branding glow color */
 .showcase-tab-btn.active {
-    background-color: #ffffff;
-    color: #000000;
-    border-color: var(--text-subtle);
+    background-color: var(--accent-soft);
+    color: var(--primary-blue);
+    border-color: var(--primary-blue);
     font-weight: 500;
 }
 
 /* 💻 Premium Browser Window Mockup Frame */
 .showcase-mockup-frame {
-    background: var(--bg-app);
+    background: var(--bg-card);
     border: 1px solid var(--border-soft);
-    border-radius: 12px;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
     overflow: hidden;
     width: 100%;
 }
@@ -1157,193 +934,16 @@ header ~ div svg,
     }
 }
 /* ==========================================================================
-     📸 11. CREATORS SPLIT SHOWCASE SECTION
-========================================================================== */
-
-.creators-split-section {
-    background-color: var(--bg-app); /* Matte black matching background */
-    padding: 80px 40px 120px 40px;
-    font-family: 'Montserrat', sans-serif;
-    color: var(--text-main);
-}
-
-.split-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    display: grid;
-    grid-template-columns: 1fr 1fr; /* Exact 50-50 desktop split layout */
-    align-items: center;
-    gap: 80px;
-}
-
-/* 📱 Left Side: Luxury Phone Mockup Frame */
-.split-visual-side {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-.luxury-phone-mockup {
-    width: 320px;
-    height: 600px;
-    background: var(--bg-app);
-    border: 8px solid var(--border-soft);
-    border-radius: 40px; /* Rounded premium smartphone finish */
-    padding: 0;
-    overflow: hidden;
-    box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.8);
-    position: relative;
-}
-
-.phone-screen {
-    width: 100%;
-    height: 100%;
-    position: relative;
-}
-
-.phone-screen img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-}
-
-.phone-overlay-text {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    padding: 30px 20px;
-    background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 100%);
-    text-align: center;
-}
-
-.phone-overlay-text h5 {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 1.6rem;
-    font-weight: 400;
-    margin-bottom: 5px;
-}
-
-.phone-overlay-text p {
-    font-size: 0.75rem;
-    color: var(--text-muted);
-    letter-spacing: 1px;
-    text-transform: uppercase;
-}
-
-/* ✍️ Right Side: Typography & Lists */
-.split-mini-tag {
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    color: var(--primary-blue); /* Clear branding accent track */
-    display: inline-block;
-    margin-bottom: 15px;
-}
-
-.split-title {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 2.8rem;
-    font-weight: 300;
-    line-height: 1.2;
-    margin-bottom: 20px;
-}
-
-.split-desc {
-    color: var(--text-muted);
-    font-size: 1rem;
-    line-height: 1.6;
-    font-weight: 300;
-    margin-bottom: 35px;
-}
-
-/* Selector List styling */
-.segment-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.segment-item {
-    font-size: 1.1rem;
-    padding: 14px 0;
-    border-bottom: 1px solid var(--border-soft);
-    color: var(--text-subtle);
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.segment-item i {
-    font-size: 0.9rem;
-}
-
-.segment-item:hover, .segment-item.active {
-    color: var(--text-main);
-    border-bottom-color: var(--border-soft);
-}
-
-.segment-item.active i {
-    color: var(--primary-blue); /* Active icon indicator glow */
-}
-
-
-
-@media (max-width: 576px) {
-    .split-title {
-        font-size: 1.9rem !important;
-    }
-    .luxury-phone-frame {
-        height: 420px !important;
-    }
-}
-
-/* ==========================================================================
-     📱 PIXIESET CLEAN MOBILE VIEWPORTS FIX (Max-width: 768px)
-========================================================================== */
-@media (max-width: 768px) {
-    .creators-split-section {
-        padding: 50px 16px !important;
-    }
-
-    .split-container-fluid {
-        flex-direction: column !important; /* Pixieset vertical stack strategy */
-        gap: 35px !important;
-    }
-
-    .split-text-block {
-        width: 100% !important;
-        text-align: left !important;
-    }
-
-    .split-title {
-        font-size: 2.1rem !important;
-    }
-
-    .split-visual-block {
-        width: 100% !important;
-    }
-
-    .luxury-phone-frame {
-        width: 280px !important; /* Perfect standard mobile portrait frame size */
-        height: 490px !important;
-        margin: 0 auto !important;
-    }
-}
-/* ==========================================================================
    💎 ULTRA-PREMIUM DYNAMIC SHOWCASE STYLE
    ========================================================================== */
 
 .showcase-section {
-    padding: 120px 20px !important;
+    padding: var(--space-9) 20px !important;
     background-color: #fcfcfc !important;
     overflow: hidden !important;
 }
 
-.showcase-container {
+.process-container {
     max-width: 1200px !important;
     margin: 0 auto !important;
     display: grid !important;
@@ -1353,44 +953,50 @@ header ~ div svg,
 }
 
 /* Header */
-.showcase-main-title {
-    font-family: 'Playfair Display', serif !important;
-    font-size: 2.8rem !important;
-    color: #111111 !important;
-    margin-bottom: 15px !important;
+#process .showcase-header {
+    text-align: left !important;
+    margin-bottom: var(--space-7) !important;
 }
 
-.showcase-subtitle {
+.process-title {
+    font-family: 'Cormorant Garamond', serif !important;
+    font-weight: 400 !important;
+    font-size: 2.8rem !important;
+    color: #111111 !important;
+    margin-bottom: var(--space-3) !important;
+}
+
+.process-subtitle {
     font-family: 'Montserrat', sans-serif !important;
     font-size: 1rem !important;
     color: var(--text-subtle) !important;
-    margin-bottom: 40px !important;
+    margin-bottom: 0 !important;
 }
 
 /* Steps Styling */
 .steps-list {
     display: flex !important;
     flex-direction: column !important;
-    gap: 25px !important;
+    gap: var(--space-5) !important;
 }
 
 .step-item {
     display: flex !important;
-    gap: 20px !important;
-    padding: 25px !important;
+    gap: var(--space-5) !important;
+    padding: var(--space-5) !important;
     background: transparent !important;
-    border-radius: 16px !important;
+    border-radius: var(--radius-md) !important;
     border: 1px solid rgba(0,0,0,0.03) !important;
     cursor: pointer !important;
-    transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1) !important;
+    transition: all var(--motion-duration) var(--motion-ease) !important;
 }
 
 .step-number {
-    font-family: 'Playfair Display', serif !important;
+    font-family: 'Cormorant Garamond', serif !important;
     font-size: 1.8rem !important;
-    font-weight: bold !important;
+    font-weight: 600 !important;
     color: #dddddd !important;
-    transition: color 0.3s !important;
+    transition: color var(--motion-duration) var(--motion-ease) !important;
 }
 
 .step-text h3 {
@@ -1398,7 +1004,7 @@ header ~ div svg,
     font-size: 1.2rem !important;
     font-weight: 600 !important;
     color: #333333 !important;
-    margin-bottom: 8px !important;
+    margin-bottom: var(--space-2) !important;
 }
 
 .step-text p {
@@ -1412,7 +1018,7 @@ header ~ div svg,
 .step-item:hover, .step-item.active {
     background: #ffffff !important;
     border-color: rgba(59, 110, 246, 0.3) !important;
-    box-shadow: 0 15px 30px rgba(59, 110, 246, 0.05) !important;
+    box-shadow: var(--shadow-glow) !important;
     transform: translateX(5px) !important;
 }
 
@@ -1495,7 +1101,7 @@ header ~ div svg,
 
 /* 📱 3. MOBILE VIEW ADAPTATION (CRITICAL FIXED) */
 @media (max-width: 991px) {
-    .showcase-container {
+    .process-container {
         grid-template-columns: 1fr !important; /* Screen becomes vertical stack */
         gap: 30px !important;
     }
@@ -1532,218 +1138,6 @@ header ~ div svg,
     .visual-s2 { background: linear-gradient(135deg, #1e293b, #0f172a) !important; }
     .visual-s3 { background: linear-gradient(135deg, #7c3aed, #4c1d95) !important; }
 }
-/*showcase*/
-
-.premium-triple-showcase {
-    background-color: #ffffff !important; 
-    padding: 60px 24px !important;
-    font-family: 'Montserrat', sans-serif;
-    color: #111111 !important;
-    width: 100% !important;
-    box-sizing: border-box !important;
-}
-
-.triple-grid-container {
-    width: 100% !important;
-    max-width: 1200px !important;
-    margin: 0 auto !important;
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 32px !important;
-}
-
-/* Header Row Layout */
-.triple-header-row {
-    display: flex !important;
-    justify-content: space-between !important;
-    align-items: flex-end !important; 
-    border-bottom: 1px solid #e5e5e5 !important; 
-    padding-bottom: 16px !important; 
-    width: 100% !important;
-}
-
-.triple-main-brand {
-    font-family: 'Montserrat', sans-serif !important;
-    font-size: 0.85rem !important; 
-    font-weight: 600 !important;
-    text-transform: uppercase !important; 
-    letter-spacing: 3px !important; 
-    color: var(--text-subtle) !important;
-    line-height: 1 !important;
-}
-
-.triple-dynamic-heading {
-    font-family: 'Cormorant Garamond', serif !important;
-    font-size: 2.4rem !important; 
-    font-weight: 400 !important;
-    color: #111111 !important; 
-    margin: 0 !important;
-    letter-spacing: 1px !important;
-    line-height: 1 !important;
-}
-
-/* Media Card Structure */
-.triple-media-wrapper-grid {
-    display: grid !important;
-    grid-template-columns: repeat(3, 1fr) !important;
-    gap: 24px !important;
-    width: 100% !important;
-}
-
-.triple-luxury-card-frame {
-    width: 100% !important;
-    position: relative !important;
-    border-radius: 8px !important; 
-    overflow: hidden !important; 
-    background: #fafafa !important;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03) !important; 
-    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
-}
-
-.triple-luxury-card-frame:hover {
-    transform: translateY(-4px) !important;
-}
-
-.triple-card-ratio-box {
-    width: 100% !important;
-    padding-top: 125% !important; 
-    position: relative !important;
-}
-
-.triple-card-ratio-box img {
-    position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
-    object-fit: cover !important;
-}
-
-/* Navigation Deck and Adaptive Controller Engine */
-.triple-navigation-deck {
-    display: flex !important;
-    justify-content: center !important; 
-    align-items: center !important;
-    gap: 16px !important;
-    width: 100% !important;
-    margin-top: 12px !important;
-}
-
-.triple-navigation-deck .deck-arrow-btn {
-    background: #ffffff !important;
-    border: 1px solid #111111 !important;
-    color: #111111 !important;
-    width: 44px !important;
-    height: 44px !important;
-    border-radius: 50% !important;
-    cursor: pointer !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
-    padding: 0 !important;
-}
-
-.triple-navigation-deck .deck-arrow-btn svg {
-    display: block !important;
-    width: 18px !important;
-    height: 18px !important;
-}
-
-.triple-navigation-deck .deck-arrow-btn:hover {
-    background-color: var(--bg-app) !important;
-    color: var(--text-main) !important;
-}
-
-/* Hide Mobile Elements on Desktop */
-.triple-pagination-dots-container {
-    display: none !important;
-}
-
-/* ==========================================================================
-   📱 MOBILE EDITORIAL ADAPTATION (CLEAN HIDE & DOTS PRESENTATION ENGINE)
-   ========================================================================== */
-@media (max-width: 768px) {
-    .premium-triple-showcase {
-        padding: 40px 0px 20px 0px !important; /* FIXED: Zero side padding to let images touch screen edges naturally */
-    }
-
-    .triple-header-row {
-        flex-direction: column !important;
-        align-items: flex-start !important;
-        gap: 6px !important;
-        border-bottom: 1px solid #eeeeee !important;
-        padding-bottom: 12px !important;
-        margin-bottom: 16px !important;
-        padding-left: 20px !important; /* Keeps text beautifully aligned with screen edge */
-        padding-right: 20px !important;
-    }
-
-    .triple-main-brand {
-        font-size: 0.72rem !important; 
-        letter-spacing: 2.5px !important;
-    }
-
-    .triple-dynamic-heading {
-        font-size: 1.95rem !important; 
-        line-height: 1.15 !important;
-    }
-
-    /* 🎯 SCROLL RAIL: Optimized gap and padding for the perfect visual peek */
-    .triple-media-wrapper-grid {
-        display: flex !important;
-        flex-direction: row !important;
-        grid-template-columns: none !important;
-        gap: 16px !important; /* Crisp consistent gap between image slides */
-        overflow-x: auto !important; 
-        scroll-snap-type: x mandatory !important;
-        scroll-behavior: smooth !important;
-        overscroll-behavior-x: contain !important;
-        padding: 4px 20px !important; /* Padding left/right lets the first and last card snap correctly */
-        width: 100% !important;
-        box-sizing: border-box !important;
-    }
-
-    .triple-media-wrapper-grid::-webkit-scrollbar {
-        display: none !important; /* Keeps track completely invisible and clean */
-    }
-
-    /* 🎯 CRITICAL UX PEEK: 82% width means exactly 18% of the next image will peek into view */
-    .triple-luxury-card-frame {
-        flex: 0 0 82% !important; 
-        width: 82% !important;
-        scroll-snap-align: start !important; /* Snaps perfectly to the left container margin */
-        border-radius: 12px !important; /* Premium smooth rounded corners for phone view */
-        box-shadow: 0 4px 15px rgba(0,0,0,0.04) !important;
-        overflow: hidden !important;
-    }
-
-    /* 🎯 NAVIGATION CONTROLS: Arrow hide & Minimal Dot Engine */
-    .triple-navigation-deck .deck-arrow-btn {
-        display: none !important; 
-    }
-
-    .triple-pagination-dots-container {
-        display: flex !important;  
-        justify-content: center !important;
-        align-items: center !important;
-        gap: 10px !important;
-        margin-top: 16px !important;
-    }
-
-    .triple-dot {
-        width: 7px !important;
-        height: 7px !important;
-        border-radius: 50% !important;
-        background-color: #cccccc !important;
-        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
-    }
-
-    .triple-dot.active {
-        background-color: var(--bg-app) !important; 
-        transform: scale(1.25) !important;
-    }
-}
 /* PARTNER WITH US */
 
 #book.section-wrapper {
@@ -1778,11 +1172,11 @@ header ~ div svg,
 /* 3️⃣ CARD CONTAINER (Fluid Scaling Core) */
 #book .form-container {
     max-width: 600px !important;
-    margin: 40px auto 0 auto !important; 
+    margin: var(--space-7) auto 0 auto !important; 
     background: #ffffff !important; 
-    border-radius: 12px !important;
+    border-radius: var(--radius-lg) !important;
     border: 1px solid #cbd5e1 !important; 
-    box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.05) !important; 
+    box-shadow: var(--shadow-md) !important; 
     box-sizing: border-box !important;
     padding: clamp(24px, 5vw, 50px) !important;
 }
@@ -1811,13 +1205,24 @@ header ~ div svg,
     padding: 14px !important;
     background-color: #f8fafc !important;
     border: 1px solid #cbd5e1 !important;
-    border-radius: 8px !important;
+    border-radius: var(--radius-sm) !important;
     color: #0f172a !important;
     font-family: 'Montserrat', sans-serif !important;
     font-size: 0.9rem !important;
     outline: none !important;
     box-sizing: border-box !important;
-    transition: all 0.3s ease !important;
+    transition: border-color var(--motion-duration) var(--motion-ease),
+                box-shadow var(--motion-duration) var(--motion-ease),
+                background-color var(--motion-duration) var(--motion-ease) !important;
+}
+
+/* Focus feedback — the site had zero :focus states anywhere before this.
+   Clicking into a field did nothing visually. This is the fix. */
+#book .form-group input:focus,
+#book .form-group textarea:focus {
+    border-color: var(--primary-blue) !important;
+    background-color: #ffffff !important;
+    box-shadow: 0 0 0 4px var(--accent-soft) !important;
 }
 /* Dropdown Wrapper */
 .custom-luxury-dropdown {
@@ -1834,13 +1239,15 @@ header ~ div svg,
     padding: 14px 45px 14px 14px !important;
     background-color: #f8fafc !important;
     border: 1px solid #cbd5e1 !important;
-    border-radius: 8px !important;
+    border-radius: var(--radius-sm) !important;
     color: #0f172a !important;
     font-family: 'Montserrat', sans-serif !important;
     font-size: 0.9rem !important;
     box-sizing: border-box !important;
     position: relative !important;
-    transition: all 0.3s ease !important;
+    transition: border-color var(--motion-duration) var(--motion-ease),
+                box-shadow var(--motion-duration) var(--motion-ease),
+                background-color var(--motion-duration) var(--motion-ease) !important;
     background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%230f172a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>") !important;
     background-repeat: no-repeat !important;
     background-position: right 16px center !important;
@@ -1849,7 +1256,8 @@ header ~ div svg,
 
 .custom-luxury-dropdown.open .dropdown-selected-val {
     background-color: #ffffff !important;
-    border-color: #0f172a !important;
+    border-color: var(--primary-blue) !important;
+    box-shadow: 0 0 0 4px var(--accent-soft) !important;
 }
 
 /* Floating Options */
@@ -1860,8 +1268,8 @@ header ~ div svg,
     width: 100% !important;
     background: #ffffff !important;
     border: 1px solid #e2e8f0 !important;
-    border-radius: 10px !important;
-    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08) !important;
+    border-radius: var(--radius-sm) !important;
+    box-shadow: var(--shadow-md) !important;
     z-index: 999 !important;
     display: none !important;
 }
@@ -1878,7 +1286,8 @@ header ~ div svg,
     text-align: left !important;
     white-space: normal !important;
     word-wrap: break-word !important;
-    transition: all 0.2s ease !important;
+    transition: background-color var(--motion-duration-fast) var(--motion-ease),
+                color var(--motion-duration-fast) var(--motion-ease) !important;
 }
 
 .luxury-option:hover {
@@ -1892,6 +1301,26 @@ header ~ div svg,
     font-weight: 500 !important;
 }
 
+/* ==========================================================================
+   💳 PRICING SECTION — scoped polish (subscription.css is shared with the
+   dashboard, so we don't touch it; the shadow/hover lift lives only here)
+   ========================================================================== */
+#pricing .plan-single-card {
+    box-shadow: var(--shadow-md);
+    transition: box-shadow var(--motion-duration) var(--motion-ease),
+                transform var(--motion-duration) var(--motion-ease),
+                border-color var(--motion-duration) var(--motion-ease);
+}
+
+#pricing .plan-single-card:hover {
+    box-shadow: var(--shadow-lg), var(--shadow-glow);
+    transform: translateY(-4px);
+}
+
+#pricing .get-started-btn:hover {
+    transform: none; /* the card already lifts — don't double-animate the button inside it */
+}
+
 /* 🚀 PREMIUM MATTE BLACK SUBMIT BUTTON (ISKO BHI LOCK KAR DIYA) */
 .submit-btn {
     width: 100% !important;
@@ -1899,7 +1328,7 @@ header ~ div svg,
     background-color: var(--primary-blue) !important; /* Rich Dark Pixieset Character Color */
     color: var(--text-main) !important;
     border: none !important;
-    border-radius: 6px !important; /* Ultra-clean matched sharpness */
+    border-radius: var(--radius-sm) !important;
     
     /* 🔤 PREMIUM TYPOGRAPHY SETUP */
     font-family: 'Montserrat', sans-serif !important;
