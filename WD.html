@@ -49,8 +49,21 @@
     </p>
     <!-- Is button ko direct Dashboard Registration/Signup se jodhenge -->
     <a href="#" id="heroCreateBtn" class="hero-action-btn">Get Started</a>
+    <ul class="trust-bar">
+        <li><i class="fas fa-check"></i> No card required</li>
+        <li><i class="fas fa-check"></i> 7-day free trial</li>
+        <li><i class="fas fa-check"></i> Cancel anytime</li>
+    </ul>
 </div>
     </header>
+
+    <!-- Data privacy strip — the specific fear a wedding photographer has
+         about handing a client's photos to a new platform, answered in one
+         line before they even have to ask. -->
+    <div class="privacy-strip">
+        <i class="fas fa-shield-alt"></i>
+        Your client's photos are never used for marketing, ever. Full data ownership stays with your studio.
+    </div>
 
     <!--Why Photrix-->
     <section class="section-wrapper" id="services">
@@ -123,7 +136,12 @@
                     <div id="instant-delivery" class="tab-content-panel">
                         <div class="showcase-placeholder-card">
                             <div class="delivery-status-box">
-                                <span class="pulse-icon">⚡</span>
+                                <div class="tab-demo-anim tab-demo-delivery">
+                                    <div class="delivery-bubble">
+                                        <i class="fas fa-check"></i>
+                                        <span>Gallery Delivered</span>
+                                    </div>
+                                </div>
                                 <h3>High-Speed Delivery Active</h3>
                                 <p>WhatsApp & Cloud integration delivers high-res memories to couples instantly.</p>
                             </div>
@@ -133,8 +151,20 @@
                     <div id="cloud-storage" class="tab-content-panel">
                         <div class="showcase-placeholder-card">
                             <div class="cloud-status-box">
+                                <div class="tab-demo-anim tab-demo-compression">
+                                    <div class="compression-row">
+                                        <span class="compression-label">Other platforms</span>
+                                        <div class="compression-bar"><div class="compression-fill compression-fill-small"></div></div>
+                                        <span class="compression-value">~890 KB</span>
+                                    </div>
+                                    <div class="compression-row">
+                                        <span class="compression-label">Photrix</span>
+                                        <div class="compression-bar"><div class="compression-fill compression-fill-full"></div></div>
+                                        <span class="compression-value">Original Quality</span>
+                                    </div>
+                                </div>
                                 <h3>100% Original Resolution</h3>
-                                <!-- <p>Say goodbye to compressed images. Every megapixel, shade, and detail is preserved exactly as captured.</p> -->
+                                <p>Say goodbye to compressed images. Every megapixel, shade, and detail is preserved exactly as captured.</p>
                             </div>
                         </div>
                     </div>
@@ -142,6 +172,18 @@
                     <div id="secure-passcode" class="tab-content-panel">
                         <div class="showcase-placeholder-card">
                             <div class="secure-lock-box">
+                                <div class="tab-demo-anim tab-demo-passcode">
+                                    <div class="passcode-dots">
+                                        <span class="passcode-dot"></span>
+                                        <span class="passcode-dot"></span>
+                                        <span class="passcode-dot"></span>
+                                        <span class="passcode-dot"></span>
+                                    </div>
+                                    <div class="passcode-lock">
+                                        <i class="fas fa-lock icon-locked"></i>
+                                        <i class="fas fa-lock-open icon-unlocked"></i>
+                                    </div>
+                                </div>
                                 <h3>🔒 Military-Grade Protection</h3>
                                 <p>Password-protected interactive cloud galleries that couples can securely access anywhere in the world.</p>
                             </div>
@@ -214,6 +256,10 @@
                 <div class="visual-content active" id="visual-1">
                     <div class="premium-mockup-card glass-v1">
                         <span class="mock-tag">Step 1: Live Demo</span>
+                        <div class="mini-anim mini-anim-upload">
+                            <div class="upload-cloud"><i class="fas fa-cloud-upload-alt"></i></div>
+                            <div class="upload-progress-track"><div class="upload-progress-fill"></div></div>
+                        </div>
                         <h4>⚡ Fast Drag & Drop Cloud Upload</h4>
                         <p>No compression. Your original photography quality stays protected.</p>
                     </div>
@@ -222,6 +268,10 @@
                 <div class="visual-content" id="visual-2">
                     <div class="premium-mockup-card glass-v2">
                         <span class="mock-tag">Step 2: Client View</span>
+                        <div class="mini-anim mini-anim-lock">
+                            <div class="lock-ping"></div>
+                            <div class="lock-icon"><i class="fas fa-lock"></i></div>
+                        </div>
                         <h4>🔒 Password Protected Lookbook</h4>
                         <p>Beautiful client interface with immersive layout & music options.</p>
                     </div>
@@ -230,6 +280,12 @@
                 <div class="visual-content" id="visual-3">
                     <div class="premium-mockup-card glass-v3">
                         <span class="mock-tag">Step 3: Business Activation</span>
+                        <div class="mini-anim mini-anim-activate">
+                            <div class="activate-circle"><i class="fas fa-check"></i></div>
+                            <span class="spark spark-1"></span>
+                            <span class="spark spark-2"></span>
+                            <span class="spark spark-3"></span>
+                        </div>
                         <h4>💰 Pay ₹700 / Keep 100% Profit</h4>
                         <p>No monthly heavy bills. Pay per gallery, only when your client is happy.</p>
                     </div>
@@ -237,6 +293,25 @@
             </div>
         </div>
 
+    </div>
+</section>
+
+<!--
+  🖋️ FOUNDER'S NOTE — real trust for a new SaaS beats fake "500+ studios"
+  numbers. This is the one part of the page ONLY you can write honestly —
+  the quote below is a safe starting draft. Before this goes live, replace
+  it with your own words: why you actually built Photrix, and swap the
+  icon avatar for a real photo of yourself if you're comfortable with that.
+-->
+<section class="section-wrapper founder-note-section">
+    <div class="founder-note-card">
+        <div class="founder-avatar">
+            <i class="fas fa-user"></i>
+        </div>
+        <div class="founder-note-content">
+            <p class="founder-quote">"I built Photrix after watching photographers I know lose hours to WhatsApp compression and confused clients asking 'where's my album?' Every feature here exists because a real studio needed it — not because it looked good on a features page."</p>
+            <p class="founder-name">— Founder, Photrix</p>
+        </div>
     </div>
 </section>
 
@@ -285,14 +360,14 @@
             <div class="form-group">
                 <label>I Am A:</label>
                 <div class="custom-luxury-dropdown" id="luxuryDropdown">
-                    <div class="dropdown-selected-val">Professional Photographer / Studio</div>
+                    <div class="dropdown-selected-val">Solo Wedding Photographer</div>
                     
                     <div class="dropdown-custom-options">
-                        <div class="luxury-option active" data-value="photographer">Professional Photographer / Studio</div>
-                        <div class="luxury-option" data-value="couple">Wedding Couple (Direct Booking)</div>
+                        <div class="luxury-option active" data-value="solo">Solo Wedding Photographer</div>
+                        <div class="luxury-option" data-value="studio">Wedding Studio / Team</div>
                     </div>
                     
-                    <input type="hidden" id="role" name="user_role" value="photographer">
+                    <input type="hidden" id="role" name="user_role" value="solo">
                 </div>
             </div>
 

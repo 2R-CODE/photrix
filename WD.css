@@ -273,6 +273,68 @@ body {
     box-shadow: 0 12px 32px rgba(59, 110, 246, 0.35);
 }
 
+/* ==========================================================================
+   🛡️ TRUST BAR + PRIVACY STRIP
+   Honest, checkable trust signals for a new platform — no fabricated
+   "500+ studios trust us" numbers, just the specific fears removed.
+   ========================================================================== */
+.trust-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-5);
+    list-style: none;
+    margin-top: var(--space-5);
+    padding: 0;
+}
+
+.trust-bar li {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.trust-bar li i {
+    color: var(--primary-blue);
+    font-size: 0.75rem;
+}
+
+.privacy-strip {
+    position: relative;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    text-align: center;
+    background: var(--bg-card);
+    border-top: 1px solid var(--border-soft);
+    border-bottom: 1px solid var(--border-soft);
+    padding: var(--space-4) var(--space-5);
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.privacy-strip i {
+    color: var(--primary-blue);
+    font-size: 0.9rem;
+}
+
+@media (max-width: 768px) {
+    .trust-bar {
+        flex-direction: column;
+        gap: var(--space-2);
+    }
+    .privacy-strip {
+        font-size: 0.78rem;
+        padding: var(--space-3) var(--space-4);
+        text-align: left;
+        align-items: flex-start;
+    }
+}
+
 /* Global keyboard-navigation focus ring — every interactive element gets
    visible feedback, not just the ones with a hand-written :focus rule. */
 a:focus-visible,
@@ -381,15 +443,18 @@ select:focus-visible {
    ✨ 3. SCROLL-ACTIVATED THEME EFFECTS (JAVASCRIPT LINKED)
    ========================================================================== */
 .navbar.scrolled {
-    background: #FFFFFF !important; 
+    background: rgba(11, 12, 14, 0.85) !important;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
     padding: 15px 80px; 
-    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.06); 
+    box-shadow: var(--shadow-sm);
+    border-bottom: 1px solid var(--border-soft);
 }
 
 .navbar.scrolled .nav-logo,
 .navbar.scrolled .nav-links a,
 .navbar.scrolled .login-link {
-    color: #121214 !important; 
+    color: var(--text-main) !important; 
 }
 
 /* ==========================================================================
@@ -481,7 +546,7 @@ select:focus-visible {
     }
 
     .navbar.scrolled .hamburger-icon span {
-        background-color: var(--bg-app) !important;
+        background-color: var(--text-main) !important;
     }
 
     .nav-container {
@@ -490,7 +555,8 @@ select:focus-visible {
         right: -100%; 
         width: 100%;
         height: 100vh;
-        background: #fbfbfbfb; 
+        background: var(--bg-app); 
+        border-left: 1px solid var(--border-soft);
         display: flex !important;
         flex-direction: column !important;
         justify-content: center !important;
@@ -625,6 +691,11 @@ select:focus-visible {
         margin: 25px auto 0 auto !important; /* 👈 'auto' left/right lagane se button mobile par ekdam CENTER ho jayega */
         padding: 14px 0 !important; /* Standard balanced height */
         font-size: 0.95rem !important;
+    }
+
+    .trust-bar {
+        justify-content: center;
+        margin-top: var(--space-4);
     }
 
     .form-container {
@@ -874,6 +945,161 @@ header ~ div svg,
     color: var(--primary-blue);
 }
 
+/* ==========================================================================
+   🎞️ PRODUCT DEMO TAB ANIMATIONS — one small, distinct animated concept
+   per feature tab instead of a repeated static text card.
+   ========================================================================== */
+.tab-demo-anim {
+    display: flex;
+    justify-content: center;
+    margin-bottom: var(--space-5);
+}
+
+/* Instant Delivery — a notification bubble that "arrives" on loop */
+.tab-demo-delivery { height: 60px; align-items: center; }
+.delivery-bubble {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    background: var(--accent-soft);
+    border: 1px solid rgba(59, 110, 246, 0.3);
+    color: var(--primary-blue);
+    font-weight: 600;
+    font-size: 0.9rem;
+    padding: 10px 20px;
+    border-radius: 30px;
+    animation: deliveryPop 2.8s ease-in-out infinite;
+}
+.delivery-bubble i {
+    background: var(--primary-blue);
+    color: #0B0C0E;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+}
+@keyframes deliveryPop {
+    0% { transform: translateY(14px); opacity: 0; }
+    15%, 75% { transform: translateY(0); opacity: 1; }
+    100% { transform: translateY(-10px); opacity: 0; }
+}
+
+/* Zero-Compression Cloud — a file-size comparison, other platforms vs us */
+.tab-demo-compression {
+    flex-direction: column;
+    gap: var(--space-3);
+    width: 100%;
+    max-width: 340px;
+}
+.compression-row {
+    display: grid;
+    grid-template-columns: 90px 1fr 90px;
+    align-items: center;
+    gap: var(--space-3);
+}
+.compression-label {
+    font-size: 0.75rem;
+    color: var(--text-subtle);
+    text-align: left;
+}
+.compression-value {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-align: right;
+    white-space: nowrap;
+}
+.compression-bar {
+    height: 7px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+}
+.compression-fill {
+    height: 100%;
+    border-radius: 4px;
+    background: var(--text-subtle);
+    width: 0%;
+}
+.compression-fill-small {
+    animation: fillSmall 3s ease-in-out infinite;
+}
+.compression-fill-full {
+    background: var(--primary-blue);
+    animation: fillFull 3s ease-in-out infinite;
+}
+@keyframes fillSmall {
+    0% { width: 0%; }
+    50%, 100% { width: 14%; }
+}
+@keyframes fillFull {
+    0% { width: 0%; }
+    50%, 100% { width: 100%; }
+}
+
+/* Secure Passcode — PIN dots fill, then the lock opens */
+.tab-demo-passcode {
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-4);
+}
+.passcode-dots {
+    display: flex;
+    gap: var(--space-2);
+}
+.passcode-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border-medium);
+    background: transparent;
+    animation: dotFill 3.2s ease-in-out infinite;
+}
+.passcode-dot:nth-child(1) { animation-delay: 0s; }
+.passcode-dot:nth-child(2) { animation-delay: 0.25s; }
+.passcode-dot:nth-child(3) { animation-delay: 0.5s; }
+.passcode-dot:nth-child(4) { animation-delay: 0.75s; }
+@keyframes dotFill {
+    0%, 15% { background: transparent; border-color: var(--border-medium); }
+    25%, 80% { background: var(--primary-blue); border-color: var(--primary-blue); }
+    95%, 100% { background: transparent; border-color: var(--border-medium); }
+}
+.passcode-lock {
+    position: relative;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--accent-soft);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary-blue);
+    font-size: 1.1rem;
+}
+.passcode-lock i {
+    position: absolute;
+}
+.icon-locked { animation: lockShow 3.2s ease-in-out infinite; }
+.icon-unlocked { animation: unlockShow 3.2s ease-in-out infinite; }
+@keyframes lockShow {
+    0%, 80% { opacity: 1; }
+    90%, 100% { opacity: 0; }
+}
+@keyframes unlockShow {
+    0%, 80% { opacity: 0; }
+    90%, 100% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .delivery-bubble, .compression-fill-small, .compression-fill-full,
+    .passcode-dot, .icon-locked, .icon-unlocked {
+        animation: none !important;
+    }
+    .icon-unlocked { opacity: 0; }
+}
+
 /* 🎬 Smooth Tab Transition Animation */
 @keyframes smoothFadeIn {
     from {
@@ -939,7 +1165,7 @@ header ~ div svg,
 
 .showcase-section {
     padding: var(--space-9) 20px !important;
-    background-color: #fcfcfc !important;
+    background-color: var(--bg-app) !important;
     overflow: hidden !important;
 }
 
@@ -962,7 +1188,7 @@ header ~ div svg,
     font-family: 'Cormorant Garamond', serif !important;
     font-weight: 400 !important;
     font-size: 2.8rem !important;
-    color: #111111 !important;
+    color: var(--text-main) !important;
     margin-bottom: var(--space-3) !important;
 }
 
@@ -986,7 +1212,7 @@ header ~ div svg,
     padding: var(--space-5) !important;
     background: transparent !important;
     border-radius: var(--radius-md) !important;
-    border: 1px solid rgba(0,0,0,0.03) !important;
+    border: 1px solid var(--border-soft) !important;
     cursor: pointer !important;
     transition: all var(--motion-duration) var(--motion-ease) !important;
 }
@@ -995,7 +1221,7 @@ header ~ div svg,
     font-family: 'Cormorant Garamond', serif !important;
     font-size: 1.8rem !important;
     font-weight: 600 !important;
-    color: #dddddd !important;
+    color: rgba(255, 255, 255, 0.18) !important;
     transition: color var(--motion-duration) var(--motion-ease) !important;
 }
 
@@ -1003,7 +1229,7 @@ header ~ div svg,
     font-family: 'Montserrat', sans-serif !important;
     font-size: 1.2rem !important;
     font-weight: 600 !important;
-    color: #333333 !important;
+    color: var(--text-main) !important;
     margin-bottom: var(--space-2) !important;
 }
 
@@ -1016,7 +1242,7 @@ header ~ div svg,
 
 /* Active State Desktop Effects */
 .step-item:hover, .step-item.active {
-    background: #ffffff !important;
+    background: var(--bg-card) !important;
     border-color: rgba(59, 110, 246, 0.3) !important;
     box-shadow: var(--shadow-glow) !important;
     transform: translateX(5px) !important;
@@ -1041,10 +1267,11 @@ header ~ div svg,
 .visual-window {
     width: 100% !important;
     height: 100% !important;
-    background: var(--bg-app) !important; /* Premium Dark Contrast Screen */
+    background: var(--bg-card) !important; /* Lifted a shade above the now-dark section so it reads as a floating panel, not a hole in the page */
+    border: 1px solid var(--border-soft) !important;
     border-radius: 24px !important;
     position: relative !important;
-    box-shadow: 0 30px 60px rgba(0,0,0,0.12) !important;
+    box-shadow: var(--shadow-lg) !important;
     overflow: hidden !important;
 }
 
@@ -1091,6 +1318,130 @@ header ~ div svg,
     font-weight: 600 !important;
     display: inline-block !important;
     margin-bottom: 15px !important;
+}
+
+/* ==========================================================================
+   🎞️ MICRO-ANIMATIONS — one per step, loops for ~3s while its panel is
+   visible. Pure CSS, no video/image assets needed.
+   ========================================================================== */
+.mini-anim {
+    position: relative;
+    height: 70px;
+    display: flex;
+    align-items: center;
+    margin-bottom: var(--space-4);
+}
+
+/* Step 1 — upload */
+.mini-anim-upload {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+}
+.upload-cloud {
+    font-size: 1.8rem;
+    color: var(--primary-blue);
+    animation: uploadBob 2.4s var(--motion-ease) infinite;
+}
+.upload-progress-track {
+    width: 100%;
+    height: 5px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    overflow: hidden;
+}
+.upload-progress-fill {
+    height: 100%;
+    width: 0%;
+    border-radius: 4px;
+    background: var(--primary-blue);
+    animation: uploadFill 3s ease-in-out infinite;
+}
+@keyframes uploadBob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+}
+@keyframes uploadFill {
+    0% { width: 0%; }
+    70% { width: 100%; }
+    100% { width: 100%; }
+}
+
+/* Step 2 — lock / secure */
+.mini-anim-lock {
+    justify-content: flex-start;
+}
+.lock-icon {
+    position: relative;
+    z-index: 2;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--accent-soft);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    color: var(--primary-blue);
+}
+.lock-ping {
+    position: absolute;
+    left: 0;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 1.5px solid var(--primary-blue);
+    animation: lockPing 2.6s var(--motion-ease) infinite;
+}
+@keyframes lockPing {
+    0% { transform: scale(1); opacity: 0.6; }
+    100% { transform: scale(1.9); opacity: 0; }
+}
+
+/* Step 3 — activation / celebration */
+.mini-anim-activate {
+    justify-content: flex-start;
+}
+.activate-circle {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--primary-blue);
+    color: #0B0C0E;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    animation: activatePulse 3s ease-in-out infinite;
+}
+@keyframes activatePulse {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(59, 110, 246, 0.4); }
+    50% { transform: scale(1.08); box-shadow: 0 0 0 10px rgba(59, 110, 246, 0); }
+}
+.spark {
+    position: absolute;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--primary-blue);
+    opacity: 0;
+    animation: sparkFly 3s ease-out infinite;
+}
+.spark-1 { left: 44px; top: 4px; animation-delay: 0.1s; }
+.spark-2 { left: 60px; top: 30px; animation-delay: 0.5s; }
+.spark-3 { left: 34px; top: 50px; animation-delay: 0.9s; }
+@keyframes sparkFly {
+    0% { opacity: 0; transform: translate(0, 0) scale(0.5); }
+    15% { opacity: 1; }
+    60% { opacity: 0; transform: translate(14px, -14px) scale(1); }
+    100% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .upload-cloud, .upload-progress-fill, .lock-ping,
+    .activate-circle, .spark {
+        animation: none !important;
+    }
 }
 
 .premium-mockup-card h4 {
@@ -1141,7 +1492,7 @@ header ~ div svg,
 /* PARTNER WITH US */
 
 #book.section-wrapper {
-    background-color: #fbfbfbfb !important; /* Soft Minimal Canvas Background */
+    background-color: var(--bg-app) !important;
     text-align: center !important;
     width: 100% !important;
     box-sizing: border-box !important;
@@ -1152,7 +1503,7 @@ header ~ div svg,
 #book .section-title {
     font-family: 'Cormorant Garamond', serif !important;
     font-size: clamp(2rem, 4vw, 3.2rem) !important; 
-    color: #0f172a !important;
+    color: var(--text-main) !important;
     font-weight: 500 !important;
     margin-bottom: 16px !important;
     letter-spacing: 0.5px !important;
@@ -1162,7 +1513,7 @@ header ~ div svg,
 #book .section-subtitle {
     font-family: 'Montserrat', sans-serif !important;
     font-size: clamp(0.85rem, 1.5vw, 1.05rem) !important; 
-    color: #475569 !important;
+    color: var(--text-muted) !important;
     line-height: 1.6 !important;
     font-weight: 400 !important;
     max-width: 550px !important;
@@ -1173,9 +1524,9 @@ header ~ div svg,
 #book .form-container {
     max-width: 600px !important;
     margin: var(--space-7) auto 0 auto !important; 
-    background: #ffffff !important; 
+    background: var(--bg-card) !important; 
     border-radius: var(--radius-lg) !important;
-    border: 1px solid #cbd5e1 !important; 
+    border: 1px solid var(--border-soft) !important; 
     box-shadow: var(--shadow-md) !important; 
     box-sizing: border-box !important;
     padding: clamp(24px, 5vw, 50px) !important;
@@ -1195,7 +1546,7 @@ header ~ div svg,
     text-transform: uppercase !important;
     letter-spacing: 1.5px !important;
     margin-bottom: 10px !important;
-    color: #0f172a !important;
+    color: var(--text-muted) !important;
 }
 
 /* 🛑 INDEPENDENT INPUT & TEXTAREA (No Arrow Applied Here) */
@@ -1203,10 +1554,10 @@ header ~ div svg,
 #book .form-group textarea {
     width: 100% !important;
     padding: 14px !important;
-    background-color: #f8fafc !important;
-    border: 1px solid #cbd5e1 !important;
+    background-color: var(--bg-app) !important;
+    border: 1px solid var(--border-medium) !important;
     border-radius: var(--radius-sm) !important;
-    color: #0f172a !important;
+    color: var(--text-main) !important;
     font-family: 'Montserrat', sans-serif !important;
     font-size: 0.9rem !important;
     outline: none !important;
@@ -1216,12 +1567,17 @@ header ~ div svg,
                 background-color var(--motion-duration) var(--motion-ease) !important;
 }
 
+#book .form-group input::placeholder,
+#book .form-group textarea::placeholder {
+    color: var(--text-subtle) !important;
+}
+
 /* Focus feedback — the site had zero :focus states anywhere before this.
    Clicking into a field did nothing visually. This is the fix. */
 #book .form-group input:focus,
 #book .form-group textarea:focus {
     border-color: var(--primary-blue) !important;
-    background-color: #ffffff !important;
+    background-color: var(--bg-card) !important;
     box-shadow: 0 0 0 4px var(--accent-soft) !important;
 }
 /* Dropdown Wrapper */
@@ -1237,10 +1593,10 @@ header ~ div svg,
 .dropdown-selected-val {
     width: 100% !important;
     padding: 14px 45px 14px 14px !important;
-    background-color: #f8fafc !important;
-    border: 1px solid #cbd5e1 !important;
+    background-color: var(--bg-app) !important;
+    border: 1px solid var(--border-medium) !important;
     border-radius: var(--radius-sm) !important;
-    color: #0f172a !important;
+    color: var(--text-main) !important;
     font-family: 'Montserrat', sans-serif !important;
     font-size: 0.9rem !important;
     box-sizing: border-box !important;
@@ -1248,14 +1604,14 @@ header ~ div svg,
     transition: border-color var(--motion-duration) var(--motion-ease),
                 box-shadow var(--motion-duration) var(--motion-ease),
                 background-color var(--motion-duration) var(--motion-ease) !important;
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%230f172a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>") !important;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23A0A3A8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>") !important;
     background-repeat: no-repeat !important;
     background-position: right 16px center !important;
     background-size: 16px !important;
 }
 
 .custom-luxury-dropdown.open .dropdown-selected-val {
-    background-color: #ffffff !important;
+    background-color: var(--bg-card) !important;
     border-color: var(--primary-blue) !important;
     box-shadow: 0 0 0 4px var(--accent-soft) !important;
 }
@@ -1266,8 +1622,8 @@ header ~ div svg,
     top: calc(100% + 6px) !important;
     left: 0 !important;
     width: 100% !important;
-    background: #ffffff !important;
-    border: 1px solid #e2e8f0 !important;
+    background: var(--bg-card) !important;
+    border: 1px solid var(--border-soft) !important;
     border-radius: var(--radius-sm) !important;
     box-shadow: var(--shadow-md) !important;
     z-index: 999 !important;
@@ -1282,7 +1638,7 @@ header ~ div svg,
     padding: 14px 16px !important;
     font-family: 'Montserrat', sans-serif !important;
     font-size: 0.9rem !important;
-    color: #334155 !important;
+    color: var(--text-muted) !important;
     text-align: left !important;
     white-space: normal !important;
     word-wrap: break-word !important;
@@ -1291,14 +1647,75 @@ header ~ div svg,
 }
 
 .luxury-option:hover {
-    background-color: #f1f5f9 !important;
-    color: #0f172a !important;
+    background-color: var(--bg-card-hover) !important;
+    color: var(--text-main) !important;
 }
 
 .luxury-option.active {
-    background-color: #f8fafc !important;
-    color: #0f172a !important;
+    background-color: var(--accent-soft) !important;
+    color: var(--primary-blue) !important;
     font-weight: 500 !important;
+}
+
+/* ==========================================================================
+   🖋️ FOUNDER'S NOTE
+   ========================================================================== */
+.founder-note-section {
+    padding-top: var(--space-7) !important;
+    padding-bottom: var(--space-7) !important;
+}
+
+.founder-note-card {
+    max-width: 780px;
+    margin: 0 auto;
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-6);
+    background: var(--bg-card);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6) var(--space-7);
+}
+
+.founder-avatar {
+    flex-shrink: 0;
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: var(--accent-soft);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: var(--primary-blue);
+}
+
+.founder-quote {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.35rem;
+    font-weight: 400;
+    font-style: italic;
+    line-height: 1.5;
+    color: var(--text-main);
+    margin-bottom: var(--space-3);
+}
+
+.founder-name {
+    font-size: 0.85rem;
+    color: var(--text-subtle);
+    letter-spacing: 0.5px;
+}
+
+@media (max-width: 768px) {
+    .founder-note-card {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        padding: var(--space-5);
+    }
+    .founder-quote {
+        font-size: 1.15rem;
+    }
 }
 
 /* ==========================================================================
@@ -1321,12 +1738,13 @@ header ~ div svg,
     transform: none; /* the card already lifts — don't double-animate the button inside it */
 }
 
-/* 🚀 PREMIUM MATTE BLACK SUBMIT BUTTON (ISKO BHI LOCK KAR DIYA) */
+/* 🚀 PREMIUM SUBMIT BUTTON — matches the same "dark text on blue" pattern
+   used by every other primary CTA on the site (hero button, nav button) */
 .submit-btn {
     width: 100% !important;
     padding: 14px 28px !important; /* Perfect luxury cushion padding */
-    background-color: var(--primary-blue) !important; /* Rich Dark Pixieset Character Color */
-    color: var(--text-main) !important;
+    background-color: var(--primary-blue) !important;
+    color: #0B0C0E !important;
     border: none !important;
     border-radius: var(--radius-sm) !important;
     

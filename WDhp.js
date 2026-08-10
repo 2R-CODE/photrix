@@ -6,7 +6,7 @@
 document.addEventListener("DOMContentLoaded", () => {
     const revealTargets = document.querySelectorAll(
         '.section-title, .section-subtitle, .service-card, .showcase-tabs-wrapper, ' +
-        '.showcase-mockup-frame, .step-item, #pricing .plan-single-card, #book .form-container'
+        '.showcase-mockup-frame, .step-item, .founder-note-card, #pricing .plan-single-card, #book .form-container'
     );
 
     if (!revealTargets.length) return;
