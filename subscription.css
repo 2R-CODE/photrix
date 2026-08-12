@@ -1,245 +1,243 @@
 /* ==========================================================
-   PHOTRIX — SUBSCRIPTION TAB STYLING
-   Extracted from DSB.css so the Subscription tab is a fully
-   self-contained module (mirrors the themes.js/themes pattern).
-   Depends on the CSS custom properties defined in DSB.css's
-   :root block (--bg-card, --border-soft, --text-main, etc.) —
-   load this file AFTER DSB.css.
+   PHOTRIX — PREMIUM SUBSCRIPTION TAB STYLING (V2)
+   Updated with micro-improvements: Typography, Contrast & Psychology
    ========================================================== */
 
+/* Trial Banner */
 .trial-banner {
     display: none;
     background: rgba(245, 158, 11, 0.1);
     color: var(--warning-orange);
-    padding: 13px 16px;
-    border-radius: var(--radius-md);
+    padding: 12px 16px;
+    border-radius: var(--radius-md, 10px);
     font-weight: 600;
     font-size: 0.88rem;
-    margin-top: 14px;
+    margin-top: 16px;
     border: 1px solid rgba(245, 158, 11, 0.2);
 }
-.subscription-card {
+
+/* Current Plan Status Box */
+.premium-status-box {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     background: var(--bg-card);
     border: 1px solid var(--border-soft);
-    border-radius: var(--radius-lg);
-    padding: 16px 20px;
-    margin-top: 14px;
+    border-radius: var(--radius-lg, 14px);
+    padding: 24px 32px;
+    margin: 24px 0 40px;
 }
-
-#currentPlanName { font-size: 1.15rem !important; margin: 4px 0 2px !important; }
-
-.subscription-label {
+.status-box-content .subscription-label {
     font-size: 0.72rem;
     text-transform: uppercase;
     color: var(--text-muted);
     font-weight: 600;
     letter-spacing: 0.8px;
+    display: block;
+    margin-bottom: 4px;
 }
-.subscription-card h2 { font-size: 1.5rem; color: var(--text-main); margin: 6px 0 4px; font-weight: 700; }
-.subscription-status-text { color: var(--text-muted); font-size: 0.85rem; }
-
-.plans-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-top: 18px; }
-
-/* ==========================================================
-   TOGGLE-DRIVEN SINGLE CARD (Pattern 5)
-   Only one plan is ever on screen — the segmented toggle swaps
-   its contents. No side-by-side squeeze on any screen size.
-   ========================================================== */
-.plan-toggle-wrap { max-width: 780px; margin: 22px auto 0; text-align: center; }
-.plan-toggle {
-    display: inline-flex;
-    background: var(--bg-app);
-    border: 1px solid var(--border-soft);
-    border-radius: 30px;
-    padding: 4px;
-    margin-bottom: 20px;
+.status-box-content h2 {
+    color: var(--text-main);
+    margin: 0 0 4px 0;
 }
-.plan-toggle-btn {
-    border: none;
-    background: transparent;
-    color: var(--text-muted);
-    padding: 9px 28px;
-    border-radius: 24px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background var(--transition), color var(--transition);
+.status-box-icon i {
+    font-size: 2.5rem;
+    color: var(--border-medium);
 }
-.plan-toggle-btn.active { background: var(--text-main); color: var(--primary-blue); }
 
-.plan-single-card {
+/* Side-by-Side Grid Layout */
+.pricing-cards-container {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 32px;
+    max-width: 900px;
+    margin: 0 auto 48px;
+    align-items: stretch;
+}
+
+/* Base Card Styling */
+.pricing-card {
     position: relative;
     background: var(--bg-card);
     border: 1px solid var(--border-soft);
-    border-radius: var(--radius-lg);
-    padding: 36px 34px;
-    text-align: left;
-    transition: border-color var(--transition), box-shadow var(--transition), background var(--transition);
-}
-.plan-single-card { font-family: 'Inter', 'Segoe UI', sans-serif; }
-.plan-single-card .plan-subscribe-btn { white-space: nowrap; overflow: visible; min-width: fit-content; }
-.plan-content h3 { margin-bottom: 6px; }
-.plan-tagline { margin-bottom: 14px; }
-.plan-price { margin-bottom: 2px; }
-.plan-price-sub { margin-bottom: 16px; }
-
-.plan-content { display: none; }
-.plan-content.active { display: block; animation: planFadeIn 0.22s ease; }
-@keyframes planFadeIn {
-    from { opacity: 0; transform: translateY(5px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-@media (min-width: 820px) {
-    .plan-content.active {
-        display: grid;
-        grid-template-columns: 1.1fr 1fr;
-        column-gap: 40px;
-        align-items: center;
-    }
-    .plan-content.active h3,
-    .plan-content.active .plan-tagline,
-    .plan-content.active .plan-price,
-    .plan-content.active .plan-price-sub,
-    .plan-content.active .plan-subscribe-btn,
-    .plan-content.active .plan-badge-inline { grid-column: 1; }
-    .plan-content.active .plan-features { grid-column: 2; grid-row: 1 / span 6; align-self: center; }
-    .plan-content.active .plan-subscribe-btn { max-width: 260px; min-width: 220px; }
-}
-
-/* When Growth is showing, JS adds .is-growth to the card itself —
-   simpler and more robust than a :has() selector. Gets the elevated
-   gold treatment: badge, glow, viewfinder corner brackets. */
-.plan-single-card.is-growth {
-    border-color: rgba(212, 175, 55, 0.5);
-    background: linear-gradient(180deg, rgba(212,175,55,0.07), var(--bg-card) 45%);
-    box-shadow: 0 14px 34px rgba(212, 175, 55, 0.14);
-}
-.plan-single-card.is-growth::before,
-.plan-single-card.is-growth::after {
-    content: "";
-    position: absolute;
-    width: 22px;
-    height: 22px;
-    border: 2px solid #d4af37;
-    pointer-events: none;
-}
-.plan-single-card.is-growth::before { top: 14px; left: 14px; border-right: none; border-bottom: none; }
-.plan-single-card.is-growth::after { bottom: 14px; right: 14px; border-left: none; border-top: none; }
-
-.plan-badge-inline {
-    display: inline-block;
-    background: #d4af37;
-    color: #1a1a1a;
-    font-size: 0.68rem;
-    font-weight: 700;
-    padding: 3px 12px;
-    border-radius: 20px;
-    margin-bottom: 12px;
-}
-.plan-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border-soft);
-    border-radius: var(--radius-lg);
-    padding: 22px;
+    border-radius: var(--radius-md, 10px);
+    padding: 40px 32px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    position: relative;
-    transition: border-color var(--transition), transform var(--transition);
+    transition: transform var(--motion-duration, 0.25s) var(--motion-ease, ease), 
+                border-color var(--motion-duration, 0.25s) var(--motion-ease, ease),
+                background var(--motion-duration, 0.25s) var(--motion-ease, ease),
+                box-shadow var(--motion-duration, 0.25s) var(--motion-ease, ease);
 }
-.plan-card:hover { border-color: var(--border-medium); transform: translateY(-2px); }
-.plan-card h3 { color: var(--text-main); font-size: 1rem; font-weight: 700; }
-.plan-content h3 { color: var(--text-main); font-size: 1.3rem; font-weight: 700; margin-bottom: 6px; }
-.plan-tagline { font-size: 0.78rem; color: var(--text-muted); margin: 2px 0 14px; }
-.whatsapp-inline-link { color: #25D366; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
-.whatsapp-inline-link i { font-size: 0.95rem; }
-.whatsapp-inline-link:hover { text-decoration: underline; }
-.plan-price { font-size: 2.1rem; font-weight: 800; letter-spacing: -0.02em; color: var(--text-main); }
-.plan-features i { color: var(--success-green); font-size: 0.8rem; width: 16px; text-align: center; flex-shrink: 0; }
-.plans-grid .plan-subscribe-btn { padding: 13px 20px; font-size: 0.92rem; }
-.plan-price span { font-size: 0.85rem; font-weight: 400; color: var(--text-muted); }
-.plan-price-sub { font-size: 0.75rem; color: var(--text-subtle); margin: -4px 0 16px; }
-.plan-btn-secondary {
-    background: transparent;
-    color: var(--primary-blue);
-    border: 1.5px solid var(--primary-blue);
+
+/* Hover Physics */
+.pricing-card:hover {
+    transform: translateY(-8px);
+    background: var(--bg-card-hover);
+    border-color: var(--border-medium);
+    box-shadow: var(--shadow-md);
 }
-.plan-btn-secondary:hover { background: rgba(255, 59, 48, 0.08); }
+
+/* Growth Card Specific (The Highlight) */
+.growth-card.featured {
+    border: 1px solid rgba(212, 175, 55, 0.3); /* Subtle gold hint */
+}
+.growth-card.featured:hover {
+    border-color: rgba(212, 175, 55, 0.6);
+}
+
+/* Floating Popular Badge - Strictly using the system Gold token */
+.popular-badge {
+    position: absolute;
+    top: -14px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #D4AF37; 
+    color: #0B0C0E; /* Dark text for contrast against gold */
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 6px 16px;
+    border-radius: var(--radius-sm, 6px);
+}
+
+/* Typography inside Cards */
+.card-header h3 { font-size: 1.6rem; color: var(--text-main); margin-bottom: 6px; font-weight: 700; }
+.plan-tagline { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 24px; }
+
+/* Pricing Layout - UPDATED for better alignment and breathing room */
+.card-pricing { 
+    margin-bottom: 32px; 
+    border-bottom: 1px solid var(--border-soft); 
+    padding-bottom: 32px; /* Increased from 24px for breathing room */
+}
+.card-pricing .currency { 
+    font-size: 1.5rem; 
+    font-weight: 500; 
+    color: var(--text-muted); /* Muted currency symbol to emphasize the number */
+    vertical-align: super; /* Better vertical alignment with numbers */
+    margin-right: 2px;
+    display: inline-block;
+}
+.card-pricing .amount { 
+    font-size: 3.8rem; /* Slightly larger for impact */
+    font-weight: 800; 
+    color: var(--text-main); 
+    line-height: 0.9; 
+    letter-spacing: -1.5px; 
+}
+.card-pricing .duration { 
+    font-size: 0.9rem; 
+    color: var(--text-subtle); 
+    font-weight: 500; 
+    margin-left: 4px; 
+}
+.plan-price-sub { 
+    font-size: 0.85rem; 
+    color: var(--text-subtle); 
+    margin-top: 12px; /* Pushed down slightly */
+}
+
+/* Features List - UPDATED for Contrast Psychology */
+.plan-features { 
+    list-style: none; 
+    padding: 0; 
+    margin-bottom: 40px; 
+    flex-grow: 1; 
+    display: flex; 
+    flex-direction: column; 
+    gap: 16px; 
+}
+/* Base features use subtle text */
+.plan-features li { 
+    display: flex; 
+    align-items: flex-start; 
+    gap: 12px; 
+    font-size: 0.9rem; 
+    color: var(--text-subtle); 
+    line-height: 1.5; 
+}
+/* Growth features get a slight bump in brightness */
+.growth-card .plan-features li {
+    color: var(--text-muted);
+}
+.plan-features li strong { 
+    color: var(--text-main); 
+}
+/* Iconography tweaks */
+.plan-features li i { 
+    color: var(--success-green); 
+    font-size: 1rem; /* Reduced from 1.1rem for sharper look */
+    margin-top: 3px; /* Re-aligned to text baseline */
+    opacity: 0.85; /* Softened slightly */
+}
+.growth-card .plan-features li i {
+    opacity: 1; /* Full brightness on the Growth plan */
+    text-shadow: 0 0 8px rgba(34, 197, 94, 0.3); /* Very subtle glow */
+}
 .feature-new-tag {
     font-size: 0.65rem;
     font-weight: 700;
-    color: var(--success-green);
+    color: var(--success-green-strong);
     background: rgba(34, 197, 94, 0.12);
     padding: 1px 6px;
     border-radius: 10px;
     margin-left: 4px;
 }
-.plan-features { list-style: none; display: flex; flex-direction: column; gap: 7px; margin-bottom: 22px; }
-.plan-features li { font-size: 0.85rem; color: var(--text-muted); display: flex; align-items: center; gap: 8px; }
-.plan-subscribe-btn { justify-content: center; text-decoration: none; margin-top: 4px; }
+.plan-limit-note { color: var(--text-subtle); font-size: 0.8rem; margin-left: 4px; }
 
-.plan-card.featured {
-    border-color: rgba(212, 175, 55, 0.5);
-    background: linear-gradient(180deg, rgba(212,175,55,0.07), var(--bg-card) 45%);
-    box-shadow: 0 14px 34px rgba(212, 175, 55, 0.14);
+/* Buttons matched to strict Design System rules */
+.btn-premium-outline, .btn-premium-solid {
+    display: block; width: 100%; text-align: center; padding: 14px 20px;
+    border-radius: var(--radius-sm, 6px); font-weight: 600; font-size: 1rem;
+    transition: all var(--motion-duration, 0.25s) var(--motion-ease, ease); 
+    text-decoration: none; cursor: pointer;
 }
-.plan-card.featured::before,
-.plan-card.featured::after {
-    content: "";
-    position: absolute;
-    width: 22px;
-    height: 22px;
-    border: 2px solid #d4af37;
-    pointer-events: none;
+.btn-premium-outline {
+    background: transparent; 
+    color: var(--primary-blue); 
+    border: 1px solid var(--primary-blue);
 }
-.plan-card.featured::before { top: 14px; left: 14px; border-right: none; border-bottom: none; }
-.plan-card.featured::after { bottom: 14px; right: 14px; border-left: none; border-top: none; }
-@media (min-width: 769px) {
-    .plan-card.featured { transform: scale(1.03); }
-    .plan-card.featured:hover { transform: scale(1.03) translateY(-2px); }
-}
-.plan-badge {
-    position: absolute;
-    top: -11px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: #d4af37;
-    color: #1a1a1a;
-    font-size: 0.7rem;
-    font-weight: 700;
-    padding: 3px 12px;
-    border-radius: 20px;
-    white-space: nowrap;
+.btn-premium-outline:hover { 
+    background: var(--accent-soft); 
 }
 
-.payment-faq { margin-top: 22px; max-width: 720px; margin-left: auto; margin-right: auto; }
+.btn-premium-solid {
+    background: var(--primary-blue); 
+    color: #0B0C0E; /* Dark text on primary blue */
+    border: none;
+}
+.btn-premium-solid:hover { 
+    background: var(--primary-blue-hover); 
+    transform: translateY(-2px); 
+    box-shadow: var(--shadow-glow);
+}
+
+/* Custom FAQ Accordions */
+.payment-faq-premium { max-width: 760px; margin: 0 auto; }
+.faq-heading { text-align: center; font-size: 1.2rem; color: var(--text-main); margin-bottom: 24px; font-weight: 600; }
 .payment-faq-item {
-    background: var(--bg-card);
+    background: var(--bg-card); 
     border: 1px solid var(--border-soft);
-    border-radius: var(--radius-md);
-    padding: 0 18px;
-    margin-bottom: 10px;
+    border-radius: var(--radius-md, 10px); 
+    margin-bottom: 12px; 
+    transition: background var(--motion-duration, 0.25s) var(--motion-ease, ease);
 }
+.payment-faq-item:hover { background: var(--bg-card-hover); }
 .payment-faq-item summary {
-    list-style: none;
-    cursor: pointer;
-    padding: 15px 0;
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--text-main);
+    padding: 18px 24px; font-size: 0.95rem; font-weight: 500; color: var(--text-main); cursor: pointer;
+    list-style: none; display: flex; justify-content: space-between; align-items: center;
 }
 .payment-faq-item summary::-webkit-details-marker { display: none; }
-.payment-faq-item p {
-    font-size: 0.85rem;
-    color: var(--text-muted);
-    padding-bottom: 16px;
-    margin-top: -4px;
-}
-.payment-faq-item p .whatsapp-inline-link { color: #25D366; }
+.payment-faq-item summary i { font-size: 0.8rem; color: var(--text-muted); transition: transform 0.3s ease; }
+.payment-faq-item[open] summary i { transform: rotate(180deg); }
+.payment-faq-item p { padding: 0 24px 20px; font-size: 0.88rem; color: var(--text-muted); line-height: 1.6; margin: 0; }
 
-/* ==========================================================
-   MOBILE
-   ========================================================== */
-@media (max-width: 768px) {
-    .plans-grid { grid-template-columns: 1fr; }
+/* Responsive Mobile View */
+@media (max-width: 820px) {
+    .pricing-cards-container { grid-template-columns: 1fr; gap: 40px; padding: 0 10px; }
+    .card-pricing .amount { font-size: 3rem; }
+    .premium-status-box { flex-direction: column; align-items: flex-start; gap: 16px; }
+    .status-box-icon { display: none; } 
 }

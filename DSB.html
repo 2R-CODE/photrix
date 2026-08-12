@@ -277,78 +277,91 @@
         <p>Loading themes...</p>
     </div>
 </div>
-
-                <!--SUBSCRIPTION TAB -->
-                <div id="view-subscription" class="view-section">
+<!--SUBSCRIPTION TAB -->
+<div id="view-subscription" class="view-section">
     <div class="section-heading">
         <h2>Subscription & Storage</h2>
-        <p>Manage your plan and billing.</p>
+        <p>Manage your studio's plan and billing.</p>
     </div>
 
     <div id="trialStatusBanner" class="trial-banner">
         ⏳ Your 7-day free trial has ended. Upgrade to keep adding new clients.
     </div>
 
-    <div class="subscription-card">
-        <span class="subscription-label">Current Plan</span>
-        <h2 id="currentPlanName">Free Trial</h2>
-        <p id="subscriptionStatusText" class="subscription-status-text">Checking your account status...</p>
+    <!-- Current Plan Status Box -->
+    <div class="subscription-card premium-status-box">
+        <div class="status-box-content">
+            <span class="subscription-label">Current Plan</span>
+            <h2 id="currentPlanName">Free Trial</h2>
+            <p id="subscriptionStatusText" class="subscription-status-text">Checking your account status...</p>
+        </div>
+        <div class="status-box-icon">
+            <i class="fas fa-shield-alt"></i>
+        </div>
     </div>
 
-    <div class="plan-toggle-wrap">
-        <div class="plan-toggle" role="tablist">
-            <button type="button" class="plan-toggle-btn active" data-plan="starter">Starter</button>
-            <button type="button" class="plan-toggle-btn" data-plan="growth">Growth</button>
-        </div>
-
-        <div class="plan-single-card">
-            <div class="plan-content active" data-plan-content="starter">
+    <!-- Premium Side-by-Side Pricing Cards -->
+    <div class="pricing-cards-container">
+        
+        <!-- Starter Plan -->
+        <div class="pricing-card starter-card">
+            <div class="card-header">
                 <h3>Starter</h3>
-                <p class="plan-tagline">Perfect if you're just getting started</p>
-                <p class="plan-price">₹700 <span>/ 6 months</span></p>
+                <p class="plan-tagline">Kickstart your client galleries.</p>
+            </div>
+            <div class="card-pricing">
+                <span class="currency">₹</span><span class="amount">700</span><span class="duration">/ 6 months</span>
                 <p class="plan-price-sub">≈ ₹117/month</p>
-                <ul class="plan-features">
-                    <li><i class="fas fa-check"></i> Up to 50 active client galleries</li>
-                    <li><i class="fas fa-check"></i> 20 GB storage</li>
-                    <li><i class="fas fa-check"></i> Secure client links</li>
-                    <li><i class="fas fa-check"></i> ZIP downloads <span class="plan-limit-note">(6/day per gallery)</span></li>
-                </ul>
-                <a href="https://wa.me/919265536548?text=Hi%20PHOTRIX%2C%20I%20want%20to%20subscribe%20to%20the%20Starter%20plan." target="_blank" rel="noopener noreferrer" class="btn-primary-small plan-subscribe-btn plan-btn-secondary" data-plan-name="Starter" data-plan-storage="20">
-                    <i class="fas fa-crown"></i> Subscribe Now
-                </a>
             </div>
-
-            <div class="plan-content" data-plan-content="growth">
-                <span class="plan-badge-inline">Most Popular</span>
-                <h3>Growth</h3>
-                <p class="plan-tagline">For studios booking steadily every month</p>
-                <p class="plan-price">₹1400 <span>/ 6 months</span></p>
-                <p class="plan-price-sub">≈ ₹233/month</p>
-                <ul class="plan-features">
-                    <li><i class="fas fa-check"></i> <strong>Up to 150 active client galleries</strong></li>
-                    <li><i class="fas fa-check"></i> <strong>50 GB storage</strong></li>
-                    <li><i class="fas fa-check"></i> Secure client links</li>
-                    <li><i class="fas fa-check"></i> ZIP downloads <span class="plan-limit-note">(12/day per gallery)</span></li>
-                    <li><i class="fas fa-check"></i> <strong>Priority support</strong> <span class="feature-new-tag">New</span></li>
-                </ul>
-                <a href="https://wa.me/919265536548?text=Hi%20PHOTRIX%2C%20I%20want%20to%20subscribe%20to%20the%20Growth%20plan." target="_blank" rel="noopener noreferrer" class="btn-primary-small plan-subscribe-btn" data-plan-name="Growth" data-plan-storage="50">
-                    <i class="fas fa-crown"></i> Subscribe Now
-                </a>
-            </div>
+            <ul class="plan-features">
+                <li><i class="fas fa-check-circle"></i> <span>Up to 50 active client galleries</span></li>
+                <li><i class="fas fa-check-circle"></i> <span>20 GB secure cloud storage</span></li>
+                <li><i class="fas fa-check-circle"></i> <span>Secure client selection links</span></li>
+                <li><i class="fas fa-check-circle"></i> <span>ZIP downloads <span class="plan-limit-note">(6/day per gallery)</span></span></li>
+            </ul>
+            <a href="https://wa.me/919265536548?text=Hi%20PHOTRIX%2C%20I%20want%20to%20subscribe%20to%20the%20Starter%20plan." target="_blank" rel="noopener noreferrer" class="btn-premium-outline" data-plan-name="Starter" data-plan-storage="20">
+                Subscribe Starter
+            </a>
         </div>
+
+        <!-- Growth Plan (Highlighted) -->
+        <div class="pricing-card growth-card featured">
+            <div class="popular-badge">Most Popular</div>
+            <div class="card-header">
+                <h3>Growth</h3>
+                <p class="plan-tagline">Scale your photography business.</p>
+            </div>
+            <div class="card-pricing">
+                <span class="currency">₹</span><span class="amount">1400</span><span class="duration">/ 6 months</span>
+                <p class="plan-price-sub">≈ ₹233/month</p>
+            </div>
+            <ul class="plan-features">
+                <li><i class="fas fa-check-circle"></i> <span><strong>Up to 150 active client galleries</strong></span></li>
+                <li><i class="fas fa-check-circle"></i> <span><strong>50 GB secure cloud storage</strong></span></li>
+                <li><i class="fas fa-check-circle"></i> <span>Secure client selection links</span></li>
+                <li><i class="fas fa-check-circle"></i> <span>ZIP downloads <span class="plan-limit-note">(12/day per gallery)</span></span></li>
+                <li><i class="fas fa-check-circle"></i> <span><strong>Priority WhatsApp support</strong> <span class="feature-new-tag">New</span></span></li>
+            </ul>
+            <a href="https://wa.me/919265536548?text=Hi%20PHOTRIX%2C%20I%20want%20to%20subscribe%20to%20the%20Growth%20plan." target="_blank" rel="noopener noreferrer" class="btn-premium-solid" data-plan-name="Growth" data-plan-storage="50">
+                <i class="fas fa-bolt"></i> Upgrade to Growth
+            </a>
+        </div>
+
     </div>
 
-    <div class="payment-faq">
-        <details class="payment-faq-item" open>
-            <summary>🔒 Is there auto-renewal or a surprise charge?</summary>
-            <p>Never. Every payment is manually verified — your account is never auto-billed or auto-renewed without you reaching out first. Activation usually takes a few hours; if it's been over 24, <a href="https://wa.me/919265536548" target="_blank" rel="noopener noreferrer" class="whatsapp-inline-link"><i class="fab fa-whatsapp"></i> message us on WhatsApp</a>.</p>
+    <!-- Sleek FAQ Section -->
+    <div class="payment-faq-premium">
+        <h4 class="faq-heading">Frequently Asked Questions</h4>
+        <details class="payment-faq-item">
+            <summary>Is there auto-renewal or a surprise charge? <i class="fas fa-chevron-down"></i></summary>
+            <p>Never. Every payment is manually verified — your account is never auto-billed or auto-renewed without you reaching out first. Activation usually takes a few hours.</p>
         </details>
         <details class="payment-faq-item">
-            <summary>💬 What if I need help?</summary>
-            <p>Priority support is one WhatsApp message away — no ticket queues, you're talking directly to the team.</p>
+            <summary>What if I need technical help? <i class="fas fa-chevron-down"></i></summary>
+            <p>Priority support is one WhatsApp message away — no ticket queues, you're talking directly to the core team.</p>
         </details>
         <details class="payment-faq-item">
-            <summary>↩️ Can I get a refund?</summary>
+            <summary>Can I get a refund if I change my mind? <i class="fas fa-chevron-down"></i></summary>
             <p>Yes — refund requests are approved within 24 hours, no back-and-forth required.</p>
         </details>
     </div>

@@ -96,7 +96,7 @@ body {
 .lookbook-hero p { color: var(--text-muted); font-size: 0.9rem; }
 
 /* --- 6. MASONRY GRID & PHOTO INTERACTION --- */
-.lookbook-main-container { max-width: 1400px; margin: 0 auto; padding: 0 20px 140px 20px; }
+.lookbook-main-container { max-width: 1400px; margin: 0 auto; padding: 0 20px 60px 20px; }
 .masonry-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
 
 .grid-item {
@@ -133,47 +133,133 @@ body {
 }
 
 /* --- 7. FLOATING GLASSMORPHIC DOCK --- */
-.floating-dock {
-    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-    background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-    border: 1px solid var(--border-highlight);
-    padding: 12px 20px; border-radius: 30px;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.7), 0 0 20px var(--accent-glow);
-    z-index: 100; width: min(94%, 520px);
-    animation: slideUpDock 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+/* --- 7. HEADER ACTION BAR (Selection counter + Submit/Download) ---
+   Moved out of a bottom floating dock into the header itself, so the photo
+   grid stays completely undisturbed while the client is browsing/selecting
+   — nothing overlaps their photos, no floating bar to work around. */
+.header-action-bar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    animation: fadeInBar 0.4s ease forwards;
 }
 
-@keyframes slideUpDock {
-    0% { transform: translate(-50%, 50px); opacity: 0; }
-    100% { transform: translate(-50%, 0); opacity: 1; }
+@keyframes fadeInBar {
+    0% { opacity: 0; transform: translateY(-4px); }
+    100% { opacity: 1; transform: translateY(0); }
 }
 
-.dock-content { display: flex; justify-content: space-between; align-items: center; gap: 12px; width: 100%; }
 .counter-badge { font-size: 0.85rem; color: var(--text-muted); font-weight: 500; white-space: nowrap; }
 .counter-badge span { color: var(--accent-color); font-weight: 700; }
 .dock-actions { display: flex; gap: 8px; align-items: center; }
 
+/* ==========================================
+   BUTTONS - PREMIUM SAAS STANDARD (STABLE & TACTILE)
+   ========================================== */
 .btn-primary, .btn-secondary {
-    border: none; padding: 8px 16px; border-radius: 20px; font-weight: 600; 
-    cursor: pointer; font-size: 0.8rem; transition: transform 0.2s, filter 0.2s; white-space: nowrap;
+    display: inline-flex; 
+    align-items: center; 
+    justify-content: center; 
+    gap: 8px; /* Clean, modern spacing between icon and text */
+    border: none; 
+    border-radius: 40px; /* Perfect pill shape */
+    padding: 10px 20px; /* Stable padding */
+    font-weight: 600; 
+    cursor: pointer; 
+    font-size: 0.85rem;
+    line-height: 1;
+    /* Apple-like fluid spring animation */
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), 
+                box-shadow 0.3s ease, 
+                background-color 0.3s ease;
+    will-change: transform; /* Hardware acceleration for buttery smoothness */
+    white-space: nowrap;
 }
-.btn-primary { background: var(--accent-color); color: #fff; } /* Text always white for primary */
-.btn-primary:hover { filter: brightness(1.15); transform: translateY(-1px); }
 
-.btn-secondary { background: var(--border-color); color: var(--text-color); }
-.btn-secondary:hover { background: var(--border-highlight); transform: translateY(-1px); }
+/* Base Colors & Glassmorphic touches */
+.btn-primary { 
+    background: var(--accent-color); 
+    color: #fff; 
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.btn-secondary { 
+    background: rgba(255, 255, 255, 0.1); 
+    color: #fff; 
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+/* Icons and Labels are now simply stable */
+.btn-icon { 
+    flex-shrink: 0; 
+    width: 16px; 
+    height: 16px;
+    display: block;
+}
+
+.btn-label { 
+    opacity: 1; 
+    max-width: none; 
+}
+
+/* 💻 Desktop View: Premium Hover & Active States */
+@media (min-width: 601px) {
+    .btn-primary:hover {
+        transform: translateY(-2px); /* Subtle lift */
+        box-shadow: 0 8px 20px var(--accent-glow);
+    }
+    
+    .btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.2);
+        transform: translateY(-2px);
+    }
+
+    /* Tactile Click - Makes the app feel incredibly responsive */
+    .btn-primary:active, .btn-secondary:active {
+        transform: scale(0.95) !important;
+    }
+}
 
 /* --- 8. MOBILE VIEW ADJUSTMENTS --- */
 @media (max-width: 600px) {
-    .lookbook-header { padding: 12px 16px; }
-    .lookbook-hero { padding: 90px 15px 15px 15px; }
-    .lookbook-hero h1 { font-size: 1.5rem; }
+    /* Header & Alignment Fixes */
+    .lookbook-header { 
+        padding: 12px 16px; 
+        flex-wrap: nowrap; /* Stops breaking into two lines */
+        justify-content: space-between; /* Pushes logo left, buttons right */
+        align-items: center; /* Perfect vertical alignment */
+    }
     
-    .floating-dock { bottom: 12px; width: 92%; padding: 10px 14px; border-radius: 24px; }
-    .dock-content { flex-direction: row; gap: 8px; }
-    .counter-badge { font-size: 0.75rem; }
-    .dock-actions { gap: 6px; }
-    .btn-primary, .btn-secondary { padding: 6px 12px; font-size: 0.7rem; border-radius: 16px; }
+    .logo { 
+        font-size: 0.95rem; 
+        flex-shrink: 0; /* Prevents the logo from getting squished */
+    }
+
+    /* Action bar stays on the same line */
+    .header-action-bar { 
+        width: auto; /* Removed 100% so it fits beside the logo */
+        flex: 1; 
+        justify-content: flex-end; 
+        gap: 8px; 
+    }
+    
+    .dock-actions { 
+        flex: 1; 
+        justify-content: flex-end; 
+        gap: 8px; 
+    }
+    
+    /* Hero Section */
+    .lookbook-hero { padding: 130px 15px 15px 15px; }
+    .lookbook-hero h1 { font-size: 1.5rem; }
+    .counter-badge { font-size: 0.72rem; }
+
+    /* Button sizing optimized for small mobile screens */
+    .btn-primary, .btn-secondary {
+        padding: 8px 14px;
+        font-size: 0.75rem;
+    }
 }
 
 /* --- 9. UNDO SUBMIT BAR & SPINNER --- */

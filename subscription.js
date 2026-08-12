@@ -1,31 +1,16 @@
-// 💳 SUBSCRIPTION TAB MODULE (`subscription.js`)
-// Mirrors themes.js's pattern: a self-contained module loaded after DSB.js,
-// relying on DSB.js's globals (db, currentUid, getTrialDaysLeft) which are
-// available in shared script scope. No Firebase writes happen here — plan
-// purchases go through WhatsApp + manual verification (see index.js notes),
-// so this file only ever reads and renders.
+// 💳 PREMIUM SUBSCRIPTION TAB MODULE (`subscription.js`)
 
-// PLAN TOGGLE — Pattern 5: one card, toggle swaps its content.
-// Pure UI, no Firebase — mirrors the mobile client-list accordion pattern
-// already used in DSBstyle.js (self-contained, re-queries its own DOM).
 document.addEventListener("DOMContentLoaded", () => {
-    const toggleBtns = document.querySelectorAll(".plan-toggle-btn");
-    const contents = document.querySelectorAll(".plan-content");
-    const card = document.querySelector(".plan-single-card");
-    if (!toggleBtns.length || !card) return;
-
-    toggleBtns.forEach((btn) => {
-        btn.addEventListener("click", () => {
-            const plan = btn.getAttribute("data-plan");
-
-            toggleBtns.forEach((b) => b.classList.remove("active"));
-            btn.classList.add("active");
-
-            contents.forEach((c) => {
-                c.classList.toggle("active", c.getAttribute("data-plan-content") === plan);
+    // Custom logic for FAQ smooth toggling (Optional but feels premium)
+    const faqs = document.querySelectorAll('.payment-faq-item');
+    faqs.forEach(faq => {
+        faq.addEventListener('click', (e) => {
+            // Close other open FAQs
+            faqs.forEach(otherFaq => {
+                if (otherFaq !== faq && otherFaq.hasAttribute('open')) {
+                    otherFaq.removeAttribute('open');
+                }
             });
-
-            card.classList.toggle("is-growth", plan === "growth");
         });
     });
 });
@@ -42,8 +27,8 @@ function updateSubscriptionUI() {
         if (data.subscriptionStatus === "active") {
             if (planNameEl) planNameEl.innerText = data.planName || "Active Plan";
             if (statusTextEl) {
-                statusTextEl.innerText = "✅ Your subscription is active.";
-                statusTextEl.style.color = "#15803d";
+                statusTextEl.innerHTML = "<i class='fas fa-check-circle' style='margin-right:6px;'></i>Your subscription is active and running smoothly.";
+                statusTextEl.style.color = "#4ade80"; // Premium neon green
             }
         } else {
             const daysLeft = getTrialDaysLeft(data);
@@ -51,18 +36,17 @@ function updateSubscriptionUI() {
             if (planNameEl) planNameEl.innerText = "Free Trial";
             if (statusTextEl) {
                 if (daysLeft > 0) {
-                    statusTextEl.innerText = `⏳ ${daysLeft} day(s) left in your free trial.`;
-                    statusTextEl.style.color = "";
+                    statusTextEl.innerHTML = `<i class='fas fa-hourglass-half' style='margin-right:6px;'></i>${daysLeft} day(s) left in your free trial.`;
+                    statusTextEl.style.color = "#fbbf24"; // Premium warning yellow
                 } else {
-                    statusTextEl.innerText = "❌ Your trial has ended. Please subscribe to continue adding clients.";
-                    statusTextEl.style.color = "#ef4444";
+                    statusTextEl.innerHTML = "<i class='fas fa-exclamation-circle' style='margin-right:6px;'></i>Your trial has ended. Subscribe below to continue.";
+                    statusTextEl.style.color = "#f87171"; // Premium soft red
                 }
             }
             const banner = document.getElementById("trialStatusBanner");
             if (banner) {
-                banner.innerText = daysLeft > 0
-                    ? `Your free trial has ${daysLeft} day(s) remaining.`
-                    : "Your 7-day free trial has ended. Subscribe to keep adding new clients.";
+                banner.style.display = daysLeft <= 0 ? "block" : "none";
+                banner.innerText = "⏳ Your 7-day free trial has ended. Upgrade to keep adding new clients.";
             }
         }
     }).catch(err => console.error("Subscription UI error:", err));

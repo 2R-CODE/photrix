@@ -160,7 +160,7 @@ if (!galleryId || !/^[A-Za-z0-9_-]{20,}$/.test(galleryId)) {
     if (nameEl) nameEl.textContent = gallery.coupleName || "Wedding Album";
     if (statusEl && !pinVerified) statusEl.textContent = "Enter the gallery PIN to view and select your previews.";
     if (pinGate && !pinVerified) pinGate.style.display = "block";
-    if (submit) submit.style.display = "block";
+    if (submit) submit.style.display = "inline-flex";
 
     pendingPreviewFiles = Array.isArray(gallery.previewFiles) ? gallery.previewFiles : [];
     // 🐞 FIX: same ordering fix as above.
@@ -342,7 +342,7 @@ if (submit) {
     if (!navigator.onLine) return alert("You're not connected to the internet. Please check your connection and try again.");
 
     submit.disabled = true;
-    submit.innerHTML = '<span class="btn-spinner"></span> Submitting...';
+    submit.innerHTML = '<span class="btn-spinner"></span><span class="btn-label">Submitting...</span>';
 
     try {
       const submitSelection = functionsRegion.httpsCallable("submitGallerySelection");
@@ -360,7 +360,12 @@ if (submit) {
         : "Could not submit selection: " + (error.message || "Please check your connection and try again.");
       alert(msg);
       submit.disabled = false;
-      submit.textContent = "Submit Selection";
+      // 🐞 FIX: this used to use .textContent, which wiped out the button's
+      // icon (added alongside the label span) permanently after any failed
+      // submit — a retry would work fine functionally, but the icon would
+      // never come back without a page reload. .innerHTML with the same
+      // icon+label markup restores it exactly.
+      submit.innerHTML = '<svg class="btn-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg><span class="btn-label">Submit Selection</span>';
     }
   });
 }
@@ -395,21 +400,22 @@ if (undoBtn) {
 async function checkDownloadAvailability() {
   if (!downloadZipBtn) return;
   try {
-    // This first call is only to decide whether to SHOW the button (and,
-    // as a side effect, it also counts as today's 1st download server-side
-    // — that's existing/unchanged behavior, not something this fix touches).
+    // 🛑 FIX (silent download-credit burn): this used to call getDownloadUrls
+    // just to decide whether to SHOW the button — but getDownloadUrls is the
+    // function that actually counts against the daily download limit. That
+    // meant simply opening the gallery page (or the listener re-firing on
+    // any doc write) silently used up one of the client's limited daily
+    // downloads before they ever clicked anything. checkDownloadAvailable
+    // mirrors every gate (PIN, active link, subscription, published) but
+    // never touches the counter — only the actual button click below still
+    // calls getDownloadUrls, which is the only place the count should move.
+    const checkAvailable = functionsRegion.httpsCallable("checkDownloadAvailable");
     const getUrls = functionsRegion.httpsCallable("getDownloadUrls");
-    const result = await getUrls({ shareId: galleryId, pin: verifiedPin });
-    if (result.data?.files?.length) {
-      downloadZipBtn.style.display = "block";
-      // 🛑 FIX (download-limit bypass): previously this reused the SAME
-      // cached `result.data.files` (15-min signed URLs) on every click —
-      // it never called the server again, so the Cloud Function's
-      // dailyDownloadLimit check/counter only ever ran ONCE per page load,
-      // no matter how many times "Download HD ZIP" was clicked. Now every
-      // click asks the server fresh, so each click is actually counted and
-      // the limit is enforced (and re-checked, in case another device used
-      // up the day's downloads in the meantime).
+
+    const result = await checkAvailable({ shareId: galleryId, pin: verifiedPin });
+    if (result.data?.available) {
+      downloadZipBtn.style.display = "inline-flex";
+      downloadZipBtn.disabled = false;
       downloadZipBtn.onclick = async (e) => {
         e.preventDefault();
         if (downloadZipBtn.disabled) return;
@@ -426,6 +432,17 @@ async function checkDownloadAvailability() {
           downloadZipBtn.disabled = false;
         }
       };
+    } else if (result.data && typeof result.data.remaining === "number" && result.data.remaining <= 0) {
+      // Gallery IS downloadable, just today's limit is used up — show the
+      // button in a disabled state instead of hiding it, so the client
+      // understands why (rather than assuming the feature doesn't exist).
+      downloadZipBtn.style.display = "block";
+      downloadZipBtn.disabled = true;
+      downloadZipBtn.title = "Today's download limit has been reached. Please try again tomorrow.";
+      downloadZipBtn.onclick = (e) => {
+        e.preventDefault();
+        alert("Today's download limit has been reached. Please try again tomorrow.");
+      };
     }
   } catch (error) {
     console.log("HD download not available yet:", error.code);
@@ -440,14 +457,14 @@ async function downloadAsZip(files) {
   }
 
   const originalLabel = downloadZipBtn.innerHTML;
-  downloadZipBtn.innerHTML = "Preparing ZIP...";
+  downloadZipBtn.innerHTML = '<span class="btn-spinner"></span><span class="btn-label">Preparing ZIP...</span>';
   try {
     const zip = new JSZip();
     for (let i = 0; i < files.length; i++) {
       const item = files[i];
       // 🐞 FIX: show progress so a slow/large gallery doesn't look frozen,
       // and so a connection drop mid-way is easier for the client to place.
-      downloadZipBtn.innerHTML = `Preparing ZIP... (${i + 1}/${files.length})`;
+      downloadZipBtn.innerHTML = `<span class="btn-spinner"></span><span class="btn-label">ZIP (${i + 1}/${files.length})</span>`;
       const response = await fetch(item.url);
       if (!response.ok) throw new Error("A photo could not be downloaded.");
       zip.file(item.name, await response.blob());

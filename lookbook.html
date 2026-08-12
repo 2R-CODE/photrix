@@ -21,6 +21,28 @@
     <header class="lookbook-header">
         <div class="logo">PHOTRIX</div>
         <!-- Theme dropdown removed: Client should only see what Photographer selects -->
+
+        <!-- 🆕 MOVED HERE from the bottom floating dock, per photographer's
+             request: keeps the photo grid (green zone) completely clean —
+             no floating bar sitting over thumbnails while the client
+             browses. Same element id/classes lookbook.js already targets
+             (getElementById("action-footer") etc.), so no JS changes needed
+             at all — only where it physically lives in the page moved. -->
+        <div id="action-footer" class="header-action-bar" style="display: none;">
+            <div id="counter-zone" class="counter-badge">
+                Selected: <span id="selected-count">0</span> / <span id="selection-limit-label">40</span>
+            </div>
+            <div class="dock-actions">
+                <button id="submit-selection-btn" class="btn-primary">
+                    <svg class="btn-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
+                    <span class="btn-label">Submit Selection</span>
+                </button>
+                <button id="download-zip-btn" class="btn-secondary" style="display: none;">
+                    <svg class="btn-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    <span class="btn-label">Download ZIP</span>
+                </button>
+            </div>
+        </div>
     </header>
 
     <!-- Hero Section -->
@@ -37,7 +59,7 @@
         <div class="pin-modal-card">
             <h3>Enter Gallery PIN</h3>
             <p>Enter the 6-digit gallery PIN shared by your photographer.</p>
-            <input type="password" id="gallery-pin-input" maxlength="6" placeholder="------" autocomplete="off">
+            <input type="password" id="gallery-pin-input" maxlength="6" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" placeholder="------" >
         </div>
     </div>
 
@@ -45,19 +67,6 @@
     <main class="lookbook-main-container">
         <div id="main-photo-grid" class="masonry-grid"></div>
     </main>
-
-    <!-- Bottom Floating Glassmorphic Dock (Action Bar) -->
-    <footer id="action-footer" class="floating-dock" style="display: none;">
-        <div class="dock-content">
-            <div id="counter-zone" class="counter-badge">
-                Selected: <span id="selected-count">0</span> / <span id="selection-limit-label">40</span>
-            </div>
-            <div class="dock-actions">
-                <button id="submit-selection-btn" class="btn-primary">Submit Selection</button>
-                <button id="download-zip-btn" class="btn-secondary" style="display: none;">Download HD ZIP</button>
-            </div>
-        </div>
-    </footer>
 
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
