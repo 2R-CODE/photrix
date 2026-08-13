@@ -25,20 +25,39 @@ service cloud.firestore {
     match /users/{uid} {
       allow read: if signedInOwner(uid);
 
+      // 🔒 FIX: pehle sirf 4 fields check hote the — trialStartDate,
+      // galleryLimit, storageLimitBytes, storageUsedBytes, dailyDownloadLimit
+      // client khud arbitrary value pe set kar sakta tha (self-granted
+      // infinite trial / unlimited storage / unlimited galleries).
+      // Ab sab trial-default values pe hard-pinned hain.
       allow create: if signedInOwner(uid)
         && request.resource.data.uid == uid
         && request.resource.data.accountStatus == "trial"
         && request.resource.data.subscriptionStatus == "trial"
-        && request.resource.data.planName == "7-day Free Trial";
+        && request.resource.data.planName == "7-day Free Trial"
+        && request.resource.data.trialStartDate == request.time
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.galleryLimit == 10
+        && request.resource.data.dailyDownloadLimit == 6
+        && request.resource.data.storageLimitBytes == 2147483648
+        && request.resource.data.storageUsedBytes == 0
+        && !("subscriptionExpiresAt" in request.resource.data);
 
+      // 🐞 FIX: dailyDownloadLimit ab bhi lock kiya (pehle missing tha —
+      // user update() se ise khud badal sakta tha). subscriptionExpiresAt
+      // ab "in" guard se check hota hai — pehle field missing hone par
+      // ye poora update() hi error de kar deny kar deta tha.
       allow update: if signedInOwner(uid)
         && request.resource.data.subscriptionStatus == resource.data.subscriptionStatus
-        && request.resource.data.subscriptionExpiresAt == resource.data.subscriptionExpiresAt
+        && (!("subscriptionExpiresAt" in resource.data)
+              ? !("subscriptionExpiresAt" in request.resource.data)
+              : request.resource.data.subscriptionExpiresAt == resource.data.subscriptionExpiresAt)
         && request.resource.data.planName == resource.data.planName
         && request.resource.data.accountStatus == resource.data.accountStatus
         && request.resource.data.trialStartDate == resource.data.trialStartDate
         && request.resource.data.createdAt == resource.data.createdAt
         && request.resource.data.galleryLimit == resource.data.galleryLimit
+        && request.resource.data.dailyDownloadLimit == resource.data.dailyDownloadLimit
         && request.resource.data.storageLimitBytes == resource.data.storageLimitBytes
         && request.resource.data.storageUsedBytes == resource.data.storageUsedBytes;
 
@@ -47,17 +66,23 @@ service cloud.firestore {
       match /clientProjects/{projectId} {
         allow read: if signedInOwner(uid);
 
-        allow create: if signedInOwner(uid)
-          && request.auth.token.email_verified == true
-          && hasStudioAccess(uid)
-          && request.resource.data.workflowState == "draft";
+        // 🔒 FIX: pehle client seedha yahan likh sakta tha (galleryLimit
+        // quota bypass karke) — createClientProject Cloud Function ise
+        // already properly handle karta hai, isliye direct create band.
+        allow create: if false;
 
+        // 🔒 FIX: pehle koi bhi field update ho sakta tha (workflowState,
+        // downloadCount, selectedPhotoIds — sab Cloud Function logic
+        // bypass karke). Ab sirf Edit Client modal ke 2 fields allowed.
         allow update: if signedInOwner(uid)
           && request.auth.token.email_verified == true
-          && hasStudioAccess(uid);
+          && hasStudioAccess(uid)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['coupleName', 'eventType']);
 
-        allow delete: if signedInOwner(uid)
-          && request.auth.token.email_verified == true;
+        // 🔒 FIX: deleteClientProject Cloud Function cleanup (Storage files,
+        // publicGalleries, gallerySecrets) karta hai — direct delete se
+        // orphaned data reh jata. DSB.js already sirf function use karta hai.
+        allow delete: if false;
       }
     }
 

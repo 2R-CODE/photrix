@@ -162,9 +162,6 @@ if (setupForm) {
     });
 }
 
-// ==========================================================================
-// 💾 HELPER: Save user profile document to Firestore
-// ==========================================================================
 function saveUserProfile(uid, email, role, businessName, websiteUrl, submitBtn) {
     db.collection("users").doc(uid).set({
         uid: uid,
@@ -176,13 +173,19 @@ function saveUserProfile(uid, email, role, businessName, websiteUrl, submitBtn) 
         subscriptionStatus: "trial",
         planName: "7-day Free Trial",
         trialStartDate: firebase.firestore.FieldValue.serverTimestamp(),
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        // 🔒 FIX: naye firestore.rules ke create-rule ko ye 4 fields
+        // exact values ke saath chahiye — warna signup fail hoga.
+        galleryLimit: 10,
+        dailyDownloadLimit: 6,
+        storageLimitBytes: 2147483648, // 2GB trial default
+        storageUsedBytes: 0
     })
     .then(() => {
         localStorage.removeItem('tempUid');
         localStorage.removeItem('tempEmail');
         localStorage.setItem('isLoggedIn', 'true');
-        localStorage.setItem('clientWorkspace', uid);           // 👈 ab UID hi workspace ID hai
+        localStorage.setItem('clientWorkspace', uid);
         localStorage.setItem('userRole', role);
         localStorage.setItem('loggedInClientName', businessName);
         const user = firebase.auth().currentUser;
