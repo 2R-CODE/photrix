@@ -68,11 +68,14 @@
         <div id="main-photo-grid" class="masonry-grid"></div>
     </main>
 
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-functions-compat.js"></script>
+    <!-- Firebase SDKs — aligned to v12.15.0 to match login.html / WD.html -->
+    <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-storage-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-functions-compat.js"></script>
+    <!-- 🆕 App Check — stops scripts/bots from calling Cloud Functions directly,
+         bypassing this page. See the setup comment at the top of lookbook.js. -->
+    <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-app-check-compat.js"></script>
     
     <!-- Utilities & Animations -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>

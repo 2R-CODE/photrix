@@ -8,6 +8,32 @@ const firebaseConfig = {
 };
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 
+// 🆕 APP CHECK SETUP — do these steps IN ORDER before enforcing anything:
+//
+// 1. Firebase Console → Build → App Check → Apps → register this web app
+//    → choose reCAPTCHA v3 → copy the site key it gives you.
+// 2. Replace 'PASTE_YOUR_RECAPTCHA_V3_SITE_KEY_HERE' below with that key.
+// 3. Also register the SAME site key in the Google reCAPTCHA admin console
+//    (https://www.google.com/recaptcha/admin) for your actual domain(s) —
+//    Firebase's App Check screen links you there directly.
+// 4. Deploy this file as-is (still `enforceAppCheck: false` in index.js) and
+//    open the live lookbook page for a few days of real traffic.
+// 5. In Firebase Console → App Check → Cloud Functions tab, watch the
+//    "Verified requests" metric climb close to 100%. ONLY once you see real
+//    traffic passing verification, flip `enforceAppCheck: false` to `true`
+//    for each function in index.js and redeploy functions.
+// Flipping enforceAppCheck to true BEFORE step 5 confirms real traffic is
+// passing will lock every real client out of their own gallery.
+const RECAPTCHA_V3_SITE_KEY = "PASTE_YOUR_RECAPTCHA_V3_SITE_KEY_HERE";
+if (RECAPTCHA_V3_SITE_KEY !== "PASTE_YOUR_RECAPTCHA_V3_SITE_KEY_HERE") {
+  firebase.appCheck().activate(
+    new firebase.appCheck.ReCaptchaV3Provider(RECAPTCHA_V3_SITE_KEY),
+    true // auto-refresh the token
+  );
+} else {
+  console.warn("App Check not active yet — set RECAPTCHA_V3_SITE_KEY in lookbook.js after registering in Firebase Console.");
+}
+
 const db = firebase.firestore();
 const storage = firebase.storage();
 const functionsRegion = firebase.app().functions("asia-south1");
@@ -32,9 +58,17 @@ const undoSecondsEl = document.getElementById("undo-seconds");
 // really being allowed up to 350, and would have no idea why the counter
 // never matched what they could actually select. One constant, used both
 // places, so they can never drift apart again.
-const MAX_SELECTABLE_PHOTOS = 350;
 const selectionLimitLabel = document.getElementById("selection-limit-label");
-if (selectionLimitLabel) selectionLimitLabel.textContent = MAX_SELECTABLE_PHOTOS;
+const DEFAULT_SELECTION_LIMIT = 200;
+let selectionLimit = DEFAULT_SELECTION_LIMIT;
+
+function setSelectionLimit(value) {
+  const parsed = Number(value);
+  selectionLimit = parsed === 350 ? 350 : DEFAULT_SELECTION_LIMIT;
+  if (selectionLimitLabel) selectionLimitLabel.textContent = selectionLimit;
+}
+
+setSelectionLimit(DEFAULT_SELECTION_LIMIT);
 
 const UNDO_WINDOW_SECONDS = 30;
 
@@ -110,12 +144,19 @@ function applyThemeClass(themeId) {
 if (!galleryId || !/^[A-Za-z0-9_-]{20,}$/.test(galleryId)) {
   setError("This gallery link is invalid. Please ask your photographer for a new link.");
 } else {
+  // The gallery document is private. Its contents are loaded below through
+  // getGalleryAccess only after the client supplies the PIN.
+  if (nameEl) nameEl.textContent = "Private client gallery";
+  if (statusEl) statusEl.textContent = "Enter the gallery PIN to view your photos.";
+  if (pinGate) pinGate.style.display = "block";
+
   // Real-time listener — single source of truth: gallery.workflowState
-  db.collection("publicGalleries").doc(galleryId).onSnapshot(async doc => {
+  if (false) db.collection("publicGalleries").doc(galleryId).onSnapshot(async doc => {
     if (!doc.exists) return setError("This gallery was not found.");
 
     const gallery = doc.data();
     galleryData = gallery;
+    setSelectionLimit(gallery.selectionLimit);
 
     if (gallery.isActive !== true) {
       return setError("This gallery is no longer active.");
@@ -194,10 +235,17 @@ if (pinInput) {
 
     try {
       // PIN check backend pe hi chalega for security
-      const verifyGalleryPin = functionsRegion.httpsCallable("verifyGalleryPin");
-      const response = await verifyGalleryPin({ shareId: galleryId, pin });
+      const getGalleryAccess = functionsRegion.httpsCallable("getGalleryAccess");
+      const response = await getGalleryAccess({ shareId: galleryId, pin });
 
-      if (response.data.ok) {
+      if (response.data) {
+        galleryData = {
+          ...response.data,
+          isActive: true,
+          previewFiles: Array.isArray(response.data.previews) ? response.data.previews : []
+        };
+        setSelectionLimit(galleryData.selectionLimit);
+        pendingPreviewFiles = galleryData.previewFiles;
         pinVerified = true;
         verifiedPin = pin;
         pinInput.disabled = true;
@@ -266,7 +314,11 @@ async function renderPreviews(files) {
   for (let index = 0; index < files.length; index++) {
     const file = files[index];
     try {
-      const url = await storage.ref(`gallery-previews/${galleryId}/${file}`).getDownloadURL();
+      const fileName = typeof file === "string" ? file : file.name;
+      const url = typeof file === "string"
+        ? await storage.ref(`gallery-previews/${galleryId}/${file}`).getDownloadURL()
+        : file.url;
+      if (!fileName || !url) throw new Error("Preview URL unavailable.");
       const item = document.createElement("div");
       item.className = "grid-item";
 
@@ -279,7 +331,7 @@ async function renderPreviews(files) {
 
       // Selection tabhi allow karni hai jab state published NA ho
       if (galleryData.workflowState !== 'published') {
-          item.addEventListener("click", () => toggleSelection(item, file));
+          item.addEventListener("click", () => toggleSelection(item, fileName));
       } else {
           item.style.cursor = "default"; // Pointer hata do published state mein
       }
@@ -326,7 +378,7 @@ function toggleSelection(item, file) {
     item.classList.remove("selected");
     selected = selected.filter(id => id !== file);
   } else {
-    if (selected.length >= MAX_SELECTABLE_PHOTOS) return alert(`You can select up to ${MAX_SELECTABLE_PHOTOS} photos.`);
+    if (selected.length >= selectionLimit) return alert(`You can select up to ${selectionLimit} photos.`);
     item.classList.add("selected");
     selected.push(file);
   }

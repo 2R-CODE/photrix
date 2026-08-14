@@ -15,19 +15,31 @@ service firebase.storage {
         );
     }
 
+    function uploadReservation(uid, fileName) {
+      return firestore.get(
+        /databases/(default)/documents/users/$(uid)/uploadReservations/$(fileName)
+      ).data;
+    }
+
     // Original HD uploads — sirf owner access kar sakta hai.
     match /client-albums/{uid}/{projectId}/{fileName} {
       allow read: if request.auth != null && request.auth.uid == uid;
 
       allow create: if request.auth != null
                     && request.auth.uid == uid
+                    && request.auth.token.email_verified == true
                     && hasStudioAccess(uid)
+                    && firestore.exists(
+                         /databases/(default)/documents/users/$(uid)/clientProjects/$(projectId)
+                       )
+                    && uploadReservation(uid, fileName).uid == uid
+                    && uploadReservation(uid, fileName).projectId == projectId
+                    && uploadReservation(uid, fileName).fileName == fileName
+                    && uploadReservation(uid, fileName).size == request.resource.size
+                    && uploadReservation(uid, fileName).contentType == request.resource.contentType
+                    && request.time < uploadReservation(uid, fileName).expiresAt
                     && request.resource.size < 30 * 1024 * 1024
-                    && request.resource.contentType.matches("image/.*")
-                    && request.resource.size <= (
-                         firestore.get(/databases/(default)/documents/users/$(uid)).data.storageLimitBytes
-                         - firestore.get(/databases/(default)/documents/users/$(uid)).data.storageUsedBytes
-                       );
+                    && request.resource.contentType.matches("image/.*");
 
       allow update: if false;
       allow delete: if request.auth != null && request.auth.uid == uid;
@@ -36,14 +48,23 @@ service firebase.storage {
     // Watermarked previews — public read allowed jab tak gallery active hai.
     // CHANGED: expiresAt → isActive
     match /gallery-previews/{shareId}/{fileName} {
-      allow get: if firestore.get(
-                      /databases/(default)/documents/publicGalleries/$(shareId)
-                    ).data.isActive == true;
+      // Public clients receive short-lived signed URLs from getGalleryAccess
+      // after PIN verification. The photographer can still review previews.
+      allow get: if request.auth != null
+                    && request.auth.uid == firestore.get(
+                         /databases/(default)/documents/publicGalleries/$(shareId)
+                       ).data.uid;
 
       allow create: if request.auth != null
                     && request.auth.uid == firestore.get(
                          /databases/(default)/documents/publicGalleries/$(shareId)
                        ).data.uid
+                    && request.auth.token.email_verified == true
+                    && hasStudioAccess(request.auth.uid)
+                    && firestore.get(
+                         /databases/(default)/documents/publicGalleries/$(shareId)
+                       ).data.isActive == true
+                    && fileName.matches("^[A-Za-z0-9_-]+\\.jpg$")
                     && request.resource.size < 5 * 1024 * 1024
                     && request.resource.contentType.matches("image/.*");
 

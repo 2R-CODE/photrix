@@ -176,7 +176,9 @@ function saveUserProfile(uid, email, role, businessName, websiteUrl, submitBtn) 
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         // 🔒 FIX: naye firestore.rules ke create-rule ko ye 4 fields
         // exact values ke saath chahiye — warna signup fail hoga.
-        galleryLimit: 10,
+        // Gallery count intentionally has no cap: storage is the only
+        // capacity limit because wedding albums vary widely in size.
+        selectionLimit: 200,
         dailyDownloadLimit: 6,
         storageLimitBytes: 2147483648, // 2GB trial default
         storageUsedBytes: 0

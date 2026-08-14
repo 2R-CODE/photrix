@@ -31,13 +31,20 @@ service cloud.firestore {
       // infinite trial / unlimited storage / unlimited galleries).
       // Ab sab trial-default values pe hard-pinned hain.
       allow create: if signedInOwner(uid)
+        && request.resource.data.keys().hasOnly([
+          'uid', 'email', 'role', 'businessName', 'websiteUrl',
+          'accountStatus', 'subscriptionStatus', 'planName',
+          'trialStartDate', 'createdAt', 'selectionLimit',
+          'dailyDownloadLimit', 'storageLimitBytes', 'storageUsedBytes'
+        ])
         && request.resource.data.uid == uid
+        && request.resource.data.email == request.auth.token.email
         && request.resource.data.accountStatus == "trial"
         && request.resource.data.subscriptionStatus == "trial"
         && request.resource.data.planName == "7-day Free Trial"
         && request.resource.data.trialStartDate == request.time
         && request.resource.data.createdAt == request.time
-        && request.resource.data.galleryLimit == 10
+        && request.resource.data.selectionLimit == 200
         && request.resource.data.dailyDownloadLimit == 6
         && request.resource.data.storageLimitBytes == 2147483648
         && request.resource.data.storageUsedBytes == 0
@@ -48,6 +55,8 @@ service cloud.firestore {
       // ab "in" guard se check hota hai — pehle field missing hone par
       // ye poora update() hi error de kar deny kar deta tha.
       allow update: if signedInOwner(uid)
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['businessName', 'websiteUrl'])
         && request.resource.data.subscriptionStatus == resource.data.subscriptionStatus
         && (!("subscriptionExpiresAt" in resource.data)
               ? !("subscriptionExpiresAt" in request.resource.data)
@@ -56,7 +65,9 @@ service cloud.firestore {
         && request.resource.data.accountStatus == resource.data.accountStatus
         && request.resource.data.trialStartDate == resource.data.trialStartDate
         && request.resource.data.createdAt == resource.data.createdAt
-        && request.resource.data.galleryLimit == resource.data.galleryLimit
+        && (!("selectionLimit" in resource.data)
+              ? !("selectionLimit" in request.resource.data)
+              : request.resource.data.selectionLimit == resource.data.selectionLimit)
         && request.resource.data.dailyDownloadLimit == resource.data.dailyDownloadLimit
         && request.resource.data.storageLimitBytes == resource.data.storageLimitBytes
         && request.resource.data.storageUsedBytes == resource.data.storageUsedBytes;
@@ -77,7 +88,7 @@ service cloud.firestore {
         allow update: if signedInOwner(uid)
           && request.auth.token.email_verified == true
           && hasStudioAccess(uid)
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['coupleName', 'eventType']);
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['coupleName', 'eventType', 'selectedThemeId']);
 
         // 🔒 FIX: deleteClientProject Cloud Function cleanup (Storage files,
         // publicGalleries, gallerySecrets) karta hai — direct delete se
@@ -90,9 +101,9 @@ service cloud.firestore {
     // Link ab permanently active rahegi jab tak photographer
     // ya cleanup function isActive:false na kare.
     match /publicGalleries/{shareId} {
-      allow get: if resource != null && resource.data.isActive == true;
-      allow list: if false;
-      allow write: if false;
+      // Client gallery data is released by getGalleryAccess only after
+      // server-side PIN verification. Admin SDK bypasses these rules.
+      allow read, write: if false;
     }
 
     // PIN hash — browser se kabhi read/write nahi hoga.

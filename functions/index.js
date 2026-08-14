@@ -5,10 +5,41 @@ const { logger } = require("firebase-functions");
 const admin = require("firebase-admin");
 const crypto = require("crypto");
 
+// 🆕 APP CHECK — every onCall below currently has enforceAppCheck: false.
+// DO NOT flip any of these to true until:
+//   1. lookbook.html/js AND DSB.html/js have App Check initialized client-side
+//      with a real reCAPTCHA v3 site key (see the setup comment in lookbook.js).
+//   2. Firebase Console → App Check → Cloud Functions shows real traffic
+//      passing verification for several days.
+// Flipping early breaks the app for every real user, not just abusers.
 admin.initializeApp();
 const db = admin.firestore();
 const REGION = "asia-south1";
 const TRIAL_DAYS = 7;
+const STARTER_SELECTION_LIMIT = 200;
+const GROWTH_SELECTION_LIMIT = 350;
+const UPLOAD_RESERVATION_TTL_MS = 15 * 60 * 1000;
+
+// Gallery count is deliberately not an entitlement. Wedding albums vary too
+// much in size; storage quota is the fair, enforceable capacity limit.
+function getSelectionLimit(userData = {}) {
+  const planId = String(userData.planId || "").toLowerCase();
+  const planName = String(userData.planName || "").toLowerCase();
+  return planId === "growth" || planName.includes("growth")
+    ? GROWTH_SELECTION_LIMIT
+    : STARTER_SELECTION_LIMIT;
+}
+
+function isValidProjectId(value) {
+  return /^[A-Za-z0-9_-]{8,128}$/.test(value);
+}
+
+function makeUploadFileName(originalName) {
+  const safeName = String(originalName || "photo")
+    .replace(/[^A-Za-z0-9._-]/g, "_")
+    .slice(-120) || "photo";
+  return `${Date.now()}-${crypto.randomInt(100000000, 1000000000)}-${safeName}`;
+}
 
 function makeShareId() {
   return crypto.randomBytes(24).toString("base64url");
@@ -95,6 +126,7 @@ exports.createGalleryShare = onCall({ region: REGION, enforceAppCheck: false }, 
   const pinSalt = crypto.randomBytes(16).toString("hex");
   const expiresAt = admin.firestore.Timestamp.fromMillis(Date.now() + 24 * 60 * 60 * 1000);
   const data = project.data();
+  const user = (await db.doc(`users/${uid}`).get()).data() || {};
 
   // WORKFLOW_STATE: single source of truth, mirrored on both documents.
   // Values: selection_open -> selection_completed -> published
@@ -103,7 +135,7 @@ exports.createGalleryShare = onCall({ region: REGION, enforceAppCheck: false }, 
     transaction.set(db.doc(`publicGalleries/${shareId}`), {
       uid, projectId, coupleName: data.coupleName || "Wedding Album", expiresAt,
       isActive: true,
-      workflowState: "selection_open", selectionLimit: 40,
+      workflowState: "selection_open", selectionLimit: getSelectionLimit(user),
       createdAt: admin.firestore.FieldValue.serverTimestamp()
     });
     transaction.set(db.doc(`gallerySecrets/${shareId}`), { pinSalt, pinHash: hashPin(pin, pinSalt), pin });
@@ -128,7 +160,7 @@ exports.submitGallerySelection = onCall({ region: REGION, enforceAppCheck: false
   if (typeof shareId !== "string" || typeof pin !== "string" || !Array.isArray(photoIds)) {
     throw new HttpsError("invalid-argument", "Invalid selection request.");
   }
-  if (!/^\d{6}$/.test(pin) || photoIds.length < 1 || photoIds.length > 40 || photoIds.some(id => typeof id !== "string" || id.length > 200)) {
+  if (!/^\d{6}$/.test(pin) || photoIds.length < 1 || photoIds.some(id => typeof id !== "string" || id.length > 200)) {
     throw new HttpsError("invalid-argument", "Invalid PIN or photo selection.");
   }
   
@@ -142,6 +174,13 @@ exports.submitGallerySelection = onCall({ region: REGION, enforceAppCheck: false
   }
   if (data.workflowState !== "selection_open") {
     throw new HttpsError("failed-precondition", "This gallery is not accepting selections right now.");
+  }
+
+  const selectionLimit = Number(data.selectionLimit) === GROWTH_SELECTION_LIMIT
+    ? GROWTH_SELECTION_LIMIT
+    : STARTER_SELECTION_LIMIT;
+  if (photoIds.length > selectionLimit) {
+    throw new HttpsError("invalid-argument", `You can select up to ${selectionLimit} photos.`);
   }
 
   if (!(await checkGalleryPin(shareId, pin))) {
@@ -325,6 +364,51 @@ exports.verifyGalleryPin = onCall({ region: REGION, enforceAppCheck: false }, as
   return { ok: true };
 });
 
+// Client gallery metadata and previews are released only after server-side
+// PIN verification. Preview URLs expire after ten minutes.
+exports.getGalleryAccess = onCall({ region: REGION, enforceAppCheck: false }, async (request) => {
+  const { shareId, pin } = request.data || {};
+  if (typeof shareId !== "string" || !/^[A-Za-z0-9_-]{20,64}$/.test(shareId) || !/^\d{6}$/.test(String(pin || ""))) {
+    throw new HttpsError("invalid-argument", "Invalid gallery access request.");
+  }
+
+  const gallery = await db.doc(`publicGalleries/${shareId}`).get();
+  if (!gallery.exists || gallery.data().isActive !== true) {
+    throw new HttpsError("not-found", "Gallery unavailable.");
+  }
+  if (!(await checkGalleryPin(shareId, pin))) {
+    throw new HttpsError("permission-denied", "Incorrect gallery PIN.");
+  }
+
+  const data = gallery.data();
+  const previewFiles = Array.isArray(data.previewFiles) ? data.previewFiles : [];
+  const bucket = admin.storage().bucket();
+  const signedUrlExpiresAt = Date.now() + 10 * 60 * 1000;
+  const previews = await Promise.all(previewFiles.map(async name => {
+    if (typeof name !== "string" || !/^[A-Za-z0-9_-]+\.jpg$/.test(name)) {
+      throw new HttpsError("failed-precondition", "Gallery preview data is invalid.");
+    }
+    const [url] = await bucket.file(`gallery-previews/${shareId}/${name}`).getSignedUrl({
+      action: "read",
+      expires: signedUrlExpiresAt
+    });
+    return { name, url };
+  }));
+
+  return {
+    coupleName: data.coupleName || "Wedding Album",
+    workflowState: data.workflowState || "selection_open",
+    selectedThemeId: data.selectedThemeId || null,
+    selectionLimit: Number(data.selectionLimit) === GROWTH_SELECTION_LIMIT
+      ? GROWTH_SELECTION_LIMIT
+      : STARTER_SELECTION_LIMIT,
+    selectedPhotoIds: Array.isArray(data.selectedPhotoIds) ? data.selectedPhotoIds : [],
+    selectionSubmittedAt: data.selectionSubmittedAt || null,
+    previews,
+    signedUrlExpiresAt
+  };
+});
+
 // Called by the photographer after preview files were uploaded. Public users
 // can only select IDs from this server-validated manifest.
 exports.publishGalleryPreviews = onCall({ region: REGION, enforceAppCheck: false }, async (request) => {
@@ -348,10 +432,12 @@ exports.publishGalleryPreviews = onCall({ region: REGION, enforceAppCheck: false
   if (previewOriginalFiles.some(name => !/^[A-Za-z0-9._-]+$/.test(name))) {
     throw new HttpsError("invalid-argument", "Invalid original file reference.");
   }
+  const ownerDoc = await db.doc(`users/${request.auth.uid}`).get();
   await galleryRef.update({
     previewFiles,
     previewCategories: previews.map(item => String(item.category || "Wedding")),
-    previewOriginalFiles
+    previewOriginalFiles,
+    selectionLimit: getSelectionLimit(ownerDoc.data() || {})
   });
   return { ok: true };
 });
@@ -384,6 +470,50 @@ exports.getGalleryPin = onCall({ region: REGION, enforceAppCheck: false }, async
   return { shareId: data.shareId, pin: secret.data().pin };
 });
 
+// 🆕 SECURITY FIX: a client's gallery link (shareId) is meant to be shared,
+// so anyone who has it (forwarded WhatsApp message, shared device, etc.) can
+// deliberately enter the wrong PIN 8 times and lock the REAL client out for
+// 15 minutes at a time, repeatedly — a low-effort targeted DoS with no way
+// for the photographer to fix it before now. This lets the photographer
+// generate a brand-new PIN on demand, which also clears any existing lockout
+// so the client can get back in immediately with the new PIN.
+exports.regenerateGalleryPin = onCall({ region: REGION, enforceAppCheck: false }, async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Please sign in.");
+  const uid = request.auth.uid;
+  const projectId = String(request.data?.projectId || "");
+  if (!/^[A-Za-z0-9_-]{8,128}$/.test(projectId)) throw new HttpsError("invalid-argument", "Invalid project.");
+
+  const projectRef = db.doc(`users/${uid}/clientProjects/${projectId}`);
+  const project = await projectRef.get();
+  if (!project.exists) throw new HttpsError("not-found", "Project not found.");
+
+  const data = project.data();
+  if (!data.shareId) throw new HttpsError("failed-precondition", "No link has been generated for this client yet.");
+
+  const galleryRef = db.doc(`publicGalleries/${data.shareId}`);
+  const gallery = await galleryRef.get();
+  if (!gallery.exists || gallery.data().isActive !== true) {
+    throw new HttpsError("failed-precondition", "This client's link is no longer active.");
+  }
+
+  const secretRef = db.doc(`gallerySecrets/${data.shareId}`);
+  const secret = await secretRef.get();
+  if (!secret.exists) throw new HttpsError("not-found", "PIN record not found for this link.");
+
+  const newPin = makePin();
+  const newSalt = crypto.randomBytes(16).toString("hex");
+  await secretRef.set({
+    pinSalt: newSalt,
+    pinHash: hashPin(newPin, newSalt),
+    pin: newPin,
+    failedAttempts: 0,
+    lockedUntil: admin.firestore.FieldValue.delete()
+  }, { merge: true });
+
+  logger.info("Gallery PIN regenerated", { shareId: data.shareId });
+  return { shareId: data.shareId, pin: newPin };
+});
+
 // 🆕 SCHEDULED CLEANUP
 exports.cleanupExpiredGalleries = onSchedule({ region: REGION, schedule: "every 24 hours" }, async () => {
   // Sirf vohi galleries clean hongi jinhe explicitly isActive: false set kiya gaya ho
@@ -412,6 +542,58 @@ exports.cleanupExpiredGalleries = onSchedule({ region: REGION, schedule: "every 
   }
 });
 
+const GRACE_DAYS = 21; // trial khatam hone ke baad itne din tak data safe rehta hai
+
+// 🆕 TRIAL LIFECYCLE — trial → grace → expired
+// Access control isme kuch change nahi karta — hasStudioAccess() (rules +
+// yahan dono jagah) already trialStartDate se live time-math karta hai, toh
+// 7 din baad naya client/upload/link apne aap block ho jata hai. Ye function
+// sirf 2 cheez karta hai: (1) accountStatus label update taaki dashboard
+// sahi banner dikha sake, (2) grace period khatam hone par asli HD photos
+// delete karke Storage cost bachana — bina metadata/history khoye.
+exports.updateTrialLifecycle = onSchedule({ region: REGION, schedule: "every 24 hours" }, async () => {
+  const now = Date.now();
+
+  // 1) trial → grace (7 din se zyada purana trial, abhi tak "trial" label pe hai)
+  const trialCutoff = admin.firestore.Timestamp.fromMillis(now - TRIAL_DAYS * 24 * 60 * 60 * 1000);
+  const expiredTrialsSnap = await db.collection("users")
+    .where("accountStatus", "==", "trial")
+    .where("trialStartDate", "<=", trialCutoff)
+    .get();
+
+  for (const doc of expiredTrialsSnap.docs) {
+    const gracePeriodEnd = admin.firestore.Timestamp.fromMillis(now + GRACE_DAYS * 24 * 60 * 60 * 1000);
+    await doc.ref.update({ accountStatus: "grace", gracePeriodEnd }).catch(err => {
+      logger.error("Failed to move user into grace", { uid: doc.id, error: err.message });
+    });
+  }
+  if (!expiredTrialsSnap.empty) {
+    logger.info(`updateTrialLifecycle: moved ${expiredTrialsSnap.size} user(s) into grace.`);
+  }
+
+  // 2) grace → expired (grace bhi khatam, subscribe nahi kiya — HD photos delete)
+  const graceExpiredSnap = await db.collection("users")
+    .where("accountStatus", "==", "grace")
+    .where("gracePeriodEnd", "<=", admin.firestore.Timestamp.fromMillis(now))
+    .get();
+
+  const bucket = admin.storage().bucket();
+  for (const doc of graceExpiredSnap.docs) {
+    const uid = doc.id;
+    // Safety guard: agar beech mein subscribe ho gaya (admin ne accountStatus
+    // badal diya), query khud hi unhe match nahi karegi — ye ek extra check
+    // race-condition se bachne ke liye.
+    if (doc.data().subscriptionStatus === "active") continue;
+
+    try {
+      await bucket.deleteFiles({ prefix: `client-albums/${uid}/` });
+      await doc.ref.update({ accountStatus: "expired", storageUsedBytes: 0 });
+      logger.info("Trial data expired — original photos deleted", { uid });
+    } catch (err) {
+      logger.error("Failed to expire trial data", { uid, error: err.message });
+    }
+  }
+});
 // 🆕 QUOTA ENFORCEMENT — gallery count
 exports.createClientProject = onCall({ region: REGION, enforceAppCheck: false }, async (request) => {
   if (!request.auth) throw new HttpsError("unauthenticated", "Please sign in.");
@@ -427,11 +609,6 @@ exports.createClientProject = onCall({ region: REGION, enforceAppCheck: false },
     throw new HttpsError("permission-denied", "Your trial has ended. Please subscribe to add new clients.");
   }
 
-  const userDoc = await db.doc(`users/${uid}`).get();
-  const rawLimit = userDoc.exists ? userDoc.data().galleryLimit : undefined;
-  const coercedLimit = Number(rawLimit);
-  const galleryLimit = Number.isFinite(coercedLimit) && coercedLimit > 0 ? coercedLimit : 10;
-
   // 🐞 FIX (pricing tagline problem): "Up to 50 client galleries" was being
   // enforced as a lifetime total — a photographer's 40th-ever client (even
   // if 35 of those weddings were long finished and archived) would get
@@ -442,16 +619,6 @@ exports.createClientProject = onCall({ region: REGION, enforceAppCheck: false },
   // "Up to 50 active client galleries" both true and a genuinely different
   // axis of value from the GB storage cap (concurrent workload capacity,
   // not total-ever), and gives a real reason to archive finished weddings.
-  const countSnap = await db.collection(`users/${uid}/clientProjects`)
-    .where("workflowState", "!=", "archived")
-    .count().get();
-  if (countSnap.data().count >= galleryLimit) {
-    throw new HttpsError(
-      "resource-exhausted",
-      `You've reached your plan's limit of ${galleryLimit} active client galleries. Archive a completed one, or upgrade to add more.`
-    );
-  }
-
   const projectRef = await db.collection(`users/${uid}/clientProjects`).add({
     coupleName,
     eventType,
@@ -461,6 +628,53 @@ exports.createClientProject = onCall({ region: REGION, enforceAppCheck: false },
   });
 
   return { projectId: projectRef.id };
+});
+
+// A reservation is created before every browser upload. This makes the
+// storage limit transactional: simultaneous uploads cannot all pass an old
+// storageUsedBytes value and overrun the plan quota.
+exports.reservePhotoUpload = onCall({ region: REGION, enforceAppCheck: false }, async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Please sign in.");
+  if (!request.auth.token.email_verified) {
+    throw new HttpsError("permission-denied", "Please verify your email address first.");
+  }
+
+  const uid = request.auth.uid;
+  const projectId = String(request.data?.projectId || "");
+  const originalName = String(request.data?.originalName || "");
+  const size = Number(request.data?.size);
+  const contentType = String(request.data?.contentType || "");
+  if (!isValidProjectId(projectId) || !originalName || !Number.isInteger(size) || size < 1 || size >= 30 * 1024 * 1024 || !/^image\/.+/.test(contentType)) {
+    throw new HttpsError("invalid-argument", "Invalid photo upload request.");
+  }
+  if (!(await hasStudioAccess(uid))) {
+    throw new HttpsError("permission-denied", "Your trial has ended. Please subscribe to upload photos.");
+  }
+
+  const projectRef = db.doc(`users/${uid}/clientProjects/${projectId}`);
+  const project = await projectRef.get();
+  if (!project.exists) throw new HttpsError("not-found", "Project not found.");
+
+  const fileName = makeUploadFileName(originalName);
+  const userRef = db.doc(`users/${uid}`);
+  const reservationRef = db.doc(`users/${uid}/uploadReservations/${fileName}`);
+  const expiresAt = admin.firestore.Timestamp.fromMillis(Date.now() + UPLOAD_RESERVATION_TTL_MS);
+
+  await db.runTransaction(async tx => {
+    const user = await tx.get(userRef);
+    if (!user.exists) throw new HttpsError("failed-precondition", "Account profile is missing.");
+    const data = user.data();
+    const used = Math.max(0, Number(data.storageUsedBytes) || 0);
+    const reserved = Math.max(0, Number(data.storageReservedBytes) || 0);
+    const limit = Number(data.storageLimitBytes);
+    if (!Number.isFinite(limit) || limit <= 0 || used + reserved + size > limit) {
+      throw new HttpsError("resource-exhausted", "This upload would exceed your secure storage limit.");
+    }
+    tx.create(reservationRef, { uid, projectId, fileName, size, contentType, expiresAt });
+    tx.update(userRef, { storageReservedBytes: reserved + size });
+  });
+
+  return { fileName, expiresAt: expiresAt.toMillis() };
 });
 
 // 🆕 FIX (client delete didn't fully clean up): previously DSB.js deleted a
@@ -537,17 +751,37 @@ exports.deleteClientProject = onCall({ region: REGION, enforceAppCheck: false },
 // cleaned up by cleanupExpiredGalleries). They keep users/{uid}.storageUsedBytes
 // accurate in real time, which storage.rules then checks against
 // storageLimitBytes before allowing any new upload.
-const CLIENT_ALBUM_PATH = /^client-albums\/([^/]+)\//;
+const CLIENT_ALBUM_PATH = /^client-albums\/([^/]+)\/([^/]+)\/([^/]+)$/;
+
+function storageEventRef(event) {
+  return db.doc(`processedStorageEvents/${event.id}`);
+}
 
 exports.onPhotoUploaded = onObjectFinalized({ region: REGION }, async (event) => {
   const filePath = event.data.name || "";
   const match = filePath.match(CLIENT_ALBUM_PATH);
   if (!match) return;
-  const uid = match[1];
+  const [, uid, , fileName] = match;
   const size = Number(event.data.size || 0);
-  await db.doc(`users/${uid}`).update({
-    storageUsedBytes: admin.firestore.FieldValue.increment(size)
-  }).catch(err => logger.warn("Could not increment storageUsedBytes", { uid, error: err.message }));
+  const userRef = db.doc(`users/${uid}`);
+  const reservationRef = db.doc(`users/${uid}/uploadReservations/${fileName}`);
+  const eventRef = storageEventRef(event);
+
+  await db.runTransaction(async tx => {
+    if ((await tx.get(eventRef)).exists) return;
+    const [user, reservation] = await Promise.all([tx.get(userRef), tx.get(reservationRef)]);
+    if (!user.exists) return;
+    const data = user.data();
+    const reservedSize = reservation.exists ? Math.max(0, Number(reservation.data().size) || 0) : 0;
+    const used = Math.max(0, Number(data.storageUsedBytes) || 0);
+    const reserved = Math.max(0, Number(data.storageReservedBytes) || 0);
+    tx.update(userRef, {
+      storageUsedBytes: used + size,
+      storageReservedBytes: Math.max(0, reserved - reservedSize)
+    });
+    if (reservation.exists) tx.delete(reservationRef);
+    tx.set(eventRef, { createdAt: admin.firestore.FieldValue.serverTimestamp() });
+  }).catch(err => logger.warn("Could not finalize storage quota", { uid, filePath, error: err.message }));
 });
 
 exports.onPhotoDeleted = onObjectDeleted({ region: REGION }, async (event) => {
@@ -556,9 +790,43 @@ exports.onPhotoDeleted = onObjectDeleted({ region: REGION }, async (event) => {
   if (!match) return;
   const uid = match[1];
   const size = Number(event.data.size || 0);
-  await db.doc(`users/${uid}`).update({
-    storageUsedBytes: admin.firestore.FieldValue.increment(-size)
-  }).catch(err => logger.warn("Could not decrement storageUsedBytes", { uid, error: err.message }));
+  const userRef = db.doc(`users/${uid}`);
+  const eventRef = storageEventRef(event);
+  await db.runTransaction(async tx => {
+    if ((await tx.get(eventRef)).exists) return;
+    const user = await tx.get(userRef);
+    if (!user.exists) return;
+    const used = Math.max(0, Number(user.data().storageUsedBytes) || 0);
+    tx.update(userRef, { storageUsedBytes: Math.max(0, used - size) });
+    tx.set(eventRef, { createdAt: admin.firestore.FieldValue.serverTimestamp() });
+  }).catch(err => logger.warn("Could not update deleted-photo quota", { uid, filePath, error: err.message }));
+});
+
+// Failed/disconnected browser uploads leave a reservation for at most 15
+// minutes, after which this job releases the held quota.
+exports.releaseExpiredUploadReservations = onSchedule({ region: REGION, schedule: "every 15 minutes" }, async () => {
+  const now = admin.firestore.Timestamp.now();
+  const reservations = await db.collectionGroup("uploadReservations")
+    .where("expiresAt", "<=", now)
+    .limit(500)
+    .get();
+
+  for (const reservation of reservations.docs) {
+    const userRef = reservation.ref.parent.parent;
+    if (!userRef) continue;
+    await db.runTransaction(async tx => {
+      const freshReservation = await tx.get(reservation.ref);
+      if (!freshReservation.exists || freshReservation.data().expiresAt.toMillis() > Date.now()) return;
+      const user = await tx.get(userRef);
+      if (user.exists) {
+        const reserved = Math.max(0, Number(user.data().storageReservedBytes) || 0);
+        const size = Math.max(0, Number(freshReservation.data().size) || 0);
+        tx.update(userRef, { storageReservedBytes: Math.max(0, reserved - size) });
+      }
+      tx.delete(reservation.ref);
+    });
+  }
+  logger.info("Released expired upload reservations", { count: reservations.size });
 });
 
 // 🆕 READ-ONLY AVAILABILITY CHECK — used only to decide whether to SHOW the

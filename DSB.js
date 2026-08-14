@@ -17,6 +17,22 @@ const firebaseConfig = {
 if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
 }
+
+// 🆕 APP CHECK — same setup as lookbook.js. Requires adding
+// <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-app-check-compat.js"></script>
+// to DSB.html (after firebase-app-compat.js). See the full step-by-step in
+// lookbook.js — do not enable enforceAppCheck in index.js until traffic here
+// is confirmed passing verification in the Firebase Console.
+const RECAPTCHA_V3_SITE_KEY = "PASTE_YOUR_RECAPTCHA_V3_SITE_KEY_HERE";
+if (RECAPTCHA_V3_SITE_KEY !== "PASTE_YOUR_RECAPTCHA_V3_SITE_KEY_HERE") {
+    firebase.appCheck().activate(
+        new firebase.appCheck.ReCaptchaV3Provider(RECAPTCHA_V3_SITE_KEY),
+        true
+    );
+} else {
+    console.warn("App Check not active yet — set RECAPTCHA_V3_SITE_KEY in DSB.js after registering in Firebase Console.");
+}
+
 const db = firebase.firestore();
 const storage = firebase.storage();
 
@@ -130,6 +146,8 @@ async function restoreExistingLinkIfValid(projectId) {
     if (!stillValid) {
         if (clientGeneratedUrlDisplayField) clientGeneratedUrlDisplayField.value = "";
         if (pinDisplay) { pinDisplay.style.display = "none"; pinDisplay.textContent = ""; }
+        const regenBtnHide = document.getElementById("regeneratePinBtn");
+        if (regenBtnHide) regenBtnHide.style.display = "none";
         updatePublishControls(null);
         return;
     }
@@ -152,6 +170,46 @@ async function restoreExistingLinkIfValid(projectId) {
             pinDisplay.style.display = "block";
         }
     }
+
+    // 🆕 SECURITY FIX: shows/enables the "Regenerate PIN" button whenever a
+    // live link exists. Needed because anyone with the shareId (forwarded
+    // link, shared device) can deliberately fail the PIN 8 times and lock
+    // the real client out for 15 min repeatedly — this button lets the
+    // photographer instantly issue a new PIN and clear any active lockout.
+    const regenBtn = document.getElementById("regeneratePinBtn");
+    if (regenBtn) regenBtn.style.display = "inline-flex";
+}
+
+const regeneratePinBtn = document.getElementById("regeneratePinBtn");
+if (regeneratePinBtn) {
+    regeneratePinBtn.addEventListener("click", async () => {
+        if (!activeProjectId) return;
+        const pinDisplay = document.getElementById("clientGalleryPinDisplay");
+
+        const confirmed = confirm("⚠️ This will invalidate the current PIN immediately. The client will need the new PIN to access their gallery. Continue?");
+        if (!confirmed) return;
+
+        if (!navigator.onLine) return alert("⚠️ You're offline. Connect to the internet and try again.");
+
+        regeneratePinBtn.disabled = true;
+        regeneratePinBtn.innerText = "Regenerating...";
+
+        try {
+            const regenerate = firebase.app().functions("asia-south1").httpsCallable("regenerateGalleryPin");
+            const result = await regenerate({ projectId: activeProjectId });
+            if (pinDisplay) {
+                pinDisplay.textContent = `Gallery PIN: ${result.data.pin} — new PIN generated, old PIN no longer works.`;
+                pinDisplay.style.display = "block";
+            }
+            alert("✅ New PIN generated. Please share the new PIN with your client — the old one no longer works.");
+        } catch (err) {
+            console.error("Regenerate PIN error:", err);
+            alert("❌ Failed to regenerate PIN: " + err.message);
+        } finally {
+            regeneratePinBtn.disabled = false;
+            regeneratePinBtn.innerText = "Regenerate PIN";
+        }
+    });
 }
 
 function setActiveProject(projectId, coupleName) {
@@ -340,9 +398,16 @@ if (uploadImagesBtn) {
             }
         };
 
-        fileArray.forEach((file, index) => {
-            const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-            const fileRef = storage.ref().child(`client-albums/${currentUid}/${activeProjectId}/${Date.now()}-${index}-${safeName}`);
+        const reserveUpload = firebase.app().functions("asia-south1").httpsCallable("reservePhotoUpload");
+        fileArray.forEach(async (file) => {
+            try {
+            const reservation = await reserveUpload({
+                projectId: activeProjectId,
+                originalName: file.name,
+                size: file.size,
+                contentType: file.type
+            });
+            const fileRef = storage.ref().child(`client-albums/${currentUid}/${activeProjectId}/${reservation.data.fileName}`);
 
             const metadata = {
                 customMetadata: {
@@ -377,6 +442,13 @@ if (uploadImagesBtn) {
                     finishIfDone();
                 }
             );
+            } catch (err) {
+                console.error("Upload reservation error:", file.name, err);
+                failCount++;
+                failedFileObjs.push(file);
+                updateProgressUI();
+                finishIfDone();
+            }
         });
     });
 }
