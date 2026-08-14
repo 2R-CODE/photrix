@@ -409,7 +409,18 @@ if (uploadImagesBtn) {
             });
             const fileRef = storage.ref().child(`client-albums/${currentUid}/${activeProjectId}/${reservation.data.fileName}`);
 
+            // 🐛 FIX: contentType wasn't set here, so Cloud Storage fell back
+            // to guessing it from the file extension. For uppercase
+            // extensions (iPhone/Android default "IMG_0461.JPG") that guess
+            // comes back as application/octet-stream instead of image/jpeg —
+            // which no longer matches what reservePhotoUpload already saved
+            // in the Firestore reservation (it correctly used file.type).
+            // storage.rules then rejects the mismatch as storage/unauthorized.
+            // Setting it explicitly here, from the same file.type used for
+            // the reservation, keeps both sides identical regardless of
+            // filename casing.
             const metadata = {
+                contentType: file.type,
                 customMetadata: {
                     category: selectedCategory,
                     originalName: file.name

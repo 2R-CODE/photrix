@@ -19,6 +19,16 @@ const TRIAL_DAYS = 7;
 const STARTER_SELECTION_LIMIT = 200;
 const GROWTH_SELECTION_LIMIT = 350;
 const UPLOAD_RESERVATION_TTL_MS = 15 * 60 * 1000;
+// 🆕 SECURITY: kept in sync with ALLOWED_IMAGE_TYPES in DSB.js. Previously
+// this function only checked contentType.startsWith("image/"), which is
+// looser than the client's allowlist — it would still accept things like
+// image/svg+xml from anyone who bypassed the browser UI and called this
+// function directly. SVGs can carry embedded <script>, so even though this
+// app only ever renders photos through <img> tags (which don't execute
+// inline SVG scripts), there's no legitimate reason to accept a format no
+// camera or phone actually produces. Matching the client's exact list here
+// closes that gap.
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"];
 
 // Gallery count is deliberately not an entitlement. Wedding albums vary too
 // much in size; storage quota is the fair, enforceable capacity limit.
@@ -644,7 +654,7 @@ exports.reservePhotoUpload = onCall({ region: REGION, enforceAppCheck: false }, 
   const originalName = String(request.data?.originalName || "");
   const size = Number(request.data?.size);
   const contentType = String(request.data?.contentType || "");
-  if (!isValidProjectId(projectId) || !originalName || !Number.isInteger(size) || size < 1 || size >= 30 * 1024 * 1024 || !/^image\/.+/.test(contentType)) {
+  if (!isValidProjectId(projectId) || !originalName || !Number.isInteger(size) || size < 1 || size >= 30 * 1024 * 1024 || !ALLOWED_IMAGE_TYPES.includes(contentType)) {
     throw new HttpsError("invalid-argument", "Invalid photo upload request.");
   }
   if (!(await hasStudioAccess(uid))) {

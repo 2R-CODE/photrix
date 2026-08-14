@@ -22,6 +22,10 @@ service firebase.storage {
     }
 
     // Original HD uploads — sirf owner access kar sakta hai.
+    // 🆕 SECURITY: contentType check tightened from "image/.*" to the exact
+    // 5 types DSB.js and reservePhotoUpload allow — closes the gap where
+    // "image/.*" would've also accepted image/svg+xml (SVGs can carry
+    // embedded <script>) even though no camera or phone ever produces one.
     match /client-albums/{uid}/{projectId}/{fileName} {
       allow read: if request.auth != null && request.auth.uid == uid;
 
@@ -39,7 +43,7 @@ service firebase.storage {
                     && uploadReservation(uid, fileName).contentType == request.resource.contentType
                     && request.time < uploadReservation(uid, fileName).expiresAt
                     && request.resource.size < 30 * 1024 * 1024
-                    && request.resource.contentType.matches("image/.*");
+                    && request.resource.contentType.matches("image/(jpeg|png|webp|heic|heif)");
 
       allow update: if false;
       allow delete: if request.auth != null && request.auth.uid == uid;
@@ -66,7 +70,7 @@ service firebase.storage {
                        ).data.isActive == true
                     && fileName.matches("^[A-Za-z0-9_-]+\\.jpg$")
                     && request.resource.size < 5 * 1024 * 1024
-                    && request.resource.contentType.matches("image/.*");
+                    && request.resource.contentType == "image/jpeg";
 
       allow list, update, delete: if false;
     }
