@@ -18,7 +18,7 @@ const REGION = "asia-south1";
 const TRIAL_DAYS = 7;
 const STARTER_SELECTION_LIMIT = 200;
 const GROWTH_SELECTION_LIMIT = 350;
-const UPLOAD_RESERVATION_TTL_MS = 15 * 60 * 1000;
+const UPLOAD_RESERVATION_TTL_MS = 60 * 60 * 1000; // 🔧 bumped from 15 min — batches of up to 500 photos on a slow connection could realistically outlast 15 min between the first reservation and the last file's upload actually completing
 // 🆕 SECURITY: kept in sync with ALLOWED_IMAGE_TYPES in DSB.js. Previously
 // this function only checked contentType.startsWith("image/"), which is
 // looser than the client's allowlist — it would still accept things like

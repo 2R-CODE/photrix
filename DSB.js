@@ -397,70 +397,100 @@ if (uploadImagesBtn) {
                 alert(`⚠️ Uploaded ${doneCount} of ${totalCount} photos. ${failCount} failed:\n${failedFileObjs.slice(0, 5).map(f => f.name).join("\n")}${failedFileObjs.length > 5 ? `\n...and ${failedFileObjs.length - 5} more` : ""}\n\nClick "Retry Failed Uploads" to upload just those — the ${doneCount} that succeeded won't be re-uploaded.`);
             }
         };
+const reserveUpload = firebase.app().functions("asia-south1").httpsCallable("reservePhotoUpload");
 
-        const reserveUpload = firebase.app().functions("asia-south1").httpsCallable("reservePhotoUpload");
-        fileArray.forEach(async (file) => {
+// 🚦 FIX: large batches (200-500 photos) used to fire every file's
+// upload simultaneously via forEach — that meant up to 500
+// concurrent reservePhotoUpload calls, each running a Firestore
+// transaction against the SAME users/{uid} document
+// (storageReservedBytes). That much concurrent write contention on
+// one document makes many transactions exhaust their automatic
+// retries and fail outright — showing up as a chunk of random
+// "failed" uploads with no real cause besides the batch size.
+// Processing a limited number of files at a time keeps identical
+// per-file behavior but avoids hammering that one document.
+const UPLOAD_CONCURRENCY = 6;
+
+function uploadOneFile(file) {
+    return new Promise((resolve) => {
+        (async () => {
             try {
-            const reservation = await reserveUpload({
-                projectId: activeProjectId,
-                originalName: file.name,
-                size: file.size,
-                contentType: file.type
-            });
-            const fileRef = storage.ref().child(`client-albums/${currentUid}/${activeProjectId}/${reservation.data.fileName}`);
+                const reservation = await reserveUpload({
+                    projectId: activeProjectId,
+                    originalName: file.name,
+                    size: file.size,
+                    contentType: file.type
+                });
+                const fileRef = storage.ref().child(`client-albums/${currentUid}/${activeProjectId}/${reservation.data.fileName}`);
 
-            // 🐛 FIX: contentType wasn't set here, so Cloud Storage fell back
-            // to guessing it from the file extension. For uppercase
-            // extensions (iPhone/Android default "IMG_0461.JPG") that guess
-            // comes back as application/octet-stream instead of image/jpeg —
-            // which no longer matches what reservePhotoUpload already saved
-            // in the Firestore reservation (it correctly used file.type).
-            // storage.rules then rejects the mismatch as storage/unauthorized.
-            // Setting it explicitly here, from the same file.type used for
-            // the reservation, keeps both sides identical regardless of
-            // filename casing.
-            const metadata = {
-                contentType: file.type,
-                customMetadata: {
-                    category: selectedCategory,
-                    originalName: file.name
-                }
-            };
-
-            const uploadTask = fileRef.put(file, metadata);
-
-            // FIX: use the resumable upload's own state_changed events so a
-            // connection drop mid-upload updates the status label immediately
-            // ("Connection lost, retrying...") instead of the button just
-            // sitting on "Uploading Assets..." with no explanation until the
-            // internal retry window (~2 min) finally times out.
-            uploadTask.on("state_changed",
-                () => {
-                    if (uploadStatusNotificationLabel && !navigator.onLine) {
-                        uploadStatusNotificationLabel.textContent = `⚠️ Connection lost — retrying ${file.name}...`;
+                // 🐛 FIX: contentType wasn't set here, so Cloud Storage fell back
+                // to guessing it from the file extension. For uppercase
+                // extensions (iPhone/Android default "IMG_0461.JPG") that guess
+                // comes back as application/octet-stream instead of image/jpeg —
+                // which no longer matches what reservePhotoUpload already saved
+                // in the Firestore reservation (it correctly used file.type).
+                // storage.rules then rejects the mismatch as storage/unauthorized.
+                // Setting it explicitly here, from the same file.type used for
+                // the reservation, keeps both sides identical regardless of
+                // filename casing.
+                const metadata = {
+                    contentType: file.type,
+                    customMetadata: {
+                        category: selectedCategory,
+                        originalName: file.name
                     }
-                },
-                (err) => {
-                    console.error("Upload error:", file.name, err);
-                    failCount++;
-                    failedFileObjs.push(file);
-                    updateProgressUI();
-                    finishIfDone();
-                },
-                () => {
-                    doneCount++;
-                    updateProgressUI();
-                    finishIfDone();
-                }
-            );
+                };
+
+                const uploadTask = fileRef.put(file, metadata);
+
+                // FIX: use the resumable upload's own state_changed events so a
+                // connection drop mid-upload updates the status label immediately
+                // ("Connection lost, retrying...") instead of the button just
+                // sitting on "Uploading Assets..." with no explanation until the
+                // internal retry window (~2 min) finally times out.
+                uploadTask.on("state_changed",
+                    () => {
+                        if (uploadStatusNotificationLabel && !navigator.onLine) {
+                            uploadStatusNotificationLabel.textContent = `⚠️ Connection lost — retrying ${file.name}...`;
+                        }
+                    },
+                    (err) => {
+                        console.error("Upload error:", file.name, err);
+                        failCount++;
+                        failedFileObjs.push(file);
+                        updateProgressUI();
+                        finishIfDone();
+                        resolve();
+                    },
+                    () => {
+                        doneCount++;
+                        updateProgressUI();
+                        finishIfDone();
+                        resolve();
+                    }
+                );
             } catch (err) {
                 console.error("Upload reservation error:", file.name, err);
                 failCount++;
                 failedFileObjs.push(file);
                 updateProgressUI();
                 finishIfDone();
+                resolve();
             }
-        });
+        })();
+    });
+}
+
+let nextFileIndex = 0;
+async function uploadWorker() {
+    while (nextFileIndex < fileArray.length) {
+        const file = fileArray[nextFileIndex];
+        nextFileIndex++;
+        await uploadOneFile(file);
+    }
+}
+const workerCount = Math.min(UPLOAD_CONCURRENCY, fileArray.length);
+for (let i = 0; i < workerCount; i++) uploadWorker();
     });
 }
 

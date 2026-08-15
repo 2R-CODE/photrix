@@ -26,6 +26,18 @@ service firebase.storage {
     // 5 types DSB.js and reservePhotoUpload allow — closes the gap where
     // "image/.*" would've also accepted image/svg+xml (SVGs can carry
     // embedded <script>) even though no camera or phone ever produces one.
+    // 🐛 ROOT-CAUSE FIX: Cloud Storage Security Rules allow AT MOST 2 unique
+    // Firestore documents per rule evaluation (firestore.get()/exists() calls
+    // to different paths). This rule was touching 3: users/{uid} (via
+    // hasStudioAccess), clientProjects/{projectId} (this exists() check), and
+    // uploadReservations/{fileName} (via uploadReservation()). Exceeding the
+    // 2-document limit makes Storage deny the request outright — which is
+    // exactly what was happening on every single upload, regardless of how
+    // correct every individual value was. Removed the clientProjects exists()
+    // check: it was redundant anyway, since reservePhotoUpload (the Cloud
+    // Function that creates the reservation) already verifies the project
+    // exists before it ever creates one — a valid matching reservation is
+    // already proof the project was real at reservation time.
     match /client-albums/{uid}/{projectId}/{fileName} {
       allow read: if request.auth != null && request.auth.uid == uid;
 
@@ -33,9 +45,6 @@ service firebase.storage {
                     && request.auth.uid == uid
                     && request.auth.token.email_verified == true
                     && hasStudioAccess(uid)
-                    && firestore.exists(
-                         /databases/(default)/documents/users/$(uid)/clientProjects/$(projectId)
-                       )
                     && uploadReservation(uid, fileName).uid == uid
                     && uploadReservation(uid, fileName).projectId == projectId
                     && uploadReservation(uid, fileName).fileName == fileName

@@ -149,68 +149,7 @@ if (!galleryId || !/^[A-Za-z0-9_-]{20,}$/.test(galleryId)) {
   if (nameEl) nameEl.textContent = "Private client gallery";
   if (statusEl) statusEl.textContent = "Enter the gallery PIN to view your photos.";
   if (pinGate) pinGate.style.display = "block";
-
-  // Real-time listener — single source of truth: gallery.workflowState
-  if (false) db.collection("publicGalleries").doc(galleryId).onSnapshot(async doc => {
-    if (!doc.exists) return setError("This gallery was not found.");
-
-    const gallery = doc.data();
-    galleryData = gallery;
-    setSelectionLimit(gallery.selectionLimit);
-
-    if (gallery.isActive !== true) {
-      return setError("This gallery is no longer active.");
-    }
-
-    // --- STATE: selection_completed (client submitted, photographer reviewing) ---
-    if (gallery.workflowState === "selection_completed") {
-      showSubmittedScreen();
-      const submittedAtMs = gallery.selectionSubmittedAt && typeof gallery.selectionSubmittedAt.toMillis === "function"
-        ? gallery.selectionSubmittedAt.toMillis() : null;
-      if (pinVerified && submittedAtMs && (Date.now() - submittedAtMs) < UNDO_WINDOW_SECONDS * 1000) {
-        startUndoCountdown(submittedAtMs);
-      } else {
-        hideUndoBar();
-      }
-      return;
-    }
-
-    hideUndoBar();
-
-    // --- STATE: published (final delivery) ---
-    if (gallery.workflowState === "published") {
-      if (nameEl) nameEl.textContent = gallery.coupleName || "Wedding Album";
-      if (statusEl && !pinVerified) statusEl.textContent = "Your final gallery is ready! Enter PIN to view and download.";
-      if (pinGate && !pinVerified) pinGate.style.display = "block";
-
-      if (submit) submit.style.display = "none";
-
-      pendingPreviewFiles = Array.isArray(gallery.previewFiles) ? gallery.previewFiles : [];
-      // 🐞 FIX: await the theme so <body>'s class is settled before
-      // renderPreviews() checks it to decide whether to run the slider animation.
-      await applyThemeClass(gallery.selectedThemeId);
-
-      if (pinVerified && pendingPreviewFiles.length > 0) {
-        await renderPreviews(pendingPreviewFiles);
-        checkDownloadAvailability();
-      }
-      return;
-    }
-
-    // --- STATE: selection_open (default) ---
-    if (nameEl) nameEl.textContent = gallery.coupleName || "Wedding Album";
-    if (statusEl && !pinVerified) statusEl.textContent = "Enter the gallery PIN to view and select your previews.";
-    if (pinGate && !pinVerified) pinGate.style.display = "block";
-    if (submit) submit.style.display = "inline-flex";
-
-    pendingPreviewFiles = Array.isArray(gallery.previewFiles) ? gallery.previewFiles : [];
-    // 🐞 FIX: same ordering fix as above.
-    await applyThemeClass(gallery.selectedThemeId);
-
-    if (pinVerified && pendingPreviewFiles.length > 0) {
-      await renderPreviews(pendingPreviewFiles);
-    }
-  }, err => setError("This gallery cannot be opened right now."));
+}
 
 if (pinInput) {
   pinInput.addEventListener("input", async () => {
@@ -250,6 +189,16 @@ if (pinInput) {
         verifiedPin = pin;
         pinInput.disabled = true;
         if (pinGate) pinGate.style.display = 'none';
+
+        // 🐛 FIX: this is the actual live code path (the old theme-apply
+        // logic lived only inside a dead `if (false)` realtime-listener
+        // block that never ran) — theme was saving fine in Firestore via
+        // applyThemeAndPublish, but the client page never read it back and
+        // applied it, so every gallery stayed on theme-default regardless
+        // of what the photographer picked. Awaited before renderPreviews()
+        // so <body>'s class is already settled when it checks classList to
+        // decide whether to start the cinematic-slider animation.
+        await applyThemeClass(galleryData.selectedThemeId);
 
         if (galleryData.workflowState === "selection_completed") {
           showSubmittedScreen();
@@ -562,7 +511,6 @@ function showSubmittedScreen() {
       </div>
     `;
   }
-}
 }
 
 // 🎬 UNIVERSAL 3D FLIP CINEMATIC SLIDER (DESKTOP + MOBILE)
