@@ -111,6 +111,7 @@ function startUndoCountdown(submittedAtMs) {
     const remaining = UNDO_WINDOW_SECONDS - Math.floor((Date.now() - submittedAtMs) / 1000);
     if (remaining <= 0) {
       hideUndoBar();
+      showSubmittedScreen(false);
       return;
     }
     if (undoSecondsEl) undoSecondsEl.textContent = remaining;
@@ -201,10 +202,11 @@ if (pinInput) {
         await applyThemeClass(galleryData.selectedThemeId);
 
         if (galleryData.workflowState === "selection_completed") {
-          showSubmittedScreen();
           const submittedAtMs = galleryData.selectionSubmittedAt && typeof galleryData.selectionSubmittedAt.toMillis === "function"
             ? galleryData.selectionSubmittedAt.toMillis() : null;
-          if (submittedAtMs && (Date.now() - submittedAtMs) < UNDO_WINDOW_SECONDS * 1000) {
+          const undoStillOpen = submittedAtMs && (Date.now() - submittedAtMs) < UNDO_WINDOW_SECONDS * 1000;
+          showSubmittedScreen(undoStillOpen);
+          if (undoStillOpen) {
             startUndoCountdown(submittedAtMs);
           }
         } else if (pendingPreviewFiles.length === 0) {
@@ -248,6 +250,17 @@ async function renderPreviews(files) {
   grid.innerHTML = "";
   grid.style.display = "grid";
 
+  // 🆕 FIX: when a gallery gets sent back to selection_open after the
+  // client already submitted once (photographer's "Revert to Editing"),
+  // this used to render a completely blank grid — the client's earlier
+  // picks were still saved in Firestore, but nothing on screen showed it,
+  // so it looked like their selection had been wiped. Restoring both the
+  // visual .selected state AND the local `selected` array here means they
+  // see exactly what they picked before and can adjust from there instead
+  // of starting over.
+  selected = Array.isArray(galleryData?.selectedPhotoIds) ? [...galleryData.selectedPhotoIds] : [];
+  if (countEl) countEl.textContent = selected.length;
+
   if (galleryData.workflowState === 'published') {
       if (statusEl) statusEl.textContent = "Your beautiful moments are here!";
   } else {
@@ -277,6 +290,12 @@ async function renderPreviews(files) {
       image.loading = "lazy";
 
       item.appendChild(image);
+
+      // 🆕 FIX: show this item as already-selected if it's in the
+      // restored `selected` array (see comment above renderPreviews).
+      if (selected.includes(fileName)) {
+        item.classList.add("selected");
+      }
 
       // Selection tabhi allow karni hai jab state published NA ho
       if (galleryData.workflowState !== 'published') {
@@ -317,6 +336,13 @@ async function renderPreviews(files) {
       if (downloadZipBtn) downloadZipBtn.style.display = "none";
   } else {
       if (counter) counter.style.display = "none";
+      // 🐛 FIX: submit button was never explicitly hidden in the published
+      // branch — only the non-published branch set it to "block", so if it
+      // was already visible from an earlier render (e.g. before publish),
+      // it just stayed visible alongside Download ZIP. Once a gallery is
+      // published, the client is done selecting — showing both buttons
+      // together is confusing.
+      if (submit) submit.style.display = "none";
       if (footer) footer.style.display = "flex"; // Footer dikhao ZIP button ke liye
       initCinematicSliderAnimation();
   }
@@ -349,9 +375,16 @@ if (submit) {
       const submitSelection = functionsRegion.httpsCallable("submitGallerySelection");
       await submitSelection({ shareId: galleryId, pin: verifiedPin, photoIds: selected });
 
-      // Optimistic switch — the onSnapshot listener will confirm this
-      // moments later and start the undo countdown from the server timestamp.
-      showSubmittedScreen();
+      // 🐛 FIX: the undo bar/countdown only ever started when re-verifying
+      // the PIN after a page reload (see the getGalleryAccess handler
+      // above) — immediately after a fresh submit, showSubmittedScreen()
+      // ran but startUndoCountdown() was never called, so the undo bar
+      // never appeared at all until the client happened to reload the
+      // page within the 30s window. The stale comment below used to
+      // reference a realtime onSnapshot listener for this that had
+      // actually been dead code (if (false)) for a while.
+      showSubmittedScreen(true);
+      startUndoCountdown(Date.now());
     } catch (error) {
       console.error("Submit selection error:", error);
       // 🐞 FIX: friendlier message for a network-related failure instead of
@@ -492,7 +525,7 @@ async function downloadAsZip(files) {
   }
 }
 
-function showSubmittedScreen() {
+function showSubmittedScreen(undoAvailable) {
   if (grid) grid.style.display = "none";
   if (footer) footer.style.display = "none";
   if (counter) counter.style.display = "none";
@@ -500,16 +533,33 @@ function showSubmittedScreen() {
 
   if (nameEl) nameEl.textContent = galleryData?.coupleName || "Your Gallery";
   if (statusEl) {
-    statusEl.innerHTML = `
-      <div style="text-align:center;padding:40px 20px;">
-        <div style="font-size:3rem;margin-bottom:16px;">📸</div>
-        <h3 style="margin-bottom:12px;font-size:1.2rem;">Selection submitted!</h3>
-        <p style="color:var(--text-muted);font-size:0.9rem;line-height:1.6;">
-          Your photographer is now working on your gallery.<br>
-          You'll receive an update when it's ready.
-        </p>
-      </div>
-    `;
+    // 🐛 FIX: this used to always say "your photographer is now working on
+    // your gallery" — shown at the exact same time as a 30s Undo button.
+    // Confusing: it announces the photographer is already on it while
+    // still offering to take it back. Now it says something accurate to
+    // whichever state is actually true, and gets re-rendered with the
+    // "working on it" message the moment the undo window naturally
+    // expires (see the tick() timeout branch below).
+    statusEl.innerHTML = undoAvailable
+      ? `
+        <div style="text-align:center;padding:40px 20px;">
+          <div style="font-size:3rem;margin-bottom:16px;">📸</div>
+          <h3 style="margin-bottom:12px;font-size:1.2rem;">Selection submitted!</h3>
+          <p style="color:var(--text-muted);font-size:0.9rem;line-height:1.6;">
+            You have a few seconds to undo below if this was a mistake.
+          </p>
+        </div>
+      `
+      : `
+        <div style="text-align:center;padding:40px 20px;">
+          <div style="font-size:3rem;margin-bottom:16px;">📸</div>
+          <h3 style="margin-bottom:12px;font-size:1.2rem;">Selection submitted!</h3>
+          <p style="color:var(--text-muted);font-size:0.9rem;line-height:1.6;">
+            Your photographer is now working on your gallery.<br>
+            You'll receive an update when it's ready.
+          </p>
+        </div>
+      `;
   }
 }
 

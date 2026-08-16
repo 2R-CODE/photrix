@@ -515,10 +515,12 @@ if (generateClientLinkBtn) {
 
             generateClientLinkBtn.disabled = true;
             generateClientLinkBtn.innerText = "Refreshing photos...";
-            try {
-                await createGalleryPreviews(existing.shareId);
-                alert("✅ Gallery photos refreshed. The same link and PIN still work for your client.");
-            } catch (error) {
+        try {
+    await createGalleryPreviews(existing.shareId, (done, total) => {
+        generateClientLinkBtn.innerText = `Refreshing photo ${done} of ${total}...`;
+    });
+    alert("✅ Gallery photos refreshed. The same link and PIN still work for your client.");
+} catch (error) {
                 console.error("Refresh failed:", error);
                 alert("❌ Could not refresh photos. Check console for details.");
             } finally {
@@ -544,9 +546,10 @@ if (generateClientLinkBtn) {
                 pinDisplay.style.display = "block";
             }
 
-            await createGalleryPreviews(shareId);
-
-            alert("Secure gallery ready. Send the link and PIN separately to your client. 24-Hour protection protocol is active.");
+        await createGalleryPreviews(shareId, (done, total) => {
+            generateClientLinkBtn.innerText = `Preparing photo ${done} of ${total}...`;
+        });
+        alert("Secure gallery ready. Send the link and PIN separately to your client. This link stays active until you delete the client.");
 
         } catch (error) {
             console.error("Secure gallery creation failed:", error);
@@ -567,7 +570,7 @@ if (generateClientLinkBtn) {
        });
 }
 
-async function createGalleryPreviews(shareId) {
+async function createGalleryPreviews(shareId, onProgress) {
     const sourceFolder = storage.ref().child(`client-albums/${currentUid}/${activeProjectId}`);
     const sourceFiles = await sourceFolder.listAll();
     if (!sourceFiles.items.length) throw new Error("Upload photos before generating a gallery.");
@@ -596,6 +599,7 @@ async function createGalleryPreviews(shareId) {
 
     const previews = [];
     for (let index = 0; index < dedupedItems.length; index++) {
+        if (onProgress) onProgress(index + 1, dedupedItems.length);
         const source = dedupedItems[index];
         const [url, metadata] = await Promise.all([source.getDownloadURL(), source.getMetadata()]);
         const response = await fetch(url);
@@ -806,7 +810,7 @@ if (unlockPremiumGalleryBtn) {
 if (revertToEditingBtn) {
     revertToEditingBtn.addEventListener("click", async function() {
         if (!activeProjectId) return;
-        if (!confirm("Reopen this gallery for editing? Your client will temporarily see the review-in-progress screen instead of the final gallery, until you publish again.")) return;
+        if (!confirm("Reopen this gallery for the client? They'll be able to pick photos again — their previous picks stay selected, they can add or remove from there. The gallery goes back to final delivery once you publish again.")) return;
 
         revertToEditingBtn.disabled = true;
         try {

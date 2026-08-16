@@ -20,14 +20,13 @@ const STARTER_SELECTION_LIMIT = 200;
 const GROWTH_SELECTION_LIMIT = 350;
 const UPLOAD_RESERVATION_TTL_MS = 60 * 60 * 1000; // 🔧 bumped from 15 min — batches of up to 500 photos on a slow connection could realistically outlast 15 min between the first reservation and the last file's upload actually completing
 // 🆕 SECURITY: kept in sync with ALLOWED_IMAGE_TYPES in DSB.js. Previously
-// this function only checked contentType.startsWith("image/"), which is
-// looser than the client's allowlist — it would still accept things like
-// image/svg+xml from anyone who bypassed the browser UI and called this
-// function directly. SVGs can carry embedded <script>, so even though this
-// app only ever renders photos through <img> tags (which don't execute
-// inline SVG scripts), there's no legitimate reason to accept a format no
-// camera or phone actually produces. Matching the client's exact list here
-// closes that gap.
+// reservePhotoUpload only checked contentType.startsWith("image/"), which
+// would still accept things like image/svg+xml from anyone who bypassed the
+// browser UI and called this function directly. SVGs can carry embedded
+// <script>, so even though this app only ever renders photos through <img>
+// tags (which don't execute inline SVG scripts), there's no legitimate
+// reason to accept a format no camera or phone actually produces. Matching
+// the client's exact list here closes that gap.
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"];
 
 // Gallery count is deliberately not an entitlement. Wedding albums vary too
@@ -352,8 +351,14 @@ exports.revertGalleryToEditing = onCall({ region: REGION, enforceAppCheck: false
 
   const galleryRef = db.doc(`publicGalleries/${data.shareId}`);
   await db.runTransaction(async (tx) => {
-    tx.update(projectRef, { workflowState: "selection_completed" });
-    tx.update(galleryRef, { workflowState: "selection_completed" });
+    // 🐛 FIX: this used to revert to "selection_completed", which on the
+    // client just shows the static "Selection submitted!" message with no
+    // way to interact — the photographer's "Revert to Editing" click had
+    // no visible effect for the client at all. "selection_open" is the
+    // state that actually re-enables the interactive photo grid and
+    // Submit button client-side (see lookbook.js renderPreviews).
+    tx.update(projectRef, { workflowState: "selection_open" });
+    tx.update(galleryRef, { workflowState: "selection_open" });
   });
 
   return { ok: true };
