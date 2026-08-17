@@ -250,15 +250,18 @@ async function renderPreviews(files) {
   grid.innerHTML = "";
   grid.style.display = "grid";
 
-  // 🆕 FIX: when a gallery gets sent back to selection_open after the
-  // client already submitted once (photographer's "Revert to Editing"),
-  // this used to render a completely blank grid — the client's earlier
-  // picks were still saved in Firestore, but nothing on screen showed it,
-  // so it looked like their selection had been wiped. Restoring both the
-  // visual .selected state AND the local `selected` array here means they
-  // see exactly what they picked before and can adjust from there instead
-  // of starting over.
-  selected = Array.isArray(galleryData?.selectedPhotoIds) ? [...galleryData.selectedPhotoIds] : [];
+  // 🐛 FIX: the pre-selection restore below used to run unconditionally,
+  // so on a PUBLISHED gallery — where selectedPhotoIds still legitimately
+  // holds the client's final picks — every photo got marked .selected and
+  // showed the ✓ checkmark badge, exactly like the client was still in
+  // selection mode. Published is a clean final-delivery view (theme
+  // gallery + Download ZIP only), so this restore now only applies when
+  // the gallery is still actually selectable (selection_open, including
+  // after a photographer's "Revert to Editing").
+  const canRestoreSelection = galleryData.workflowState !== 'published';
+  selected = (canRestoreSelection && Array.isArray(galleryData?.selectedPhotoIds))
+    ? [...galleryData.selectedPhotoIds]
+    : [];
   if (countEl) countEl.textContent = selected.length;
 
   if (galleryData.workflowState === 'published') {
@@ -291,8 +294,10 @@ async function renderPreviews(files) {
 
       item.appendChild(image);
 
-      // 🆕 FIX: show this item as already-selected if it's in the
-      // restored `selected` array (see comment above renderPreviews).
+      // Show this item as already-selected if it's in the restored
+      // `selected` array (see canRestoreSelection above renderPreviews) —
+      // `selected` is always empty on a published gallery, so this never
+      // adds the checkmark there, only during actual selection.
       if (selected.includes(fileName)) {
         item.classList.add("selected");
       }
