@@ -199,7 +199,20 @@ if (pinInput) {
         // of what the photographer picked. Awaited before renderPreviews()
         // so <body>'s class is already settled when it checks classList to
         // decide whether to start the cinematic-slider animation.
-        await applyThemeClass(galleryData.selectedThemeId);
+        //
+        // 🐛 FIX 2: only apply the custom theme once the gallery is
+        // actually published. Previously this ran unconditionally, so
+        // after a photographer used "Revert to Editing", the client's
+        // selection screen kept showing the final theme (e.g. Pastel
+        // Bloom) that had been picked for the LAST publish — confusing,
+        // since selection is supposed to look the same plain way every
+        // time, first link or after a revert. selectedThemeId is left
+        // untouched in Firestore (not cleared) so the photographer's
+        // choice is still remembered for next time they publish — it's
+        // just not visually applied until publish actually happens again.
+        if (galleryData.workflowState === "published") {
+          await applyThemeClass(galleryData.selectedThemeId);
+        }
 
         if (galleryData.workflowState === "selection_completed") {
           const submittedAtMs = galleryData.selectionSubmittedAt && typeof galleryData.selectionSubmittedAt.toMillis === "function"
