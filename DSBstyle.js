@@ -302,3 +302,227 @@ window.setOverviewClientSelectedState = setOverviewClientSelectedState;
 
 // Start in the "no client" empty state until DSB.js says otherwise.
 document.addEventListener("DOMContentLoaded", () => setOverviewClientSelectedState(false));
+
+// ============================================================
+// 🆕 CLIENT TRACKER TABLE — pure UI (no Firebase). Moved from
+// DSB.js per the DSB.js = backend, DSBstyle.js = frontend split.
+// DSB.js owns the Firestore data (allClientDocs) and calls
+// window.renderClientTrackerTable(docs, activeProjectId) whenever
+// that data changes. This file caches the last docs/activeId it
+// was given so the search box and "Load More" button can re-render
+// locally, without asking DSB.js to re-fetch anything.
+// ============================================================
+const clientTrackerTableBody = document.getElementById("clientTrackerTableBody");
+const clientSearchInput = document.getElementById("clientSearchInput");
+const loadMoreClientsBtn = document.getElementById("loadMoreClientsBtn");
+const selectAllClientsCheckbox = document.getElementById("selectAllClientsCheckbox");
+const bulkActionsBar = document.getElementById("bulkActionsBar");
+const bulkSelectedCount = document.getElementById("bulkSelectedCount");
+const bulkDeleteBtn = document.getElementById("bulkDeleteBtn");
+
+const CLIENT_PAGE_SIZE = 10;
+let cachedClientDocs = [];
+let cachedActiveProjectId = null;
+let visibleClientCount = CLIENT_PAGE_SIZE;
+let selectedClientIds = new Set(); // pure UI selection state (no Firebase) — DSB.js reads it via window.getSelectedClientIds()
+
+function escapeHtml(value) {
+    return String(value).replace(/[&<>'"]/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[char]));
+}
+
+function renderClientRow(projectId, data) {
+    const tr = document.createElement("tr");
+    tr.setAttribute("data-project-id", projectId);
+    tr.setAttribute("data-couple-name", data.coupleName || "Unnamed");
+
+    let statusHtml = "";
+    let statusDotClass = "dot-pending";
+    if (data.workflowState === "published") {
+        statusHtml = `<span class="status-badge success">✅ Published</span>`;
+        statusDotClass = "dot-published";
+    } else if (data.selectedPhotoIds && data.selectedPhotoIds.length > 0) {
+        statusHtml = `<span class="status-badge success">✅ ${data.selectedPhotoIds.length} Photos Picked</span>`;
+        statusDotClass = "dot-picked";
+    } else if (data.workflowState === "selection_open") {
+        statusHtml = `<span class="status-badge pending">⏳ Awaiting Selection</span>`;
+        statusDotClass = "dot-pending";
+    } else {
+        statusHtml = `<span class="status-badge pending">🆕 Not Sent Yet</span>`;
+        statusDotClass = "dot-draft";
+    }
+
+    const eventClass = data.eventType === "Pre-Wedding" ? "event-tag pre-wed" : "event-tag";
+    const safeName = escapeHtml(data.coupleName || "Unnamed");
+    const safeEvent = escapeHtml(data.eventType || "");
+
+    tr.innerHTML = `
+        <td data-label="" class="td-checkbox">
+            <input type="checkbox" class="client-row-checkbox" data-project-id="${projectId}" ${selectedClientIds.has(projectId) ? "checked" : ""}>
+        </td>
+        <td data-label="Client Name" class="td-name">
+            <div class="client-info">
+                <strong>${safeName}</strong>
+                <span class="client-meta-inline">
+                    ${safeEvent ? `<span class="event-pill-mini">${safeEvent}</span>` : ""}
+                    <span class="mobile-status-dot ${statusDotClass}" title="${statusHtml.replace(/<[^>]+>/g, "")}"></span>
+                </span>
+            </div>
+            <i class="fas fa-chevron-down row-expand-chevron" aria-hidden="true"></i>
+        </td>
+        <td data-label="Event Type" class="td-event-detail"><span class="${eventClass}">${safeEvent || "N/A"}</span></td>
+        <td data-label="Selection Status" class="td-status-detail">${statusHtml}</td>
+        <td data-label="Action" class="td-action">
+            <button class="action-btn text-btn manage-project-btn" data-project-id="${projectId}" data-couple-name="${safeName}" title="Manage">
+                <i class="fas fa-gauge"></i>
+            </button>
+            <button class="action-btn text-btn copy-project-link-btn" data-project-id="${projectId}" title="Copy Link">
+                <i class="far fa-copy"></i>
+            </button>
+            <button class="action-btn text-btn edit-project-btn" data-project-id="${projectId}" data-couple-name="${safeName}" data-event-type="${safeEvent}" style="color:var(--primary-blue); border-color:var(--border-medium);" title="Edit">
+                <i class="fas fa-pencil-alt"></i>
+            </button>
+            <button class="action-btn text-btn delete-project-btn" data-project-id="${projectId}" data-couple-name="${safeName}" style="color:var(--danger-red); border-color:rgba(248,113,113,0.35);" title="Delete">
+                <i class="fas fa-trash"></i>
+            </button>
+        </td>
+    `;
+    return tr;
+}
+
+function renderClientTrackerFromCache() {
+    if (!clientTrackerTableBody) return;
+
+    const query = (clientSearchInput?.value || "").trim().toLowerCase();
+    const filtered = query
+        ? cachedClientDocs.filter(item => (item.data.coupleName || "").toLowerCase().includes(query))
+        : cachedClientDocs;
+
+    const pageItems = filtered.slice(0, visibleClientCount);
+
+    clientTrackerTableBody.innerHTML = "";
+
+    if (pageItems.length === 0) {
+        clientTrackerTableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:30px; color:var(--text-subtle);">${query ? "No clients match your search." : "No clients yet. Click \"New Client\" to add one."}</td></tr>`;
+    } else {
+        pageItems.forEach(item => {
+            const row = renderClientRow(item.id, item.data);
+            if (item.id === cachedActiveProjectId) row.classList.add("active-row");
+            clientTrackerTableBody.appendChild(row);
+        });
+    }
+
+    // "Load More" only shows when there are more rows beyond what's visible —
+    // clean by default (matches the original search-first UX), no clutter
+    // when everything already fits on screen.
+    if (loadMoreClientsBtn) {
+        loadMoreClientsBtn.style.display = filtered.length > visibleClientCount ? "inline-flex" : "none";
+    }
+
+    syncSelectAllCheckboxState(pageItems);
+    updateBulkActionsBar();
+}
+
+// "Select all" reflects only the currently-rendered rows — checked when every
+// visible row is selected, indeterminate (dash) when some but not all are,
+// unchecked otherwise. Matches how the rows themselves are already scoped
+// (search filter + load-more window), so it never silently selects clients
+// the photographer can't currently see.
+function syncSelectAllCheckboxState(pageItems) {
+    if (!selectAllClientsCheckbox) return;
+    if (pageItems.length === 0) {
+        selectAllClientsCheckbox.checked = false;
+        selectAllClientsCheckbox.indeterminate = false;
+        return;
+    }
+    const selectedVisibleCount = pageItems.filter(item => selectedClientIds.has(item.id)).length;
+    selectAllClientsCheckbox.checked = selectedVisibleCount === pageItems.length;
+    selectAllClientsCheckbox.indeterminate = selectedVisibleCount > 0 && selectedVisibleCount < pageItems.length;
+}
+
+function updateBulkActionsBar() {
+    if (!bulkActionsBar) return;
+    const count = selectedClientIds.size;
+    bulkActionsBar.style.display = count > 0 ? "flex" : "none";
+    if (bulkSelectedCount) bulkSelectedCount.innerText = `${count} selected`;
+}
+
+// Individual row checkboxes — delegated so newly-rendered rows work with no
+// extra wiring per render.
+if (clientTrackerTableBody) {
+    clientTrackerTableBody.addEventListener("change", (e) => {
+        const checkbox = e.target.closest(".client-row-checkbox");
+        if (!checkbox) return;
+        const projectId = checkbox.getAttribute("data-project-id");
+        if (checkbox.checked) {
+            selectedClientIds.add(projectId);
+        } else {
+            selectedClientIds.delete(projectId);
+        }
+        const query = (clientSearchInput?.value || "").trim().toLowerCase();
+        const filtered = query
+            ? cachedClientDocs.filter(item => (item.data.coupleName || "").toLowerCase().includes(query))
+            : cachedClientDocs;
+        syncSelectAllCheckboxState(filtered.slice(0, visibleClientCount));
+        updateBulkActionsBar();
+    });
+}
+
+if (selectAllClientsCheckbox) {
+    selectAllClientsCheckbox.addEventListener("change", () => {
+        const wantChecked = selectAllClientsCheckbox.checked;
+        clientTrackerTableBody.querySelectorAll(".client-row-checkbox").forEach(cb => {
+            cb.checked = wantChecked;
+            const projectId = cb.getAttribute("data-project-id");
+            if (wantChecked) selectedClientIds.add(projectId);
+            else selectedClientIds.delete(projectId);
+        });
+        selectAllClientsCheckbox.indeterminate = false;
+        updateBulkActionsBar();
+    });
+}
+
+// Read-only access for DSB.js (backend) to know what's selected when the
+// photographer clicks a bulk action button — this file owns the selection
+// state, DSB.js never touches selectedClientIds directly.
+window.getSelectedClientIds = () => Array.from(selectedClientIds);
+
+// DSB.js calls this after a bulk action finishes (success or partial
+// failure) so the checkboxes and bar reset to a clean state.
+window.clearClientSelection = () => {
+    selectedClientIds.clear();
+    if (selectAllClientsCheckbox) {
+        selectAllClientsCheckbox.checked = false;
+        selectAllClientsCheckbox.indeterminate = false;
+    }
+    updateBulkActionsBar();
+};
+
+// Entry point DSB.js calls whenever Firestore data (or the active client)
+// changes. This file remembers the values so search/load-more can re-render
+// without going back to DSB.js.
+function renderClientTrackerTable(docs, activeProjectId) {
+    cachedClientDocs = docs || [];
+    cachedActiveProjectId = activeProjectId || null;
+
+    // Drop any selected id that no longer exists (deleted elsewhere, or by
+    // this same bulk action) — keeps the bar's count honest.
+    const liveIds = new Set(cachedClientDocs.map(item => item.id));
+    selectedClientIds.forEach(id => { if (!liveIds.has(id)) selectedClientIds.delete(id); });
+
+    renderClientTrackerFromCache();
+}
+window.renderClientTrackerTable = renderClientTrackerTable;
+
+if (clientSearchInput) {
+    clientSearchInput.addEventListener("input", () => {
+        visibleClientCount = CLIENT_PAGE_SIZE; // fresh search always starts back at 10
+        renderClientTrackerFromCache();
+    });
+}
+
+if (loadMoreClientsBtn) {
+    loadMoreClientsBtn.addEventListener("click", () => {
+        visibleClientCount += CLIENT_PAGE_SIZE;
+        renderClientTrackerFromCache();
+    });
+}

@@ -951,8 +951,8 @@ if (saveClientEditBtn) {
                 setActiveProject(projectId, newName);
             }
 
-            if (typeof renderTablePage === "function") {
-                renderTablePage(); 
+            if (typeof window.renderClientTrackerTable === "function") {
+                window.renderClientTrackerTable(allClientDocs, activeProjectId);
             }
 
         } catch (error) {
@@ -965,106 +965,21 @@ if (saveClientEditBtn) {
 }
 
 // 🆕 STEP B: CLIENT TRACKER TABLE 
-const clientTrackerTableBody = document.getElementById("clientTrackerTableBody");
-const clientSearchInput = document.getElementById("clientSearchInput");
-const prevPageBtn = document.getElementById("prevPageBtn");
-const nextPageBtn = document.getElementById("nextPageBtn");
-const paginationInfo = document.getElementById("paginationInfo");
+const clientTrackerTableBodyEl = document.getElementById("clientTrackerTableBody");
 
-const PAGE_SIZE = 10;
+// 🔀 FRONTEND/BACKEND SPLIT: search input, load-more button, row
+// rendering, and "how many rows are visible" state are pure UI (zero
+// Firebase calls once the data is in hand) — that logic now lives in
+// DSBstyle.js as window.renderClientTrackerTable(docs, activeProjectId).
+// This file keeps ONLY the Firestore data (allClientDocs) and calls that
+// function whenever the data changes or activeProjectId changes.
 let allClientDocs = [];
-let currentPage = 1;
 
-function renderClientRow(projectId, data) {
-    const tr = document.createElement("tr");
-    tr.setAttribute("data-project-id", projectId);
-    tr.setAttribute("data-couple-name", data.coupleName || "Unnamed");
-
-    let statusHtml = "";
-    let statusDotClass = "dot-pending";
-    if (data.workflowState === "published") {
-        statusHtml = `<span class="status-badge success">✅ Published</span>`;
-        statusDotClass = "dot-published";
-    } else if (data.selectedPhotoIds && data.selectedPhotoIds.length > 0) {
-        statusHtml = `<span class="status-badge success">✅ ${data.selectedPhotoIds.length} Photos Picked</span>`;
-        statusDotClass = "dot-picked";
-    } else if (data.workflowState === "selection_open") {
-        statusHtml = `<span class="status-badge pending">⏳ Awaiting Selection</span>`;
-        statusDotClass = "dot-pending";
-    } else {
-        statusHtml = `<span class="status-badge pending">🆕 Not Sent Yet</span>`;
-        statusDotClass = "dot-draft";
-    }
-
-    const eventClass = data.eventType === "Pre-Wedding" ? "event-tag pre-wed" : "event-tag";
-    const safeName = escapeHtml(data.coupleName || "Unnamed");
-    const safeEvent = escapeHtml(data.eventType || "");
-    
-    tr.innerHTML = `
-        <td data-label="Client Name" class="td-name">
-            <div class="client-info">
-                <strong>${safeName}</strong>
-                <span class="client-meta-inline">
-                    ${safeEvent ? `<span class="event-pill-mini">${safeEvent}</span>` : ""}
-                    <span class="mobile-status-dot ${statusDotClass}" title="${statusHtml.replace(/<[^>]+>/g, "")}"></span>
-                </span>
-            </div>
-            <i class="fas fa-chevron-down row-expand-chevron" aria-hidden="true"></i>
-        </td>
-        <td data-label="Event Type" class="td-event-detail"><span class="${eventClass}">${safeEvent || "N/A"}</span></td>
-        <td data-label="Selection Status" class="td-status-detail">${statusHtml}</td>
-        <td data-label="Action" class="td-action">
-            <button class="action-btn text-btn manage-project-btn" data-project-id="${projectId}" data-couple-name="${safeName}" title="Manage">
-                <i class="fas fa-gauge"></i>
-            </button>
-            <button class="action-btn text-btn copy-project-link-btn" data-project-id="${projectId}" title="Copy Link">
-                <i class="far fa-copy"></i>
-            </button>
-            <button class="action-btn text-btn edit-project-btn" data-project-id="${projectId}" data-couple-name="${safeName}" data-event-type="${safeEvent}" style="color:var(--primary-blue); border-color:var(--border-medium);" title="Edit">
-                <i class="fas fa-pencil-alt"></i>
-            </button>
-            <button class="action-btn text-btn delete-project-btn" data-project-id="${projectId}" data-couple-name="${safeName}" style="color:var(--danger-red); border-color:rgba(248,113,113,0.35);" title="Delete">
-                <i class="fas fa-trash"></i>
-            </button>
-        </td>
-    `;
-    return tr;
-}
-
-function renderTablePage() {
-    if (!clientTrackerTableBody) return;
-
-    const query = (clientSearchInput?.value || "").trim().toLowerCase();
-
-    const filtered = query
-        ? allClientDocs.filter(item => (item.data.coupleName || "").toLowerCase().includes(query))
-        : allClientDocs;
-
-    const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-    if (currentPage > totalPages) currentPage = totalPages;
-
-    const startIndex = (currentPage - 1) * PAGE_SIZE;
-    const pageItems = filtered.slice(startIndex, startIndex + PAGE_SIZE);
-
-    clientTrackerTableBody.innerHTML = "";
-
-    if (pageItems.length === 0) {
-        clientTrackerTableBody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:30px; color:var(--text-subtle);">${query ? "No clients match your search." : "No clients yet. Click \"New Client\" to add one."}</td></tr>`;
-    } else {
-        pageItems.forEach(item => {
-            const row = renderClientRow(item.id, item.data);
-            if (item.id === activeProjectId) row.classList.add("active-row");
-            clientTrackerTableBody.appendChild(row);
-        });
-    }
-
-    if (paginationInfo) paginationInfo.innerText = `Page ${currentPage} of ${totalPages}`;
-    if (prevPageBtn) prevPageBtn.disabled = currentPage <= 1;
-    if (nextPageBtn) nextPageBtn.disabled = currentPage >= totalPages;
-}
+// renderClientRow() and renderTablePage() moved to DSBstyle.js
+// (window.renderClientTrackerTable) — pure UI, no Firebase.
 
 function listenClientTrackerTable() {
-    if (!clientTrackerTableBody || !currentUid) return;
+    if (!clientTrackerTableBodyEl || !currentUid) return;
 
     db.collection("users").doc(currentUid).collection("clientProjects")
         .orderBy("createdAt", "desc")
@@ -1087,7 +1002,7 @@ function listenClientTrackerTable() {
             });
 
             updateDashboardMetrics(activeLinksCount, readyToDeliverCount);
-            renderTablePage();
+            window.renderClientTrackerTable(allClientDocs, activeProjectId);
             populateOverviewClientQuickPicker();
         }, (err) => {
             console.error("Error loading client tracker:", err);
@@ -1102,28 +1017,11 @@ function updateDashboardMetrics(activeLinks, readyToDeliver) {
     if (readyToDeliverEl) readyToDeliverEl.innerHTML = `${readyToDeliver} <span class="metric-label">Pending Galleries</span>`;
 }
 
-if (clientSearchInput) {
-    clientSearchInput.addEventListener("input", () => {
-        currentPage = 1;
-        renderTablePage();
-    });
-}
-
-if (prevPageBtn) {
-    prevPageBtn.addEventListener("click", () => {
-        if (currentPage > 1) { currentPage--; renderTablePage(); }
-    });
-}
-if (nextPageBtn) {
-    nextPageBtn.addEventListener("click", () => {
-        currentPage++;
-        renderTablePage();
-    });
-}
+// search + load-more button listeners moved to DSBstyle.js
 
 // 🆕 STEP C: TABLE ROW ACTIONS
-if (clientTrackerTableBody) {
-    clientTrackerTableBody.addEventListener("click", async (e) => {
+if (clientTrackerTableBodyEl) {
+    clientTrackerTableBodyEl.addEventListener("click", async (e) => {
         
         // 1. COPY LINK
         const copyBtn = e.target.closest(".copy-project-link-btn");
@@ -1229,29 +1127,81 @@ if (clientTrackerTableBody) {
     });
 }
 
+// 🆕 STEP D: BULK ACTIONS (backend — calls the same Cloud Function as the
+// single-row delete above, once per selected client). Selection state lives
+// in DSBstyle.js (window.getSelectedClientIds / window.clearClientSelection)
+// — this file never touches the checkboxes directly, only reads the result.
+const bulkDeleteBtnEl = document.getElementById("bulkDeleteBtn");
+if (bulkDeleteBtnEl) {
+    bulkDeleteBtnEl.addEventListener("click", async () => {
+        const selectedIds = typeof window.getSelectedClientIds === "function" ? window.getSelectedClientIds() : [];
+        if (selectedIds.length === 0) return;
+
+        const confirmed = confirm(`⚠️ Permanently delete ${selectedIds.length} client${selectedIds.length > 1 ? "s" : ""} and ALL their photos?\n\nThis cannot be undone.`);
+        if (!confirmed) return;
+
+        if (!navigator.onLine) return alert("⚠️ You're offline. Connect to the internet and try again.");
+
+        const originalLabel = bulkDeleteBtnEl.innerHTML;
+        bulkDeleteBtnEl.disabled = true;
+
+        const deleteProject = firebase.app().functions("asia-south1").httpsCallable("deleteClientProject");
+        let succeeded = 0;
+        const failedNames = [];
+
+        // Sequential on purpose (not Promise.all) — keeps "Deleting 3 of 10..."
+        // meaningful and avoids hammering the Cloud Function with a burst of
+        // simultaneous storage-heavy deletes if the photographer selects many.
+        for (let i = 0; i < selectedIds.length; i++) {
+            const projectId = selectedIds[i];
+            bulkDeleteBtnEl.innerText = `Deleting ${i + 1} of ${selectedIds.length}...`;
+            try {
+                await deleteProject({ projectId });
+                succeeded++;
+                if (activeProjectId === projectId) {
+                    activeProjectId = null;
+                    activeProjectName = null;
+                    if (activeClientIndicator) {
+                        activeClientIndicator.innerText = "No client selected — click a row in the table above";
+                        activeClientIndicator.style.color = "var(--text-muted)";
+                    }
+                }
+            } catch (err) {
+                console.error("Bulk delete error for", projectId, err);
+                const item = allClientDocs.find(d => d.id === projectId);
+                failedNames.push(item?.data?.coupleName || projectId);
+            }
+        }
+
+        bulkDeleteBtnEl.disabled = false;
+        bulkDeleteBtnEl.innerHTML = originalLabel;
+        if (typeof window.clearClientSelection === "function") window.clearClientSelection();
+
+        if (failedNames.length === 0) {
+            alert(`✅ ${succeeded} client${succeeded > 1 ? "s" : ""} deleted.`);
+        } else {
+            alert(`✅ ${succeeded} deleted.\n❌ Failed: ${failedNames.join(", ")}`);
+        }
+    });
+}
+
+// PAGE LOAD
 // PAGE LOAD
 firebase.auth().onAuthStateChanged((user) => {
     if (!user) {
-        localStorage.removeItem("isLoggedIn");
-        localStorage.removeItem("clientWorkspace");
+        console.warn("No authenticated user.");
         window.location.replace("login.html");
         return;
     }
 
     currentUser = user;
     currentUid = user.uid;
-    localStorage.setItem("isLoggedIn", "true");
-    localStorage.setItem("clientWorkspace", user.uid);
-    if (!dashboardStarted) {
-        dashboardStarted = true;
-        listenClientTrackerTable();
-        updateSubscriptionUI();
-        calculateCloudStorageMetrics(); // 🐞 FIX: show account-wide storage on load, no client selection needed
-    }
+
+    console.log("✅ Dashboard user:", currentUid);
+
+    // Load client projects
+    listenClientTrackerTable();
+
+    // Load storage metrics
+    calculateCloudStorageMetrics();
 });
-
-// SUBSCRIPTION TAB UI — logic now lives in subscription.js
-
-function escapeHtml(value) {
-    return String(value).replace(/[&<>'\"]/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[char]));
-}

@@ -1510,3 +1510,38 @@ select.form-control { cursor: pointer; }
 
 /* Subscription plan cards — muted "(N/day per gallery)" note */
 .plan-limit-note { color: var(--text-muted); font-weight: 400; }
+
+/* Client tracker — load more row (frontend UI, DSBstyle.js drives visibility) */
+.table-load-more-row {
+    display: flex;
+    justify-content: center;
+    padding: var(--space-3) 0 0;
+}
+
+/* Client tracker — select-all + bulk actions (frontend UI, DSBstyle.js drives state) */
+.th-checkbox, .td-checkbox {
+    width: 40px;
+    text-align: center;
+}
+.th-checkbox input[type="checkbox"], .td-checkbox input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: var(--primary-blue, #3b82f6);
+}
+.bulk-actions-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: 10px 14px;
+    margin-bottom: var(--space-3);
+    background: rgba(59, 130, 246, 0.08);
+    border: 1px solid rgba(59, 130, 246, 0.25);
+    border-radius: 10px;
+}
+.bulk-selected-count {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-color);
+}

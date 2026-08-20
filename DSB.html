@@ -253,16 +253,24 @@
                         <input type="text" id="clientSearchInput" class="form-control" placeholder="Search client by name.">
                     </div>
 
-                    <section class="dashboard-module tracker-section">
+                        <section class="dashboard-module tracker-section">
                         <div class="section-heading">
                             <h3>Real-Time Client Tracker</h3>
                             <button class="btn-primary-small"><i class="fas fa-plus"></i> New Client</button>
+                        </div>
+
+                        <div id="bulkActionsBar" class="bulk-actions-bar" style="display:none;">
+                            <span id="bulkSelectedCount" class="bulk-selected-count">0 selected</span>
+                            <button id="bulkDeleteBtn" class="action-btn text-btn" type="button" style="color:var(--danger-red); border-color:rgba(248,113,113,0.35);">
+                                <i class="fas fa-trash"></i> Delete Selected
+                            </button>
                         </div>
                         
                         <div class="table-responsive">
                             <table class="client-table">
                                 <thead>
                                     <tr>
+                                        <th class="th-checkbox"><input type="checkbox" id="selectAllClientsCheckbox" title="Select all"></th>
                                         <th>Client Name</th>
                                         <th>Event Type</th>
                                         <th>Selection Status</th>
@@ -272,6 +280,12 @@
                                 
 <tbody id="clientTrackerTableBody"> </tbody>
                             </table>
+                        </div>
+
+                        <div class="table-load-more-row">
+                            <button id="loadMoreClientsBtn" class="action-btn text-btn" type="button" style="display:none;">
+                                Load 10 More Clients
+                            </button>
                         </div>
                     </section>
                 </div>
