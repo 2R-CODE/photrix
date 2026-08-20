@@ -1,1207 +1,5849 @@
 // 🏷️ BUILD MARKER — update this string every time you deploy a new DSB.js.
+
+ 
+
 // Open DevTools Console after deploying and confirm THIS exact line prints —
+
+ 
+
 // if it doesn't (or shows an older date), the browser/CDN is still serving
+
+ 
+
 // a stale cached copy, not your latest edit.
-console.log("PHOTRIX DSB.js build: 2026-07-30-v1");
+
+ 
+
+console.log("PHOTRIX DSB.js build: 2026-08-20-v3");
+
+ 
+
+ 
+
+ 
 
 const firebaseConfig = {
+
+ 
+
     apiKey: "AIzaSyDQFAJH5_V1-qApDKg1I9RcDi3eVMcWAWg",
+
+ 
+
     authDomain: "eternal-memories-wedding.firebaseapp.com",
+
+ 
+
     projectId: "eternal-memories-wedding",
+
+ 
+
     storageBucket: "eternal-memories-wedding.firebasestorage.app",
+
+ 
+
     messagingSenderId: "702108745012",
+
+ 
+
     appId: "1:702108745012:web:1bf2f1f8de187ed231b961",
+
+ 
+
     measurementId: "G-M16V77Z2QS"
+
+ 
+
 };
 
+ 
+
+ 
+
+ 
+
 if (!firebase.apps.length) {
+
+ 
+
     firebase.initializeApp(firebaseConfig);
+
+ 
+
 }
+
+ 
+
+ 
+
+ 
 
 // 🆕 APP CHECK — same setup as lookbook.js. Requires adding
+
+ 
+
 // <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-app-check-compat.js"></script>
+
+ 
+
 // to DSB.html (after firebase-app-compat.js). See the full step-by-step in
+
+ 
+
 // lookbook.js — do not enable enforceAppCheck in index.js until traffic here
+
+ 
+
 // is confirmed passing verification in the Firebase Console.
+
+ 
+
 const RECAPTCHA_V3_SITE_KEY = "PASTE_YOUR_RECAPTCHA_V3_SITE_KEY_HERE";
+
+ 
+
 if (RECAPTCHA_V3_SITE_KEY !== "PASTE_YOUR_RECAPTCHA_V3_SITE_KEY_HERE") {
+
+ 
+
     firebase.appCheck().activate(
+
+ 
+
         new firebase.appCheck.ReCaptchaV3Provider(RECAPTCHA_V3_SITE_KEY),
+
+ 
+
         true
+
+ 
+
     );
+
+ 
+
 } else {
+
+ 
+
     console.warn("App Check not active yet — set RECAPTCHA_V3_SITE_KEY in DSB.js after registering in Firebase Console.");
+
+ 
+
 }
+
+ 
+
+ 
+
+ 
 
 const db = firebase.firestore();
+
+ 
+
 const storage = firebase.storage();
 
+ 
+
+ 
+
+ 
+
 let currentUid = null;
+
+ 
+
 let currentUser = null;
+
+ 
+
 let dashboardStarted = false;
+
+ 
+
 let verificationEmailAttempted = false;
+
+ 
+
 const TRIAL_DAYS = 7;
 
+ 
+
+ 
+
+ 
+
 // 🛑 FIX: listenLiveClientPipeline() used to be called (setActiveProject,
+
+ 
+
 // new client, rename, etc.) without ever closing the previous onSnapshot
+
+ 
+
 // listener. Each call stacked a NEW listener on top of old ones — with 2+
+
+ 
+
 // listeners live on the same doc, each one independently clears + redraws
+
+ 
+
 // liveClientSelectionThumbnailsGrid, and their async getDownloadURL() calls
+
+ 
+
 // interleave, so photos got double-rendered (e.g. 3 selected -> 6 shown).
+
+ 
+
 // unsubscribeLiveClientPipeline: closes the previous listener before a new
+
+ 
+
 // one is attached. livePipelineRenderToken: guards against a *single*
+
+ 
+
 // listener's own stale async renders landing after a newer snapshot already
+
+ 
+
 // cleared the grid (same race, just within one listener instead of across two).
+
+ 
+
 let unsubscribeLiveClientPipeline = null;
+
+ 
+
 let livePipelineRenderToken = 0;
 
+ 
+
+ 
+
+ 
+
+// 🆕 ACTIVE CLIENT SAFETY STATE
+
+ 
+
+let activeProjectSelectionToken = 0;
+
+ 
+
+ 
+
+ 
+
+// 🆕 UPLOAD SESSION STATE
+
+ 
+
+let uploadSessionToken = 0;
+
+ 
+
+ 
+
+ 
+
+// 🆕 FIRESTORE LISTENER CLEANUP
+
+ 
+
+let unsubscribeClientTrackerTable = null;
+
+ 
+
+let unsubscribeStudioStorage = null;
+
+ 
+
+ 
+
+ 
+
 // DOM SELECTORS
+
+ 
+
 const bulkImagePickerFiles = document.getElementById("realFileInput");
+
+ 
+
 const uploadImagesBtn = document.getElementById("startCloudUploadBtn");
+
+ 
+
 const uploadStatusNotificationLabel = document.getElementById("uploadStatusText");
+
+ 
+
 const clientGeneratedUrlDisplayField = document.getElementById("clientGeneratedUrlDisplayField");
+
+ 
+
 const generateClientLinkBtn = document.getElementById("generateClientLinkBtn");
+
+ 
+
 const copySecureLinkBtn = document.getElementById("copySecureLinkBtn");
+
+ 
+
 const liveClientSelectionThumbnailsGrid = document.getElementById("liveClientSelectionThumbnailsGrid");
+
+ 
+
 const selectionStatsStatusSummaryCounter = document.getElementById("selectionStatsStatusSummaryCounter");
+
+ 
+
 const paymentStatusBadgeIndicator = document.getElementById("paymentStatusBadgeIndicator");
+
+ 
+
 const unlockPremiumGalleryBtn = document.getElementById("unlockPremiumGalleryBtn");
+
+ 
+
 const storageTextCounter = document.getElementById("storageTextSpan");
 
+ 
+
+ 
+
+ 
+
+ 
+
+ 
 
 let activeProjectId = null;
+
+ 
+
 let activeProjectName = null;
+
+ 
+
 const activeClientIndicator = document.getElementById("activeClientIndicator"); // 🗒️ element removed from HTML (replaced by the picker below) — kept as a guarded no-op so nothing here breaks if referenced elsewhere
 
+ 
+
+ 
+
+ 
+
 // 🆕 CLIENT PICKER (Overview UX fix) — the single control for selecting,
+
+ 
+
 // switching, or creating a client. Populated from allClientDocs (declared
+
+ 
+
 // further below, but only READ inside functions below, never at this
+
+ 
+
 // top-level point, so there's no temporal-dead-zone issue — see notes on
+
+ 
+
 // each function). Visibility of the upload/link empty-states is delegated
+
+ 
+
 // to DSBstyle.js's window.setOverviewClientSelectedState(), which is pure
+
+ 
+
 // UI and knows nothing about Firestore — this file only tells it true/false.
+
+ 
+
 const overviewClientQuickPicker = document.getElementById("overviewClientQuickPicker");
 
+ 
+
+ 
+
+ 
+
 function populateOverviewClientQuickPicker() {
+
+ 
+
     if (!overviewClientQuickPicker) return;
+
+ 
+
     overviewClientQuickPicker.innerHTML = `<option value="">— Select or create a client —</option>`;
+
+ 
+
     allClientDocs.forEach(({ id, data }) => {
+
+ 
+
         const opt = document.createElement("option");
+
+ 
+
         opt.value = id;
+
+ 
+
         opt.textContent = data.coupleName || "Unnamed";
+
+ 
+
         overviewClientQuickPicker.appendChild(opt);
+
+ 
+
     });
+
+ 
+
     overviewClientQuickPicker.value = activeProjectId || "";
+
+ 
+
 }
+
+ 
+
+ 
+
+ 
 
 if (overviewClientQuickPicker) {
+
+ 
+
     overviewClientQuickPicker.addEventListener("change", () => {
+
+ 
+
         const selectedId = overviewClientQuickPicker.value;
+
+ 
+
         if (!selectedId) return;
+
+ 
+
         const match = allClientDocs.find(item => item.id === selectedId);
+
+ 
+
         setActiveProject(selectedId, match ? match.data.coupleName : "Client");
+
+ 
+
     });
+
+ 
+
 }
+
+ 
+
+ 
+
+ 
 
 function getTrialDaysLeft(data) {
+
+ 
+
     const start = data?.trialStartDate || data?.createdAt;
+
+ 
+
     const startMillis = start && start.toMillis ? start.toMillis() : start;
+
+ 
+
     if (!startMillis) return TRIAL_DAYS;
+
+ 
+
     return Math.max(0, Math.ceil(TRIAL_DAYS - ((Date.now() - startMillis) / 86400000)));
+
+ 
+
 }
+
+ 
+
+ 
+
+ 
 
 async function canManageStudio() {
+
+ 
+
     if (!currentUser || currentUser.uid !== currentUid) {
+
+ 
+
         alert("Your session has expired. Please log in again.");
+
+ 
+
         window.location.replace("login.html");
+
+ 
+
         return false;
+
+ 
+
     }
+
+ 
+
     await currentUser.reload();
+
+ 
+
     if (!currentUser.emailVerified) {
+
+ 
+
         if (!verificationEmailAttempted && currentUser.providerData.some(provider => provider.providerId === "password")) {
+
+ 
+
             verificationEmailAttempted = true;
+
+ 
+
             try { await currentUser.sendEmailVerification(); } catch (error) { console.warn("Verification email could not be sent.", error); }
+
+ 
+
         }
+
+ 
+
         alert("Please verify your email address first. A verification link has been sent to your email.");
+
+ 
+
         return false;
+
+ 
+
     }
+
+ 
+
     const userDoc = await db.collection("users").doc(currentUid).get();
+
+ 
+
     const account = userDoc.exists ? userDoc.data() : {};
+
+ 
+
     if (account.subscriptionStatus?.trim() === "active" || getTrialDaysLeft(account) > 0) return true;
+
+ 
+
     alert("Your 7-day free trial has ended. Please subscribe to add or upload galleries.");
+
+ 
+
     return false;
+
+ 
+
 }
 
+ 
+
+ 
+
+ 
+
 function findLoadedProject(projectId) {
+
+ 
+
     return allClientDocs.find(item => item.id === projectId)?.data || null;
+
+ 
+
 }
+
+ 
+
+ 
+
+ 
 
 const LIVE_LINK_STATES = ["selection_open", "selection_completed", "published"];
 
+ 
+
+ 
+
+ 
+
 async function restoreExistingLinkIfValid(projectId) {
+
+ 
+
+    const requestToken = activeProjectSelectionToken;
+
+ 
+
     const data = findLoadedProject(projectId);
+
+ 
+
     const pinDisplay = document.getElementById("clientGalleryPinDisplay");
+
+ 
+
     const stillValid = data?.shareId && LIVE_LINK_STATES.includes(data?.workflowState);
 
+ 
+
+ 
+
+ 
+
+    if (activeProjectId !== projectId || requestToken !== activeProjectSelectionToken) return;
+
+ 
+
+ 
+
+ 
+
     if (!stillValid) {
+
+ 
+
         if (clientGeneratedUrlDisplayField) clientGeneratedUrlDisplayField.value = "";
-        if (pinDisplay) { pinDisplay.style.display = "none"; pinDisplay.textContent = ""; }
+
+ 
+
+        if (pinDisplay) {
+
+ 
+
+            pinDisplay.style.display = "none";
+
+ 
+
+            pinDisplay.textContent = "";
+
+ 
+
+        }
+
+ 
+
         const regenBtnHide = document.getElementById("regeneratePinBtn");
+
+ 
+
         if (regenBtnHide) regenBtnHide.style.display = "none";
+
+ 
+
         updatePublishControls(null);
+
+ 
+
         return;
+
+ 
+
     }
 
-    const securePath = `${window.location.origin}${window.location.pathname.replace("DSB.html", "lookbook.html")}?gallery=${encodeURIComponent(data.shareId)}`;
-    if (clientGeneratedUrlDisplayField) clientGeneratedUrlDisplayField.value = securePath;
+ 
+
+ 
+
+ 
+
+    const secureUrl = new URL("lookbook.html", window.location.href);
+
+ 
+
+    secureUrl.searchParams.set("gallery", data.shareId);
+
+ 
+
+ 
+
+ 
+
+    if (clientGeneratedUrlDisplayField) clientGeneratedUrlDisplayField.value = secureUrl.href;
+
+ 
+
     updatePublishControls(data);
 
+ 
+
+ 
+
+ 
+
     try {
+
+ 
+
         const getPin = firebase.app().functions("asia-south1").httpsCallable("getGalleryPin");
+
+ 
+
         const result = await getPin({ projectId });
+
+ 
+
+ 
+
+ 
+
+        if (activeProjectId !== projectId || requestToken !== activeProjectSelectionToken) return;
+
+ 
+
+ 
+
+ 
+
         if (pinDisplay) {
+
+ 
+
             pinDisplay.textContent = `Gallery PIN: ${result.data.pin} — same PIN as before, link is permanently active.`;
+
+ 
+
             pinDisplay.style.display = "block";
+
+ 
+
         }
+
+ 
+
     } catch (err) {
+
+ 
+
         console.warn("Could not fetch existing PIN:", err);
+
+ 
+
+ 
+
+ 
+
+        if (activeProjectId !== projectId || requestToken !== activeProjectSelectionToken) return;
+
+ 
+
+ 
+
+ 
+
         if (pinDisplay) {
-            pinDisplay.textContent = `Active link exists (expires ${new Date(data.expiresAt.toMillis()).toLocaleString()}), but the PIN could not be loaded — try reselecting this client.`;
+
+ 
+
+            pinDisplay.textContent = "Active gallery link exists, but the PIN could not be loaded. Try reselecting this client.";
+
+ 
+
             pinDisplay.style.display = "block";
+
+ 
+
         }
+
+ 
+
     }
 
-    // 🆕 SECURITY FIX: shows/enables the "Regenerate PIN" button whenever a
-    // live link exists. Needed because anyone with the shareId (forwarded
-    // link, shared device) can deliberately fail the PIN 8 times and lock
-    // the real client out for 15 min repeatedly — this button lets the
-    // photographer instantly issue a new PIN and clear any active lockout.
+ 
+
+ 
+
+ 
+
+    if (activeProjectId !== projectId || requestToken !== activeProjectSelectionToken) return;
+
+ 
+
+ 
+
+ 
+
     const regenBtn = document.getElementById("regeneratePinBtn");
+
+ 
+
     if (regenBtn) regenBtn.style.display = "inline-flex";
+
+ 
+
 }
 
+ 
+
+ 
+
+ 
+
 const regeneratePinBtn = document.getElementById("regeneratePinBtn");
+
+ 
+
 if (regeneratePinBtn) {
+
+ 
+
     regeneratePinBtn.addEventListener("click", async () => {
+
+ 
+
         if (!activeProjectId) return;
+
+ 
+
         const pinDisplay = document.getElementById("clientGalleryPinDisplay");
 
+ 
+
+ 
+
+ 
+
         const confirmed = confirm("⚠️ This will invalidate the current PIN immediately. The client will need the new PIN to access their gallery. Continue?");
+
+ 
+
         if (!confirmed) return;
+
+ 
+
+ 
+
+ 
 
         if (!navigator.onLine) return alert("⚠️ You're offline. Connect to the internet and try again.");
 
+ 
+
+ 
+
+ 
+
         regeneratePinBtn.disabled = true;
+
+ 
+
         regeneratePinBtn.innerText = "Regenerating...";
 
+ 
+
+ 
+
+ 
+
         try {
+
+ 
+
             const regenerate = firebase.app().functions("asia-south1").httpsCallable("regenerateGalleryPin");
+
+ 
+
             const result = await regenerate({ projectId: activeProjectId });
+
+ 
+
             if (pinDisplay) {
+
+ 
+
                 pinDisplay.textContent = `Gallery PIN: ${result.data.pin} — new PIN generated, old PIN no longer works.`;
+
+ 
+
                 pinDisplay.style.display = "block";
+
+ 
+
             }
+
+ 
+
             alert("✅ New PIN generated. Please share the new PIN with your client — the old one no longer works.");
+
+ 
+
         } catch (err) {
+
+ 
+
             console.error("Regenerate PIN error:", err);
+
+ 
+
             alert("❌ Failed to regenerate PIN: " + err.message);
+
+ 
+
         } finally {
+
+ 
+
             regeneratePinBtn.disabled = false;
+
+ 
+
             regeneratePinBtn.innerText = "Regenerate PIN";
+
+ 
+
         }
+
+ 
+
     });
+
+ 
+
 }
 
-function setActiveProject(projectId, coupleName) {
-    activeProjectId = projectId;
-    activeProjectName = coupleName;
-    if (activeClientIndicator) {
-        activeClientIndicator.innerText = `Active project: ${coupleName}`;
-        activeClientIndicator.style.color = "var(--primary-blue)";
+ 
+
+ 
+
+ 
+
+function clearActiveProject({ preserveView = true } = {}) {
+
+ 
+
+    activeProjectSelectionToken++;
+
+ 
+
+    uploadSessionToken++;
+
+ 
+
+ 
+
+ 
+
+    activeProjectId = null;
+
+ 
+
+    activeProjectName = null;
+
+ 
+
+ 
+
+ 
+
+    if (unsubscribeLiveClientPipeline) {
+
+ 
+
+        unsubscribeLiveClientPipeline();
+
+ 
+
+        unsubscribeLiveClientPipeline = null;
+
+ 
+
     }
 
-    // 🆕 Client is now selected — swap the Overview empty-states for the
-    // real upload/link content (pure UI toggle, lives in DSBstyle.js).
-    if (typeof window.setOverviewClientSelectedState === "function") {
-        window.setOverviewClientSelectedState(true);
-    }
-    if (overviewClientQuickPicker && overviewClientQuickPicker.value !== projectId) {
-        overviewClientQuickPicker.value = projectId;
-    }
+ 
 
-    // 🐞 CRITICAL FIX (wrong-client upload risk): none of this was reset on
-    // client switch before. A stale file selection (still sitting in the
-    // hidden <input type=file> from a previous client) or a leftover
-    // pendingRetryFiles list (from an earlier failed batch) stayed alive
-    // across the switch — and since the upload click handler always uses
-    // whatever activeProjectId is CURRENT at click time, clicking "Upload
-    // Images"/"Retry Failed Uploads" after switching clients could silently
-    // upload one client's photos into a completely different client's
-    // folder. Every client switch now starts upload state from a clean slate.
+    livePipelineRenderToken++;
+
+ 
+
+ 
+
+ 
+
     pendingRetryFiles = null;
+
+ 
+
     if (bulkImagePickerFiles) bulkImagePickerFiles.value = "";
+
+ 
+
+ 
+
+ 
+
     if (uploadImagesBtn) {
+
+ 
+
         uploadImagesBtn.style.display = "none";
+
+ 
+
         uploadImagesBtn.innerText = "Upload Images";
+
+ 
+
         uploadImagesBtn.disabled = false;
+
+ 
+
     }
+
+ 
+
     if (globalProgressWrapper) globalProgressWrapper.style.display = "none";
 
-    listenLiveClientPipeline();
-    restoreExistingLinkIfValid(projectId);
-    calculateCloudStorageMetrics();
+ 
+
+    if (globalProgressBarFill) globalProgressBarFill.style.width = "0%";
+
+ 
+
+    if (globalPercentageLabel) globalPercentageLabel.textContent = "0%";
+
+ 
+
+ 
+
+ 
+
+    if (clientGeneratedUrlDisplayField) clientGeneratedUrlDisplayField.value = "";
+
+ 
+
+ 
+
+ 
+
+    const pinDisplay = document.getElementById("clientGalleryPinDisplay");
+
+ 
+
+    if (pinDisplay) {
+
+ 
+
+        pinDisplay.style.display = "none";
+
+ 
+
+        pinDisplay.textContent = "";
+
+ 
+
+    }
+
+ 
+
+ 
+
+ 
+
+    const regenBtn = document.getElementById("regeneratePinBtn");
+
+ 
+
+    if (regenBtn) {
+
+ 
+
+        regenBtn.style.display = "none";
+
+ 
+
+        regenBtn.disabled = false;
+
+ 
+
+        regenBtn.innerText = "Regenerate PIN";
+
+ 
+
+    }
+
+ 
+
+ 
+
+ 
+
+    if (generateClientLinkBtn) {
+
+ 
+
+        generateClientLinkBtn.disabled = false;
+
+ 
+
+        generateClientLinkBtn.innerHTML = '<i class="fas fa-link"></i> Generate Client Link';
+
+ 
+
+    }
+
+ 
+
+ 
+
+ 
+
+    if (liveClientSelectionThumbnailsGrid) liveClientSelectionThumbnailsGrid.innerHTML = "";
+
+ 
+
+    if (selectionStatsStatusSummaryCounter) {
+
+ 
+
+        selectionStatsStatusSummaryCounter.innerText = "No selections yet — waiting on your client.";
+
+ 
+
+    }
+
+ 
+
+ 
+
+ 
+
+    updatePublishControls(null);
+
+ 
+
+ 
+
+ 
+
+    if (overviewClientQuickPicker) overviewClientQuickPicker.value = "";
+
+ 
+
+ 
+
+ 
+
+    if (typeof window.setOverviewClientSelectedState === "function") {
+
+ 
+
+        window.setOverviewClientSelectedState(false);
+
+ 
+
+    }
+
+ 
+
+ 
+
+ 
+
+    if (typeof window.renderClientTrackerTable === "function") {
+
+ 
+
+        window.renderClientTrackerTable(allClientDocs, null);
+
+ 
+
+    }
+
+ 
+
+ 
+
+ 
+
+    // preserveView intentionally means: do not force a tab switch while
+
+ 
+
+    // clearing state. The photographer should stay where they are.
+
+ 
+
+    void preserveView;
+
+ 
+
 }
+
+ 
+
+ 
+
+ 
+
+function setActiveProject(projectId, coupleName) {
+
+ 
+
+    if (!projectId) return false;
+
+ 
+
+ 
+
+ 
+
+    const projectChanged = activeProjectId !== projectId;
+
+ 
+
+ 
+
+ 
+
+    activeProjectSelectionToken++;
+
+ 
+
+    activeProjectId = projectId;
+
+ 
+
+    activeProjectName = coupleName || "Client";
+
+ 
+
+ 
+
+ 
+
+    if (activeClientIndicator) {
+
+ 
+
+        activeClientIndicator.innerText = `Active project: ${activeProjectName}`;
+
+ 
+
+        activeClientIndicator.style.color = "var(--primary-blue)";
+
+ 
+
+    }
+
+ 
+
+ 
+
+ 
+
+    if (typeof window.setOverviewClientSelectedState === "function") {
+
+ 
+
+        window.setOverviewClientSelectedState(true);
+
+ 
+
+    }
+
+ 
+
+    if (overviewClientQuickPicker && overviewClientQuickPicker.value !== projectId) {
+
+ 
+
+        overviewClientQuickPicker.value = projectId;
+
+ 
+
+    }
+
+ 
+
+ 
+
+ 
+
+    // Only reset upload state when switching to a DIFFERENT client. Re-
+
+ 
+
+    // selecting the already active client must not discard a file batch.
+
+ 
+
+    if (projectChanged) {
+
+ 
+
+        uploadSessionToken++;
+
+ 
+
+ 
+
+ 
+
+        pendingRetryFiles = null;
+
+ 
+
+        if (bulkImagePickerFiles) bulkImagePickerFiles.value = "";
+
+ 
+
+ 
+
+ 
+
+        if (uploadImagesBtn) {
+
+ 
+
+            uploadImagesBtn.style.display = "none";
+
+ 
+
+            uploadImagesBtn.innerText = "Upload Images";
+
+ 
+
+            uploadImagesBtn.disabled = false;
+
+ 
+
+        }
+
+ 
+
+ 
+
+ 
+
+        if (globalProgressWrapper) globalProgressWrapper.style.display = "none";
+
+ 
+
+        if (globalProgressBarFill) globalProgressBarFill.style.width = "0%";
+
+ 
+
+        if (globalPercentageLabel) globalPercentageLabel.textContent = "0%";
+
+ 
+
+ 
+
+ 
+
+        if (generateClientLinkBtn) {
+
+ 
+
+            generateClientLinkBtn.disabled = false;
+
+ 
+
+            generateClientLinkBtn.innerHTML = '<i class="fas fa-link"></i> Generate Client Link';
+
+ 
+
+        }
+
+ 
+
+    }
+
+ 
+
+ 
+
+ 
+
+    if (projectChanged) {
+
+ 
+
+        listenLiveClientPipeline();
+
+ 
+
+    }
+
+ 
+
+    restoreExistingLinkIfValid(projectId);
+
+ 
+
+    calculateCloudStorageMetrics();
+
+ 
+
+ 
+
+ 
+
+    if (typeof window.renderClientTrackerTable === "function") {
+
+ 
+
+        window.renderClientTrackerTable(allClientDocs, activeProjectId);
+
+ 
+
+    }
+
+ 
+
+ 
+
+ 
+
+    return true;
+
+ 
+
+}
+
+ 
+
+ 
+
+ 
 
 // 🛠️ FEATURE 1: IMAGES UPLOADER ENGINE VALIDATION RULES 
+
+ 
+
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"];
+
+ 
+
 const MAX_FILE_SIZE_MB = 30;
+
+ 
+
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+
+ 
+
 const MAX_FILES_PER_UPLOAD = 500;
 
+ 
+
+ 
+
+ 
+
 // 🐞 FIX (duplicate photos on retry): earlier, if some files failed and the
+
+ 
+
 // photographer clicked "Upload Images" again with the SAME file selection
+
+ 
+
 // still in the input, EVERY file — including ones that had already
+
+ 
+
 // uploaded successfully — got re-uploaded under a new Date.now() path,
+
+ 
+
 // creating visible duplicates in the gallery. This tracks only the files
+
+ 
+
 // that actually failed, so a retry only re-attempts those.
+
+ 
+
 let pendingRetryFiles = null;
+
+ 
+
 const globalProgressWrapper = document.getElementById("globalProgressWrapper");
+
+ 
+
 const globalPercentageLabel = document.getElementById("globalPercentage");
+
+ 
+
 const globalProgressBarFill = document.getElementById("globalProgressBarFill");
 
+ 
+
+ 
+
+ 
+
 // Selecting a fresh batch of files always means "start over" — clear any
+
+ 
+
 // pending retry-only list so it doesn't get mixed with the new selection.
+
+ 
+
 if (bulkImagePickerFiles) {
+
+ 
+
     bulkImagePickerFiles.addEventListener("change", () => {
+
+ 
+
         pendingRetryFiles = null;
+
+ 
+
         if (uploadImagesBtn) uploadImagesBtn.innerText = "Upload Images";
+
+ 
+
     });
+
+ 
+
 }
 
+ 
+
+ 
+
+ 
+
 if (uploadImagesBtn) {
+
+ 
+
     uploadImagesBtn.addEventListener("click", async function() {
+
+ 
+
         if (!activeProjectId) return alert("Please select a client from the table first!");
+
+ 
+
         if (!(await canManageStudio())) return;
 
+ 
+
+ 
+
+ 
+
         // FIX: use the failed-only list when we're in retry mode, otherwise
+
+ 
+
         // whatever is currently selected in the file input.
+
+ 
+
         const files = pendingRetryFiles && pendingRetryFiles.length
+
+ 
+
             ? pendingRetryFiles
+
+ 
+
             : bulkImagePickerFiles.files;
+
+ 
+
         if (files.length === 0) return alert("Please select files first!");
 
+ 
+
+ 
+
+ 
+
         // 🐞 FIX: extra safety net on top of the state-reset fix above —
+
+ 
+
         // names the exact client before anything uploads, so a photographer
+
+ 
+
         // managing many clients back-to-back gets one last clear checkpoint
+
+ 
+
         // instead of trusting silent state.
+
+ 
+
         if (!confirm(`Upload ${files.length} photo(s) to "${activeProjectName || activeProjectId}"?`)) {
+
+ 
+
             return;
+
+ 
+
         }
 
+ 
+
+ 
+
+ 
+
         const isUserLogged = localStorage.getItem('isLoggedIn') === 'true';
+
+ 
+
         if (!isUserLogged) {
+
+ 
+
             return alert("Session Out: Unauthorized action blocked. Please login again.");
+
+ 
+
         }
+
+ 
+
+ 
+
+ 
+
+        // Pin this upload to the client/UID that was confirmed. This prevents
+
+ 
+
+        // a client switch during async reservation/upload work from redirecting
+
+ 
+
+        // files into the newly selected client's folder.
+
+ 
+
+        const uploadProjectId = activeProjectId;
+
+ 
+
+        const uploadUid = currentUid;
+
+ 
+
+        const uploadClientName = activeProjectName || uploadProjectId;
+
+ 
+
+        const thisUploadSession = ++uploadSessionToken;
+
+ 
+
+ 
+
+ 
 
         const fileArray = Array.from(files);
 
+ 
+
+ 
+
+ 
+
         if (fileArray.length > MAX_FILES_PER_UPLOAD) {
+
+ 
+
             return alert(`⚠️ Too many files selected! Max ${MAX_FILES_PER_UPLOAD} photos allowed per upload. You selected ${fileArray.length}.`);
+
+ 
+
         }
+
+ 
+
+ 
+
+ 
 
         const invalidTypeFiles = [];
+
+ 
+
         const oversizedFiles = [];
 
+ 
+
+ 
+
+ 
+
         fileArray.forEach((file) => {
+
+ 
+
             if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+
+ 
+
                 invalidTypeFiles.push(file.name);
+
+ 
+
             }
+
+ 
+
             if (file.size > MAX_FILE_SIZE_BYTES) {
+
+ 
+
                 oversizedFiles.push(file.name);
+
+ 
+
             }
+
+ 
+
         });
 
+ 
+
+ 
+
+ 
+
         if (invalidTypeFiles.length > 0) {
+
+ 
+
             return alert(`❌ Only image files (JPG, PNG, WEBP, HEIC) are allowed.\n\nInvalid files:\n${invalidTypeFiles.slice(0, 5).join("\n")}${invalidTypeFiles.length > 5 ? `\n...and ${invalidTypeFiles.length - 5} more` : ""}`);
+
+ 
+
         }
+
+ 
+
+ 
+
+ 
 
         if (oversizedFiles.length > 0) {
+
+ 
+
             return alert(`❌ Each photo must be under ${MAX_FILE_SIZE_MB}MB.\n\nToo large:\n${oversizedFiles.slice(0, 5).join("\n")}${oversizedFiles.length > 5 ? `\n...and ${oversizedFiles.length - 5} more` : ""}`);
+
+ 
+
         }
+
+ 
+
+ 
+
+ 
 
         // 🌐 FIX: fail fast if already offline, instead of letting every
+
+ 
+
         // file spend up to ~2 minutes retrying (Firebase Storage's default
+
+ 
+
         // maxUploadRetryTime) before anything tells the user what's wrong.
+
+ 
+
         if (!navigator.onLine) {
+
+ 
+
             alert("⚠️ You're offline. Connect to the internet and try uploading again.");
+
+ 
+
             return;
+
+ 
+
         }
 
+ 
+
+ 
+
+ 
+
         uploadImagesBtn.innerText = "Uploading Assets...";
+
+ 
+
         uploadImagesBtn.disabled = true;
+
+ 
+
         pendingRetryFiles = null; // this attempt owns these files now
 
+ 
+
+ 
+
+ 
+
         // 🐞 FIX (invisible progress): #globalProgressWrapper already existed
+
+ 
+
         // in DSB.html with a percentage label + progress bar, but nothing in
+
+ 
+
         // this file ever un-hid it or updated the bar — so uploadStatusText
+
+ 
+
         // was being updated the whole time inside a div stuck on
+
+ 
+
         // display:none. That's why clicking Upload looked like nothing was
+
+ 
+
         // happening. Now it's shown for the duration of the upload and
+
+ 
+
         // actually driven by real progress.
+
+ 
+
         if (globalProgressWrapper) globalProgressWrapper.style.display = "block";
+
+ 
+
         if (globalProgressBarFill) globalProgressBarFill.style.width = "0%";
+
+ 
+
         if (globalPercentageLabel) globalPercentageLabel.textContent = "0%";
+
+ 
+
         if (uploadStatusNotificationLabel) uploadStatusNotificationLabel.textContent = `Uploading 0 of ${fileArray.length} photos...`;
 
+ 
+
+ 
+
+ 
+
         let doneCount = 0;      // succeeded
+
+ 
+
         let failCount = 0;      // failed
+
+ 
+
         const failedFileObjs = []; // FIX: actual File objects, not just names, so a retry can re-use them directly
+
+ 
+
         const totalCount = fileArray.length;
+
+ 
+
+ 
+
+ 
 
         const selectedCategory = document.getElementById("photoCategorySelect")?.value || "Wedding";
 
+ 
+
+ 
+
+ 
+
         const updateProgressUI = () => {
+
+ 
+
+            if (thisUploadSession !== uploadSessionToken) return;
+
+ 
+
+ 
+
+ 
+
             const processed = doneCount + failCount;
+
+ 
+
             const pct = Math.round((processed / totalCount) * 100);
+
+ 
+
             if (globalProgressBarFill) globalProgressBarFill.style.width = `${pct}%`;
+
+ 
+
             if (globalPercentageLabel) globalPercentageLabel.textContent = `${pct}%`;
+
+ 
+
             if (uploadStatusNotificationLabel) {
+
+ 
+
                 uploadStatusNotificationLabel.textContent = failCount > 0
+
+ 
+
                     ? `Uploading ${processed} of ${totalCount} photos... (${failCount} failed)`
+
+ 
+
                     : `Uploading ${processed} of ${totalCount} photos...`;
+
+ 
+
             }
+
+ 
+
         };
+
+ 
+
+ 
+
+ 
 
         const finishIfDone = () => {
+
+ 
+
             if (doneCount + failCount !== totalCount) return;
 
+ 
+
+            if (thisUploadSession !== uploadSessionToken) return;
+
+ 
+
+ 
+
+ 
+
             uploadImagesBtn.innerText = "Upload Images";
+
+ 
+
             uploadImagesBtn.disabled = false;
+
+ 
+
             if (globalProgressWrapper) globalProgressWrapper.style.display = "none";
+
+ 
+
             calculateCloudStorageMetrics();
 
-            // FIX: accurate partial-failure summary instead of silently
-            // never showing the "all done" alert when some files fail.
+ 
+
+ 
+
+ 
+
             if (failCount === 0) {
-                alert("🎉 All assets uploaded securely to Cloud Bucket!");
+
+ 
+
+                pendingRetryFiles = null;
+
+ 
+
+                if (bulkImagePickerFiles) bulkImagePickerFiles.value = "";
+
+ 
+
+                uploadImagesBtn.style.display = "none";
+
+ 
+
+                alert(`🎉 All ${totalCount} asset${totalCount === 1 ? "" : "s"} uploaded securely to "${uploadClientName}".`);
+
+ 
+
             } else if (doneCount === 0) {
+
+ 
+
                 pendingRetryFiles = failedFileObjs;
+
+ 
+
+                uploadImagesBtn.style.display = "inline-flex";
+
+ 
+
                 uploadImagesBtn.innerText = `Retry Failed Uploads (${failCount})`;
+
+ 
+
                 alert(`❌ Upload failed for all ${totalCount} photo(s). Check your connection, then click "Retry Failed Uploads".`);
+
+ 
+
             } else {
-                // FIX: set up retry-only mode instead of leaving the
-                // photographer to re-select the whole batch (which is what
-                // caused duplicates before).
+
+ 
+
                 pendingRetryFiles = failedFileObjs;
+
+ 
+
+                if (bulkImagePickerFiles) bulkImagePickerFiles.value = "";
+
+ 
+
+                uploadImagesBtn.style.display = "inline-flex";
+
+ 
+
                 uploadImagesBtn.innerText = `Retry Failed Uploads (${failCount})`;
-                alert(`⚠️ Uploaded ${doneCount} of ${totalCount} photos. ${failCount} failed:\n${failedFileObjs.slice(0, 5).map(f => f.name).join("\n")}${failedFileObjs.length > 5 ? `\n...and ${failedFileObjs.length - 5} more` : ""}\n\nClick "Retry Failed Uploads" to upload just those — the ${doneCount} that succeeded won't be re-uploaded.`);
+
+ 
+
+                alert(`⚠️ Uploaded ${doneCount} of ${totalCount} photos. ${failCount} failed:
+
+ 
+
+${failedFileObjs.slice(0, 5).map(f => f.name).join("\n")}${failedFileObjs.length > 5 ? `\n...and ${failedFileObjs.length - 5} more` : ""}
+
+ 
+
+ 
+
+ 
+
+Click "Retry Failed Uploads" to upload just those — the ${doneCount} that succeeded won't be re-uploaded.`);
+
+ 
+
             }
+
+ 
+
         };
+
+ 
+
+ 
+
+ 
+
 const reserveUpload = firebase.app().functions("asia-south1").httpsCallable("reservePhotoUpload");
 
+ 
+
+ 
+
+ 
+
 // 🚦 FIX: large batches (200-500 photos) used to fire every file's
+
+ 
+
 // upload simultaneously via forEach — that meant up to 500
+
+ 
+
 // concurrent reservePhotoUpload calls, each running a Firestore
+
+ 
+
 // transaction against the SAME users/{uid} document
+
+ 
+
 // (storageReservedBytes). That much concurrent write contention on
+
+ 
+
 // one document makes many transactions exhaust their automatic
+
+ 
+
 // retries and fail outright — showing up as a chunk of random
+
+ 
+
 // "failed" uploads with no real cause besides the batch size.
+
+ 
+
 // Processing a limited number of files at a time keeps identical
+
+ 
+
 // per-file behavior but avoids hammering that one document.
+
+ 
+
 const UPLOAD_CONCURRENCY = 6;
 
+ 
+
+ 
+
+ 
+
 function uploadOneFile(file) {
+
+ 
+
     return new Promise((resolve) => {
+
+ 
+
         (async () => {
+
+ 
+
             try {
+
+ 
+
                 const reservation = await reserveUpload({
-                    projectId: activeProjectId,
+
+ 
+
+                    projectId: uploadProjectId,
+
+ 
+
                     originalName: file.name,
+
+ 
+
                     size: file.size,
+
+ 
+
                     contentType: file.type
+
+ 
+
                 });
-                const fileRef = storage.ref().child(`client-albums/${currentUid}/${activeProjectId}/${reservation.data.fileName}`);
+
+ 
+
+                const fileRef = storage.ref().child(`client-albums/${uploadUid}/${uploadProjectId}/${reservation.data.fileName}`);
+
+ 
+
+ 
+
+ 
 
                 // 🐛 FIX: contentType wasn't set here, so Cloud Storage fell back
+
+ 
+
                 // to guessing it from the file extension. For uppercase
+
+ 
+
                 // extensions (iPhone/Android default "IMG_0461.JPG") that guess
+
+ 
+
                 // comes back as application/octet-stream instead of image/jpeg —
+
+ 
+
                 // which no longer matches what reservePhotoUpload already saved
+
+ 
+
                 // in the Firestore reservation (it correctly used file.type).
+
+ 
+
                 // storage.rules then rejects the mismatch as storage/unauthorized.
+
+ 
+
                 // Setting it explicitly here, from the same file.type used for
+
+ 
+
                 // the reservation, keeps both sides identical regardless of
+
+ 
+
                 // filename casing.
+
+ 
+
                 const metadata = {
+
+ 
+
                     contentType: file.type,
+
+ 
+
                     customMetadata: {
+
+ 
+
                         category: selectedCategory,
+
+ 
+
                         originalName: file.name
+
+ 
+
                     }
+
+ 
+
                 };
+
+ 
+
+ 
+
+ 
 
                 const uploadTask = fileRef.put(file, metadata);
 
+ 
+
+ 
+
+ 
+
                 // FIX: use the resumable upload's own state_changed events so a
+
+ 
+
                 // connection drop mid-upload updates the status label immediately
+
+ 
+
                 // ("Connection lost, retrying...") instead of the button just
+
+ 
+
                 // sitting on "Uploading Assets..." with no explanation until the
+
+ 
+
                 // internal retry window (~2 min) finally times out.
+
+ 
+
                 uploadTask.on("state_changed",
+
+ 
+
                     () => {
+
+ 
+
                         if (uploadStatusNotificationLabel && !navigator.onLine) {
+
+ 
+
                             uploadStatusNotificationLabel.textContent = `⚠️ Connection lost — retrying ${file.name}...`;
+
+ 
+
                         }
+
+ 
+
                     },
+
+ 
+
                     (err) => {
+
+ 
+
                         console.error("Upload error:", file.name, err);
+
+ 
+
                         failCount++;
+
+ 
+
                         failedFileObjs.push(file);
+
+ 
+
                         updateProgressUI();
+
+ 
+
                         finishIfDone();
+
+ 
+
                         resolve();
+
+ 
+
                     },
+
+ 
+
                     () => {
+
+ 
+
                         doneCount++;
+
+ 
+
                         updateProgressUI();
+
+ 
+
                         finishIfDone();
+
+ 
+
                         resolve();
+
+ 
+
                     }
+
+ 
+
                 );
+
+ 
+
             } catch (err) {
+
+ 
+
                 console.error("Upload reservation error:", file.name, err);
+
+ 
+
                 failCount++;
+
+ 
+
                 failedFileObjs.push(file);
+
+ 
+
                 updateProgressUI();
+
+ 
+
                 finishIfDone();
+
+ 
+
                 resolve();
+
+ 
+
             }
+
+ 
+
         })();
+
+ 
+
     });
+
+ 
+
 }
+
+ 
+
+ 
+
+ 
 
 let nextFileIndex = 0;
+
+ 
+
 async function uploadWorker() {
+
+ 
+
     while (nextFileIndex < fileArray.length) {
+
+ 
+
         const file = fileArray[nextFileIndex];
+
+ 
+
         nextFileIndex++;
+
+ 
+
         await uploadOneFile(file);
+
+ 
+
     }
-}
-const workerCount = Math.min(UPLOAD_CONCURRENCY, fileArray.length);
-for (let i = 0; i < workerCount; i++) uploadWorker();
-    });
+
+ 
+
 }
 
+ 
+
+const workerCount = Math.min(UPLOAD_CONCURRENCY, fileArray.length);
+
+ 
+
+for (let i = 0; i < workerCount; i++) uploadWorker();
+
+ 
+
+    });
+
+ 
+
+}
+
+ 
+
+ 
+
+ 
+
 // 🔗 FEATURE 2: SECURE CLIENT LINK GENERATOR
+
+ 
+
 if (generateClientLinkBtn) {
+
+ 
+
     generateClientLinkBtn.addEventListener("click", async function() {
-        if (!activeProjectId) return alert("⚠️ Please select a client from the table first!");
-        // 🌐 FIX: same fail-fast pattern as client creation.
+
+ 
+
+        if (!activeProjectId) return alert("⚠️ Please select a client first.");
+
+ 
+
+ 
+
+ 
+
+        const targetProjectId = activeProjectId;
+
+ 
+
+        const targetUid = currentUid;
+
+ 
+
+        const targetClientName = activeProjectName || targetProjectId;
+
+ 
+
+        const requestToken = activeProjectSelectionToken;
+
+ 
+
+ 
+
+ 
+
         if (!navigator.onLine) return alert("⚠️ You're offline. Connect to the internet and try again.");
+
+ 
 
         if (!(await canManageStudio())) return;
 
-        const existing = findLoadedProject(activeProjectId);
+ 
+
+ 
+
+ 
+
+        // The selection may have changed while auth/subscription checks ran.
+
+ 
+
+        if (
+
+ 
+
+            activeProjectId !== targetProjectId ||
+
+ 
+
+            targetUid !== currentUid ||
+
+ 
+
+            requestToken !== activeProjectSelectionToken
+
+ 
+
+        ) {
+
+ 
+
+            return;
+
+ 
+
+        }
+
+ 
+
+ 
+
+ 
+
+        const existing = findLoadedProject(targetProjectId);
+
+ 
+
         const existingStillValid = existing?.shareId && LIVE_LINK_STATES.includes(existing?.workflowState);
+
+ 
+
+ 
+
+ 
+
         if (existingStillValid) {
+
+ 
+
             const refresh = confirm(
-                `This client already has an active link.\n\n` +
-                `The link and PIN won't change, but I can refresh the gallery's photo list to include anything you've uploaded since it was generated.\n\n` +
+
+ 
+
+                `This client already has an active link.
+
+ 
+
+ 
+
+ 
+
+` +
+
+ 
+
+                `The link and PIN won't change, but I can refresh the gallery's photo list to include anything you've uploaded since it was generated.
+
+ 
+
+ 
+
+ 
+
+` +
+
+ 
+
                 `Refresh photos now?`
+
+ 
+
             );
+
+ 
+
             if (!refresh) return;
 
+ 
+
+ 
+
+ 
+
             generateClientLinkBtn.disabled = true;
+
+ 
+
             generateClientLinkBtn.innerText = "Refreshing photos...";
-        try {
-    await createGalleryPreviews(existing.shareId, (done, total) => {
-        generateClientLinkBtn.innerText = `Refreshing photo ${done} of ${total}...`;
-    });
-    alert("✅ Gallery photos refreshed. The same link and PIN still work for your client.");
-} catch (error) {
-                console.error("Refresh failed:", error);
-                alert("❌ Could not refresh photos. Check console for details.");
-            } finally {
-                generateClientLinkBtn.disabled = false;
-                generateClientLinkBtn.innerHTML = '<i class="fas fa-link"></i> Generate Client Link';
-            }
-            return;
-        }
 
-        generateClientLinkBtn.disabled = true;
-        generateClientLinkBtn.innerText = "Preparing secure gallery...";
+ 
 
-        try {
-            const createShare = firebase.app().functions("asia-south1").httpsCallable("createGalleryShare");
-            const result = await createShare({ projectId: activeProjectId });
-            const { shareId, pin } = result.data;
-            const securePath = `${window.location.origin}${window.location.pathname.replace("DSB.html", "lookbook.html")}?gallery=${encodeURIComponent(shareId)}`;
+ 
 
-            if (clientGeneratedUrlDisplayField) clientGeneratedUrlDisplayField.value = securePath;
-            const pinDisplay = document.getElementById("clientGalleryPinDisplay");
-            if (pinDisplay) {
-                pinDisplay.textContent = `Gallery PIN: ${pin} — share this with the client separately.`;
-                pinDisplay.style.display = "block";
-            }
+ 
 
-        await createGalleryPreviews(shareId, (done, total) => {
-            generateClientLinkBtn.innerText = `Preparing photo ${done} of ${total}...`;
-        });
-        alert("Secure gallery ready. Send the link and PIN separately to your client. This link stays active until you delete the client.");
+            try {
 
-        } catch (error) {
-            console.error("Secure gallery creation failed:", error);
-            alert("Secure gallery could not be created. Check console for details.");
-        } finally {
-            generateClientLinkBtn.disabled = false;
-            generateClientLinkBtn.innerHTML = '<i class="fas fa-link"></i> Generate Client Link';
-        }
-    });
-}
+ 
 
- if (copySecureLinkBtn) {
-    copySecureLinkBtn.addEventListener("click", function() {
-        if (!clientGeneratedUrlDisplayField) return;
-        const textToCopy = clientGeneratedUrlDisplayField.value;
-        if (!textToCopy) return alert("Generate a link first!");
-        navigator.clipboard.writeText(textToCopy).then(() => alert("Link copied to clipboard!"));
-       });
-}
+                await createGalleryPreviews(existing.shareId, (done, total) => {
 
-async function createGalleryPreviews(shareId, onProgress) {
-    const sourceFolder = storage.ref().child(`client-albums/${currentUid}/${activeProjectId}`);
-    const sourceFiles = await sourceFolder.listAll();
-    if (!sourceFiles.items.length) throw new Error("Upload photos before generating a gallery.");
+ 
 
-    // 🐞 FIX (duplicate photos in client gallery): this generates one preview
-    // per Storage object found here. If the same original photo was ever
-    // physically stored twice under this client (e.g. an old test upload
-    // from before the retry-only-failed-files fix above, or any other
-    // reason), every copy got its own preview — the client would see the
-    // same photo twice, exactly like in the screenshot. Storage object names
-    // are `${timestamp}-${index}-${safeName}`, so de-dupe by that trailing
-    // safeName, keeping only the most recently uploaded copy of each. This
-    // also retroactively fixes clients who already had duplicate previews —
-    // just click "Refresh photos" / re-generate the link.
-    const mostRecentByName = new Map();
-    for (const item of sourceFiles.items) {
-        const match = item.name.match(/^(\d+)-\d+-(.+)$/);
-        const key = match ? match[2] : item.name;
-        const ts = match ? Number(match[1]) : 0;
-        const existing = mostRecentByName.get(key);
-        if (!existing || ts > existing.ts) {
-            mostRecentByName.set(key, { item, ts });
-        }
-    }
-    const dedupedItems = Array.from(mostRecentByName.values()).map(entry => entry.item);
+                    if (
 
-    const previews = [];
-    for (let index = 0; index < dedupedItems.length; index++) {
-        if (onProgress) onProgress(index + 1, dedupedItems.length);
-        const source = dedupedItems[index];
-        const [url, metadata] = await Promise.all([source.getDownloadURL(), source.getMetadata()]);
-        const response = await fetch(url);
-        if (!response.ok) throw new Error("Could not prepare a gallery preview.");
-        const blob = await response.blob();
-        const previewBlob = await resizePreview(blob);
-        const file = `${index}-${crypto.getRandomValues(new Uint32Array(1))[0]}.jpg`;
-        await storage.ref().child(`gallery-previews/${shareId}/${file}`).put(previewBlob, {
-            contentType: "image/jpeg",
-            customMetadata: { category: metadata.customMetadata?.category || "Wedding" }
-        });
-        previews.push({ file, category: metadata.customMetadata?.category || "Wedding", originalFile: source.name });
-    }
-    const publishPreviews = firebase.app().functions("asia-south1").httpsCallable("publishGalleryPreviews");
-    await publishPreviews({ shareId, previews });
-}
+ 
 
-function resizePreview(blob) {
-    return new Promise((resolve, reject) => {
-        const image = new Image();
-        const objectUrl = URL.createObjectURL(blob);
-        image.onload = () => {
-            const maxWidth = 1600;
-            const scale = Math.min(1, maxWidth / image.naturalWidth);
-            const canvas = document.createElement("canvas");
-            canvas.width = Math.round(image.naturalWidth * scale);
-            canvas.height = Math.round(image.naturalHeight * scale);
-            const context = canvas.getContext("2d");
-            context.drawImage(image, 0, 0, canvas.width, canvas.height);
-            context.fillStyle = "rgba(255,255,255,0.72)";
-            context.font = `${Math.max(18, Math.round(canvas.width / 28))}px sans-serif`;
-            context.textAlign = "center";
-            context.fillText("PHOTRIX PREVIEW", canvas.width / 2, canvas.height - Math.max(28, canvas.height / 20));
-            URL.revokeObjectURL(objectUrl);
-            canvas.toBlob(result => result ? resolve(result) : reject(new Error("Preview conversion failed.")), "image/jpeg", 0.82);
-        };
-        image.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error("Unsupported image format for previews.")); };
-        image.src = objectUrl;
-    });
-}
+                        activeProjectId === targetProjectId &&
 
-function listenLiveClientPipeline() {
-    if (!activeProjectId || !currentUid) return;
+ 
 
-    // 🛑 FIX: close the previous listener (if any) before attaching a new
-    // one — otherwise switching/reselecting a client stacks listeners on
-    // the old project's doc forever, each still firing in the background.
-    if (unsubscribeLiveClientPipeline) {
-        unsubscribeLiveClientPipeline();
-        unsubscribeLiveClientPipeline = null;
-    }
+                        requestToken === activeProjectSelectionToken
 
-    unsubscribeLiveClientPipeline = db.collection("users").doc(currentUid).collection("clientProjects").doc(activeProjectId)
-        .onSnapshot((doc) => {
-            if (liveClientSelectionThumbnailsGrid) liveClientSelectionThumbnailsGrid.innerHTML = "";
-            // 🛑 FIX: bump the render token on every snapshot. Any
-            // getDownloadURL().then() callback still in flight from a
-            // PREVIOUS snapshot checks this before appending — if it's
-            // stale (a newer snapshot already cleared the grid), it skips
-            // instead of appending a leftover thumbnail into the new render.
-            const myRenderToken = ++livePipelineRenderToken;
+ 
 
-            if (doc.exists) {
-                const data = doc.data();
-                updatePublishControls(data);
+                    ) {
 
-                if (paymentStatusBadgeIndicator) {
-                    if (data.workflowState === "published") {
-                        paymentStatusBadgeIndicator.innerText = "Published ✅";
-                        paymentStatusBadgeIndicator.style.color = "var(--success-green)";
-                    } else if (data.workflowState === "selection_completed") {
-                        paymentStatusBadgeIndicator.innerText = "Review Compiled! (Choose theme & Publish)";
-                        paymentStatusBadgeIndicator.style.color = "var(--warning-orange)";
-                    } else {
-                        paymentStatusBadgeIndicator.innerText = "Awaiting Client Action";
-                        paymentStatusBadgeIndicator.style.color = "";
+ 
+
+                        generateClientLinkBtn.innerText = `Refreshing photo ${done} of ${total}...`;
+
+ 
+
                     }
+
+ 
+
+                }, targetProjectId, targetUid);
+
+ 
+
+ 
+
+ 
+
+                if (
+
+ 
+
+                    activeProjectId === targetProjectId &&
+
+ 
+
+                    requestToken === activeProjectSelectionToken
+
+ 
+
+                ) {
+
+ 
+
+                    alert(`✅ Gallery photos refreshed for "${targetClientName}". The same link and PIN still work for your client.`);
+
+ 
+
                 }
 
+ 
+
+            } catch (error) {
+
+ 
+
+                console.error("Refresh failed:", error);
+
+ 
+
+                if (
+
+ 
+
+                    activeProjectId === targetProjectId &&
+
+ 
+
+                    requestToken === activeProjectSelectionToken
+
+ 
+
+                ) {
+
+ 
+
+                    alert("❌ Could not refresh photos. Check console for details.");
+
+ 
+
+                }
+
+ 
+
+            } finally {
+
+ 
+
+                if (
+
+ 
+
+                    activeProjectId === targetProjectId &&
+
+ 
+
+                    requestToken === activeProjectSelectionToken
+
+ 
+
+                ) {
+
+ 
+
+                    generateClientLinkBtn.disabled = false;
+
+ 
+
+                    generateClientLinkBtn.innerHTML = '<i class="fas fa-link"></i> Generate Client Link';
+
+ 
+
+                }
+
+ 
+
+            }
+
+ 
+
+            return;
+
+ 
+
+        }
+
+ 
+
+ 
+
+ 
+
+        generateClientLinkBtn.disabled = true;
+
+ 
+
+        generateClientLinkBtn.innerText = "Preparing secure gallery...";
+
+ 
+
+ 
+
+ 
+
+        try {
+
+ 
+
+            const createShare = firebase.app().functions("asia-south1").httpsCallable("createGalleryShare");
+
+ 
+
+            const result = await createShare({ projectId: targetProjectId });
+
+ 
+
+            const { shareId, pin } = result.data;
+
+ 
+
+ 
+
+ 
+
+            if (
+
+ 
+
+                activeProjectId !== targetProjectId ||
+
+ 
+
+                requestToken !== activeProjectSelectionToken
+
+ 
+
+            ) {
+
+ 
+
+                // Share creation completed safely for the original project, but
+
+ 
+
+                // the UI now belongs to another client.
+
+ 
+
+                return;
+
+ 
+
+            }
+
+ 
+
+ 
+
+ 
+
+            const secureUrl = new URL("lookbook.html", window.location.href);
+
+ 
+
+            secureUrl.searchParams.set("gallery", shareId);
+
+ 
+
+ 
+
+ 
+
+            if (clientGeneratedUrlDisplayField) {
+
+ 
+
+                clientGeneratedUrlDisplayField.value = secureUrl.href;
+
+ 
+
+            }
+
+ 
+
+ 
+
+ 
+
+            const pinDisplay = document.getElementById("clientGalleryPinDisplay");
+
+ 
+
+            if (pinDisplay) {
+
+ 
+
+                pinDisplay.textContent = `Gallery PIN: ${pin} — share this with the client separately.`;
+
+ 
+
+                pinDisplay.style.display = "block";
+
+ 
+
+            }
+
+ 
+
+ 
+
+ 
+
+            await createGalleryPreviews(shareId, (done, total) => {
+
+ 
+
+                if (
+
+ 
+
+                    activeProjectId === targetProjectId &&
+
+ 
+
+                    requestToken === activeProjectSelectionToken
+
+ 
+
+                ) {
+
+ 
+
+                    generateClientLinkBtn.innerText = `Preparing photo ${done} of ${total}...`;
+
+ 
+
+                }
+
+ 
+
+            }, targetProjectId, targetUid);
+
+ 
+
+ 
+
+ 
+
+            if (
+
+ 
+
+                activeProjectId !== targetProjectId ||
+
+ 
+
+                requestToken !== activeProjectSelectionToken
+
+ 
+
+            ) {
+
+ 
+
+                return;
+
+ 
+
+            }
+
+ 
+
+ 
+
+ 
+
+            alert(`✅ Secure gallery ready for "${targetClientName}". Send the link and PIN separately to your client.`);
+
+ 
+
+        } catch (error) {
+
+ 
+
+            console.error("Secure gallery creation failed:", error);
+
+ 
+
+            if (
+
+ 
+
+                activeProjectId === targetProjectId &&
+
+ 
+
+                requestToken === activeProjectSelectionToken
+
+ 
+
+            ) {
+
+ 
+
+                alert("❌ Secure gallery could not be created. Check console for details.");
+
+ 
+
+            }
+
+ 
+
+        } finally {
+
+ 
+
+            if (
+
+ 
+
+                activeProjectId === targetProjectId &&
+
+ 
+
+                requestToken === activeProjectSelectionToken
+
+ 
+
+            ) {
+
+ 
+
+                generateClientLinkBtn.disabled = false;
+
+ 
+
+                generateClientLinkBtn.innerHTML = '<i class="fas fa-link"></i> Generate Client Link';
+
+ 
+
+            }
+
+ 
+
+        }
+
+ 
+
+    });
+
+ 
+
+}
+
+ 
+
+ 
+
+ 
+
+ if (copySecureLinkBtn) {
+
+ 
+
+    copySecureLinkBtn.addEventListener("click", async function() {
+
+ 
+
+        if (!clientGeneratedUrlDisplayField) return;
+
+ 
+
+        const textToCopy = clientGeneratedUrlDisplayField.value;
+
+ 
+
+        if (!textToCopy) return alert("Generate a link first!");
+
+ 
+
+ 
+
+ 
+
+        try {
+
+ 
+
+            await navigator.clipboard.writeText(textToCopy);
+
+ 
+
+            const originalHtml = copySecureLinkBtn.innerHTML;
+
+ 
+
+            copySecureLinkBtn.innerHTML = '<i class="fas fa-check"></i> Copied';
+
+ 
+
+            copySecureLinkBtn.disabled = true;
+
+ 
+
+ 
+
+ 
+
+            setTimeout(() => {
+
+ 
+
+                copySecureLinkBtn.innerHTML = originalHtml;
+
+ 
+
+                copySecureLinkBtn.disabled = false;
+
+ 
+
+            }, 1500);
+
+ 
+
+        } catch (err) {
+
+ 
+
+            console.error("Copy link error:", err);
+
+ 
+
+            alert("Could not copy the link automatically. Please copy it manually.");
+
+ 
+
+        }
+
+ 
+
+    });
+
+ 
+
+}
+
+ 
+
+ 
+
+ 
+
+async function createGalleryPreviews(shareId, onProgress, projectId = activeProjectId, uid = currentUid) {
+
+ 
+
+    if (!projectId || !uid) throw new Error("Client selection expired. Please select the client again.");
+
+ 
+
+    const sourceFolder = storage.ref().child(`client-albums/${uid}/${projectId}`);
+
+ 
+
+    const sourceFiles = await sourceFolder.listAll();
+
+ 
+
+    if (!sourceFiles.items.length) throw new Error("Upload photos before generating a gallery.");
+
+ 
+
+ 
+
+ 
+
+    // 🐞 FIX (duplicate photos in client gallery): this generates one preview
+
+ 
+
+    // per Storage object found here. If the same original photo was ever
+
+ 
+
+    // physically stored twice under this client (e.g. an old test upload
+
+ 
+
+    // from before the retry-only-failed-files fix above, or any other
+
+ 
+
+    // reason), every copy got its own preview — the client would see the
+
+ 
+
+    // same photo twice, exactly like in the screenshot. Storage object names
+
+ 
+
+    // are `${timestamp}-${index}-${safeName}`, so de-dupe by that trailing
+
+ 
+
+    // safeName, keeping only the most recently uploaded copy of each. This
+
+ 
+
+    // also retroactively fixes clients who already had duplicate previews —
+
+ 
+
+    // just click "Refresh photos" / re-generate the link.
+
+ 
+
+    const mostRecentByName = new Map();
+
+ 
+
+    for (const item of sourceFiles.items) {
+
+ 
+
+        const match = item.name.match(/^(\d+)-\d+-(.+)$/);
+
+ 
+
+        const key = match ? match[2] : item.name;
+
+ 
+
+        const ts = match ? Number(match[1]) : 0;
+
+ 
+
+        const existing = mostRecentByName.get(key);
+
+ 
+
+        if (!existing || ts > existing.ts) {
+
+ 
+
+            mostRecentByName.set(key, { item, ts });
+
+ 
+
+        }
+
+ 
+
+    }
+
+ 
+
+    const dedupedItems = Array.from(mostRecentByName.values()).map(entry => entry.item);
+
+ 
+
+ 
+
+ 
+
+    const previews = [];
+
+ 
+
+    for (let index = 0; index < dedupedItems.length; index++) {
+
+ 
+
+        if (onProgress) onProgress(index + 1, dedupedItems.length);
+
+ 
+
+        const source = dedupedItems[index];
+
+ 
+
+        const [url, metadata] = await Promise.all([source.getDownloadURL(), source.getMetadata()]);
+
+ 
+
+        const response = await fetch(url);
+
+ 
+
+        if (!response.ok) throw new Error("Could not prepare a gallery preview.");
+
+ 
+
+        const blob = await response.blob();
+
+ 
+
+        const previewBlob = await resizePreview(blob);
+
+ 
+
+        const file = `${index}-${crypto.getRandomValues(new Uint32Array(1))[0]}.jpg`;
+
+ 
+
+        await storage.ref().child(`gallery-previews/${shareId}/${file}`).put(previewBlob, {
+
+ 
+
+            contentType: "image/jpeg",
+
+ 
+
+            customMetadata: { category: metadata.customMetadata?.category || "Wedding" }
+
+ 
+
+        });
+
+ 
+
+        previews.push({ file, category: metadata.customMetadata?.category || "Wedding", originalFile: source.name });
+
+ 
+
+    }
+
+ 
+
+    const publishPreviews = firebase.app().functions("asia-south1").httpsCallable("publishGalleryPreviews");
+
+ 
+
+    await publishPreviews({ shareId, previews });
+
+ 
+
+}
+
+ 
+
+ 
+
+ 
+
+function resizePreview(blob) {
+
+ 
+
+    return new Promise((resolve, reject) => {
+
+ 
+
+        const image = new Image();
+
+ 
+
+        const objectUrl = URL.createObjectURL(blob);
+
+ 
+
+        image.onload = () => {
+
+ 
+
+            const maxWidth = 1600;
+
+ 
+
+            const scale = Math.min(1, maxWidth / image.naturalWidth);
+
+ 
+
+            const canvas = document.createElement("canvas");
+
+ 
+
+            canvas.width = Math.round(image.naturalWidth * scale);
+
+ 
+
+            canvas.height = Math.round(image.naturalHeight * scale);
+
+ 
+
+            const context = canvas.getContext("2d");
+
+ 
+
+            context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+ 
+
+            context.fillStyle = "rgba(255,255,255,0.72)";
+
+ 
+
+            context.font = `${Math.max(18, Math.round(canvas.width / 28))}px sans-serif`;
+
+ 
+
+            context.textAlign = "center";
+
+ 
+
+            context.fillText("PHOTRIX PREVIEW", canvas.width / 2, canvas.height - Math.max(28, canvas.height / 20));
+
+ 
+
+            URL.revokeObjectURL(objectUrl);
+
+ 
+
+            canvas.toBlob(result => result ? resolve(result) : reject(new Error("Preview conversion failed.")), "image/jpeg", 0.82);
+
+ 
+
+        };
+
+ 
+
+        image.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error("Unsupported image format for previews.")); };
+
+ 
+
+        image.src = objectUrl;
+
+ 
+
+    });
+
+ 
+
+}
+
+ 
+
+ 
+
+ 
+
+function listenLiveClientPipeline() {
+
+ 
+
+    if (!activeProjectId || !currentUid) return;
+
+ 
+
+ 
+
+ 
+
+    // 🛑 FIX: close the previous listener (if any) before attaching a new
+
+ 
+
+    // one — otherwise switching/reselecting a client stacks listeners on
+
+ 
+
+    // the old project's doc forever, each still firing in the background.
+
+ 
+
+    if (unsubscribeLiveClientPipeline) {
+
+ 
+
+        unsubscribeLiveClientPipeline();
+
+ 
+
+        unsubscribeLiveClientPipeline = null;
+
+ 
+
+    }
+
+ 
+
+ 
+
+ 
+
+    unsubscribeLiveClientPipeline = db.collection("users").doc(currentUid).collection("clientProjects").doc(activeProjectId)
+
+ 
+
+        .onSnapshot((doc) => {
+
+ 
+
+            if (liveClientSelectionThumbnailsGrid) liveClientSelectionThumbnailsGrid.innerHTML = "";
+
+ 
+
+            // 🛑 FIX: bump the render token on every snapshot. Any
+
+ 
+
+            // getDownloadURL().then() callback still in flight from a
+
+ 
+
+            // PREVIOUS snapshot checks this before appending — if it's
+
+ 
+
+            // stale (a newer snapshot already cleared the grid), it skips
+
+ 
+
+            // instead of appending a leftover thumbnail into the new render.
+
+ 
+
+            const myRenderToken = ++livePipelineRenderToken;
+
+ 
+
+ 
+
+ 
+
+            if (doc.exists) {
+
+ 
+
+                const data = doc.data();
+
+ 
+
+                updatePublishControls(data);
+
+ 
+
+ 
+
+ 
+
+                if (paymentStatusBadgeIndicator) {
+
+ 
+
+                    if (data.workflowState === "published") {
+
+ 
+
+                        paymentStatusBadgeIndicator.innerText = "Published ✅";
+
+ 
+
+                        paymentStatusBadgeIndicator.style.color = "var(--success-green)";
+
+ 
+
+                    } else if (data.workflowState === "selection_completed") {
+
+ 
+
+                        paymentStatusBadgeIndicator.innerText = "Review Compiled! (Choose theme & Publish)";
+
+ 
+
+                        paymentStatusBadgeIndicator.style.color = "var(--warning-orange)";
+
+ 
+
+                    } else {
+
+ 
+
+                        paymentStatusBadgeIndicator.innerText = "Awaiting Client Action";
+
+ 
+
+                        paymentStatusBadgeIndicator.style.color = "";
+
+ 
+
+                    }
+
+ 
+
+                }
+
+ 
+
+ 
+
+ 
+
                 if (selectionStatsStatusSummaryCounter) {
+
+ 
+
                     if (data.selectedPhotoIds && data.selectedPhotoIds.length > 0 && data.shareId) {
+
+ 
+
                         selectionStatsStatusSummaryCounter.innerText = `Client selected total ${data.selectedPhotoIds.length} photos.`;
 
+ 
+
+ 
+
+ 
+
                         const canEdit = data.workflowState === "selection_completed";
+
+ 
+
                         data.selectedPhotoIds.forEach((file) => {
+
+ 
+
                             storage.ref(`gallery-previews/${data.shareId}/${file}`).getDownloadURL()
+
+ 
+
                                 .then((url) => {
+
+ 
+
                                     // 🛑 FIX: a newer snapshot already fired and cleared the
+
+ 
+
                                     // grid while this URL was still loading — drop it instead
+
+ 
+
                                     // of appending a stale thumbnail on top of the new render.
+
+ 
+
                                     if (myRenderToken !== livePipelineRenderToken) return;
 
+ 
+
+ 
+
+ 
+
                                     const wrapper = document.createElement("div");
+
+ 
+
                                     wrapper.className = "thumbnail-wrapper";
 
+ 
+
+ 
+
+ 
+
                                     const img = document.createElement("img");
+
+ 
+
                                     img.src = url;
+
+ 
+
                                     img.onclick = () => {
+
+ 
+
                                         const lightbox = document.getElementById("photoLightbox");
+
+ 
+
                                         const lightboxImg = document.getElementById("lightboxImage");
+
+ 
+
                                         if (lightbox && lightboxImg) {
+
+ 
+
                                             lightboxImg.src = url;
+
+ 
+
                                             lightbox.classList.add("active");
+
+ 
+
                                         }
+
+ 
+
                                     };
+
+ 
+
+ 
+
+ 
 
                                     wrapper.appendChild(img);
 
+ 
+
+ 
+
+ 
+
                                     // Removing a photo only makes sense while still reviewing —
+
+ 
+
                                     // once published, use "Revert to Editing" first.
+
+ 
+
                                     if (canEdit) {
+
+ 
+
                                         const removeBtn = document.createElement("button");
+
+ 
+
                                         removeBtn.className = "remove-photo-btn";
+
+ 
+
                                         removeBtn.innerHTML = '<i class="fas fa-trash"></i>';
+
+ 
+
                                         removeBtn.title = "Remove from selection";
 
+ 
+
+ 
+
+ 
+
                                         removeBtn.onclick = async (e) => {
+
+ 
+
                                             e.stopPropagation();
+
+ 
+
                                             if (!confirm("Are you sure you want to remove this photo from the client's selection?")) return;
+
+ 
+
                                             removeBtn.disabled = true;
+
+ 
+
                                             try {
+
+ 
+
                                                 const removePhoto = firebase.app().functions("asia-south1").httpsCallable("removeSelectedPhoto");
+
+ 
+
                                                 await removePhoto({ projectId: activeProjectId, file });
+
+ 
+
                                             } catch (err) {
+
+ 
+
                                                 console.error("Error removing photo:", err);
+
+ 
+
                                                 alert("Failed to remove photo: " + (err.message || "Try again."));
+
+ 
+
                                                 removeBtn.disabled = false;
+
+ 
+
                                             }
+
+ 
+
                                         };
 
+ 
+
+ 
+
+ 
+
                                         wrapper.appendChild(removeBtn);
+
+ 
+
                                     }
+
+ 
+
+ 
+
+ 
 
                                     if (liveClientSelectionThumbnailsGrid) {
+
+ 
+
                                         liveClientSelectionThumbnailsGrid.appendChild(wrapper);
+
+ 
+
                                     }
+
+ 
+
                                 })
+
+ 
+
                                 .catch((err) => console.warn("Could not load a selected preview:", file, err));
+
+ 
+
                         });
+
+ 
+
                     } else {
+
+ 
+
                         selectionStatsStatusSummaryCounter.innerText = "No selections yet — waiting on your client.";
+
+ 
+
                     }
+
+ 
+
                 }
+
+ 
+
             } else {
+
+ 
+
                 updatePublishControls(null);
+
+ 
+
             }
+
+ 
+
         }, err => console.log("Watchdog passive error:", err));
+
+ 
+
 }
+
+ 
+
+ 
+
+ 
 
 // 💸 FEATURE 4: REVIEW & FINALIZE — Publish Gallery / Revert to Editing
+
+ 
+
 const revertToEditingBtn = document.getElementById("revertToEditingBtn");
 
+ 
+
+ 
+
+ 
+
 // Keeps the Publish/Revert buttons in sync with the gallery's current
+
+ 
+
 // workflowState — same URL, same PIN, only the state (and what the
+
+ 
+
 // buttons let you do) changes.
+
+ 
+
 function updatePublishControls(data) {
+
+ 
+
     if (!unlockPremiumGalleryBtn) return;
+
+ 
+
     const state = data?.workflowState;
 
+ 
+
+ 
+
+ 
+
     if (state === "published") {
+
+ 
+
         unlockPremiumGalleryBtn.style.display = "none";
+
+ 
+
         if (revertToEditingBtn) revertToEditingBtn.style.display = "inline-flex";
+
+ 
+
     } else if (state === "selection_completed") {
+
+ 
+
         unlockPremiumGalleryBtn.style.display = "inline-flex";
+
+ 
+
         unlockPremiumGalleryBtn.disabled = false;
+
+ 
+
         unlockPremiumGalleryBtn.innerHTML = '<i class="fas fa-unlock"></i> Publish Gallery';
+
+ 
+
         if (revertToEditingBtn) revertToEditingBtn.style.display = "none";
+
+ 
+
     } else {
+
+ 
+
         // selection_open or no gallery yet — nothing to publish
+
+ 
+
         unlockPremiumGalleryBtn.style.display = "inline-flex";
+
+ 
+
         unlockPremiumGalleryBtn.disabled = true;
+
+ 
+
         unlockPremiumGalleryBtn.innerHTML = '<i class="fas fa-unlock"></i> Awaiting Client Selection';
+
+ 
+
         if (revertToEditingBtn) revertToEditingBtn.style.display = "none";
+
+ 
+
     }
+
+ 
+
 }
+
+ 
+
+ 
+
+ 
 
 if (unlockPremiumGalleryBtn) {
+
+ 
+
     unlockPremiumGalleryBtn.addEventListener("click", async function() {
+
+ 
+
         if (!activeProjectId) return alert("⚠️ Please select a client from the table first!");
+
+ 
+
         if (!(await canManageStudio())) return;
+
+ 
+
+ 
+
+ 
 
         const projectData = findLoadedProject(activeProjectId);
+
+ 
+
         if (!projectData?.shareId) return alert("⚠️ Generate a client link first!");
+
+ 
+
         if (projectData.workflowState !== "selection_completed") {
+
+ 
+
             return alert("⚠️ Client hasn't submitted their selection yet.");
+
+ 
+
         }
+
+ 
+
         const themeId = projectData.selectedThemeId;
+
+ 
+
         if (!themeId) {
+
+ 
+
             return alert("⚠️ Choose a theme from Gallery Themes first — it gets locked in when you publish.");
+
+ 
+
         }
+
+ 
+
+ 
+
+ 
 
         unlockPremiumGalleryBtn.disabled = true;
+
+ 
+
         unlockPremiumGalleryBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Publishing...';
 
+ 
+
+ 
+
+ 
+
         try {
+
+ 
+
             const publish = firebase.app().functions("asia-south1").httpsCallable("applyThemeAndPublish");
+
+ 
+
             await publish({ projectId: activeProjectId, themeId });
+
+ 
+
             alert("💸 Gallery Published! Your client can now view the final themed gallery and download the full HD ZIP.");
+
+ 
+
         } catch (error) {
+
+ 
+
             console.error("Error publishing gallery:", error);
+
+ 
+
             alert("Could not publish the gallery: " + (error.message || "Try again."));
+
+ 
+
             unlockPremiumGalleryBtn.disabled = false;
+
+ 
+
             unlockPremiumGalleryBtn.innerHTML = '<i class="fas fa-unlock"></i> Publish Gallery';
+
+ 
+
         }
+
+ 
+
     });
+
+ 
+
 }
+
+ 
+
+ 
+
+ 
 
 if (revertToEditingBtn) {
+
+ 
+
     revertToEditingBtn.addEventListener("click", async function() {
+
+ 
+
         if (!activeProjectId) return;
+
+ 
+
         if (!confirm("Reopen this gallery for the client? They'll be able to pick photos again — their previous picks stay selected, they can add or remove from there. The gallery goes back to final delivery once you publish again.")) return;
 
+ 
+
+ 
+
+ 
+
         revertToEditingBtn.disabled = true;
+
+ 
+
         try {
+
+ 
+
             const revert = firebase.app().functions("asia-south1").httpsCallable("revertGalleryToEditing");
+
+ 
+
             await revert({ projectId: activeProjectId });
+
+ 
+
         } catch (error) {
+
+ 
+
             console.error("Error reverting gallery:", error);
+
+ 
+
             alert("Could not reopen the gallery: " + (error.message || "Try again."));
+
+ 
+
         } finally {
+
+ 
+
             revertToEditingBtn.disabled = false;
+
+ 
+
         }
+
+ 
+
     });
+
+ 
+
 }
+
+ 
+
+ 
+
+ 
 
 // 🎛️ FEATURE 5: STORAGE METRICS CALCULATOR
+
+ 
+
 // 🐞 FIX (wrong number shown): this used to list files in just the
+
+ 
+
 // CURRENTLY ACTIVE client's own Storage folder and show "X MB in this
+
+ 
+
 // project" — not useful for "how full is my 20GB plan?" since a
+
+ 
+
 // photographer manages many clients at once, each a different size.
+
+ 
+
 // users/{uid}.storageUsedBytes is already the real ACCOUNT-WIDE total,
+
+ 
+
 // kept accurate in real time by the onPhotoUploaded/onPhotoDeleted Storage
+
+ 
+
 // triggers (see index.js) — so this just reads that directly instead of
+
+ 
+
 // recomputing anything, and listens live so it self-updates within moments
+
+ 
+
 // of any upload/delete anywhere in the account (not just the active one).
+
+ 
+
 let studioStorageListenerAttached = false;
+
+ 
+
 function calculateCloudStorageMetrics() {
+
+ 
+
     if (!storageTextCounter || !currentUid) return;
-    if (studioStorageListenerAttached) return; // listener (below) handles every future update
+
+ 
+
+    if (studioStorageListenerAttached && unsubscribeStudioStorage) return;
+
+ 
+
+ 
+
+ 
+
+    if (unsubscribeStudioStorage) {
+
+ 
+
+        unsubscribeStudioStorage();
+
+ 
+
+        unsubscribeStudioStorage = null;
+
+ 
+
+    }
+
+ 
+
+ 
+
+ 
+
     studioStorageListenerAttached = true;
 
-    db.collection("users").doc(currentUid).onSnapshot(doc => {
+ 
+
+ 
+
+ 
+
+    unsubscribeStudioStorage = db.collection("users").doc(currentUid).onSnapshot(doc => {
+
+ 
+
         if (!doc.exists) return;
+
+ 
+
         const data = doc.data();
+
+ 
+
         const usedBytes = Number(data.storageUsedBytes) || 0;
-        const limitBytes = Number(data.storageLimitBytes) || (20 * 1024 * 1024 * 1024); // 20GB fallback
+
+ 
+
+        const limitBytes = Number(data.storageLimitBytes) || (20 * 1024 * 1024 * 1024);
+
+ 
+
         const usedGB = usedBytes / (1024 ** 3);
+
+ 
+
         const limitGB = limitBytes / (1024 ** 3);
+
+ 
+
         const percent = limitBytes > 0 ? Math.min(100, (usedBytes / limitBytes) * 100) : 0;
 
+ 
+
+ 
+
+ 
+
         storageTextCounter.innerText = `${usedGB.toFixed(2)} GB of ${limitGB.toFixed(0)} GB used`;
+
+ 
+
         const progress = document.getElementById("studioStorageProgressFill");
+
+ 
+
         if (progress) {
+
+ 
+
             progress.style.width = `${percent.toFixed(1)}%`;
+
+ 
+
             progress.style.background = percent >= 90 ? "var(--danger-red)" : "";
+
+ 
+
         }
+
+ 
+
     }, err => console.warn("Storage metrics listener error:", err));
+
+ 
+
 }
+
+ 
+
+ 
+
+ 
 
 // 🚪 SECURE LOGOUT PIPELINE
+
+ 
+
 document.addEventListener("click", (e) => {
+
+ 
+
     if (e.target.closest("#signOutMasterBtn")) {
+
+ 
+
         firebase.auth().signOut().then(() => {
+
+ 
+
             console.log("🔴 Firebase Auth Logged Out");
+
+ 
+
             localStorage.removeItem('isLoggedIn');
+
+ 
+
             localStorage.removeItem('clientWorkspace');
+
+ 
+
             localStorage.clear(); 
+
+ 
+
             window.location.replace("WD.html");
+
+ 
+
         }).catch((error) => {
+
+ 
+
             console.error("Logout Error:", error);
+
+ 
+
         });
+
+ 
+
     }
+
+ 
+
 });
 
+ 
+
+ 
+
+ 
+
 // 🆕 STEP A: NEW CLIENT MODAL
+
+ 
+
 const createClientBtn = document.getElementById("createClientBtn");
+
+ 
+
 // 🆕 Modal open/close (openNewClientModal, closeNewClientModal, closeEditModal)
+
+ 
+
 // and ALL their DOM selectors (newClientModal, closeModalBtn, cancelModalBtn,
+
+ 
+
 // clientNameInput, eventTypeInput, editClientModal, closeEditModalBtn,
+
+ 
+
 // cancelEditModalBtn) now live in DSBstyle.js as pure frontend UI — this
+
+ 
+
 // file only calls the close functions after a successful Firebase write,
+
+ 
+
 // and re-queries the two input fields locally below (rather than a
+
+ 
+
 // duplicate top-level const, which two plain <script> files sharing one
+
+ 
+
 // global scope would collide on).
 
+ 
+
+ 
+
+ 
+
 if (createClientBtn) {
+
+ 
+
     createClientBtn.addEventListener("click", async function() {
+
+ 
+
         const coupleName = document.getElementById("clientNameInput").value.trim();
+
+ 
+
         const eventType = document.getElementById("eventTypeInput").value;
 
+ 
+
+ 
+
+ 
+
         if (!coupleName) return alert("Please enter a client/couple name!");
+
+ 
+
         if (!currentUid) return alert("Session error — please log in again.");
+
+ 
+
         // 🌐 FIX: fail fast + clear message instead of a generic error
+
+ 
+
         // string after the Cloud Function call times out.
+
+ 
+
         if (!navigator.onLine) return alert("⚠️ You're offline. Connect to the internet and try again.");
 
+ 
+
+ 
+
+ 
+
         if (!(await canManageStudio())) return;
+
+ 
+
         createClientBtn.innerText = "Creating...";
+
+ 
+
         createClientBtn.disabled = true;
 
+ 
+
+ 
+
+ 
+
         try {
+
+ 
+
             const createProject = firebase.app().functions("asia-south1").httpsCallable("createClientProject");
+
+ 
+
             const result = await createProject({ coupleName, eventType });
+
+ 
+
             console.log("✅ New client project created:", result.data.projectId);
+
+ 
+
             closeNewClientModal();
+
+ 
+
             createClientBtn.innerText = "Create & Go to Upload";
+
+ 
+
             createClientBtn.disabled = false;
+
+ 
+
             setActiveProject(result.data.projectId, coupleName);
+
+ 
+
         } catch (err) {
+
+ 
+
             console.error("Error creating client project:", err);
+
+ 
+
             alert(err.code === "functions/resource-exhausted" ? `⚠️ ${err.message}` : "❌ Failed to create client: " + err.message);
+
+ 
+
             createClientBtn.innerText = "Create & Go to Upload";
+
+ 
+
             createClientBtn.disabled = false;
+
+ 
+
         }
+
+ 
+
     });
+
+ 
+
 }
+
+ 
+
+ 
+
+ 
 
 // 🚀 EDIT CLIENT MODAL LOGIC
+
+ 
+
 // closeEditModal() and its trigger-button bindings now live in DSBstyle.js
+
+ 
+
 // (pure UI, no Firebase) — saveClientEditBtn's handler below is the only
+
+ 
+
 // backend-tied piece, and it calls that same global closeEditModal().
+
+ 
+
 const saveClientEditBtn = document.getElementById("saveClientEditBtn");
 
+ 
+
+ 
+
+ 
+
 if (saveClientEditBtn) {
+
+ 
+
     saveClientEditBtn.addEventListener("click", async () => {
+
+ 
+
         const projectId = document.getElementById("editClientIdInput").value;
+
+ 
+
         const newName = document.getElementById("editClientNameInput").value.trim();
+
+ 
+
         const newEvent = document.getElementById("editEventTypeInput").value;
 
+ 
+
+ 
+
+ 
+
         if (!newName) {
+
+ 
+
             alert("Client name cannot be empty!");
+
+ 
+
             return;
+
+ 
+
         }
+
+ 
+
+ 
+
+ 
 
         saveClientEditBtn.innerText = "Saving...";
+
+ 
+
         saveClientEditBtn.disabled = true;
 
+ 
+
+ 
+
+ 
+
         try {
+
+ 
+
             await db.collection("users").doc(currentUid).collection("clientProjects").doc(projectId).update({
+
+ 
+
                 coupleName: newName,
+
+ 
+
                 eventType: newEvent
+
+ 
+
             });
+
+ 
+
+ 
+
+ 
 
             closeEditModal(); 
+
+ 
+
             saveClientEditBtn.innerText = "Save Changes";
+
+ 
+
             saveClientEditBtn.disabled = false;
+
+ 
+
             
+
+ 
+
             if (activeProjectId === projectId) {
+
+ 
+
                 setActiveProject(projectId, newName);
+
+ 
+
             }
+
+ 
+
+ 
+
+ 
 
             if (typeof window.renderClientTrackerTable === "function") {
+
+ 
+
                 window.renderClientTrackerTable(allClientDocs, activeProjectId);
+
+ 
+
             }
 
+ 
+
+ 
+
+ 
+
         } catch (error) {
+
+ 
+
             console.error("Edit Update Error:", error);
+
+ 
+
             alert("Failed to update project: " + error.message);
+
+ 
+
             saveClientEditBtn.innerText = "Save Changes";
+
+ 
+
             saveClientEditBtn.disabled = false;
+
+ 
+
         }
+
+ 
+
     });
+
+ 
+
 }
+
+ 
+
+ 
+
+ 
 
 // 🆕 STEP B: CLIENT TRACKER TABLE 
+
+ 
+
 const clientTrackerTableBodyEl = document.getElementById("clientTrackerTableBody");
 
+ 
+
+ 
+
+ 
+
 // 🔀 FRONTEND/BACKEND SPLIT: search input, load-more button, row
+
+ 
+
 // rendering, and "how many rows are visible" state are pure UI (zero
+
+ 
+
 // Firebase calls once the data is in hand) — that logic now lives in
+
+ 
+
 // DSBstyle.js as window.renderClientTrackerTable(docs, activeProjectId).
+
+ 
+
 // This file keeps ONLY the Firestore data (allClientDocs) and calls that
+
+ 
+
 // function whenever the data changes or activeProjectId changes.
+
+ 
+
 let allClientDocs = [];
 
+ 
+
+ 
+
+ 
+
 // renderClientRow() and renderTablePage() moved to DSBstyle.js
+
+ 
+
 // (window.renderClientTrackerTable) — pure UI, no Firebase.
 
+ 
+
+ 
+
+ 
+
 function listenClientTrackerTable() {
+
+ 
+
     if (!clientTrackerTableBodyEl || !currentUid) return;
 
-    db.collection("users").doc(currentUid).collection("clientProjects")
+ 
+
+ 
+
+ 
+
+    if (unsubscribeClientTrackerTable) {
+
+ 
+
+        unsubscribeClientTrackerTable();
+
+ 
+
+        unsubscribeClientTrackerTable = null;
+
+ 
+
+    }
+
+ 
+
+ 
+
+ 
+
+    unsubscribeClientTrackerTable = db.collection("users").doc(currentUid).collection("clientProjects")
+
+ 
+
         .orderBy("createdAt", "desc")
+
+ 
+
         .onSnapshot((snapshot) => {
+
+ 
+
             allClientDocs = [];
+
+ 
+
             let activeLinksCount = 0;
+
+ 
+
             let readyToDeliverCount = 0;
 
+ 
+
+ 
+
+ 
+
             snapshot.forEach((doc) => {
+
+ 
+
                 const data = doc.data();
+
+ 
+
                 allClientDocs.push({ id: doc.id, data });
 
-                const hasSelectedPhotos = data.selectedPhotoIds && data.selectedPhotoIds.length > 0;
+ 
+
+ 
+
+ 
+
+                const hasSelectedPhotos = Array.isArray(data.selectedPhotoIds) && data.selectedPhotoIds.length > 0;
+
+ 
+
                 if (data.workflowState === "selection_open" || data.workflowState === "selection_completed") {
+
+ 
+
                     activeLinksCount++;
+
+ 
+
                 }
+
+ 
+
                 if (hasSelectedPhotos && data.workflowState !== "published") {
+
+ 
+
                     readyToDeliverCount++;
+
+ 
+
                 }
+
+ 
+
             });
 
+ 
+
+ 
+
+ 
+
+            if (activeProjectId && !allClientDocs.some(item => item.id === activeProjectId)) {
+
+ 
+
+                clearActiveProject({ preserveView: true });
+
+ 
+
+            }
+
+ 
+
+ 
+
+ 
+
             updateDashboardMetrics(activeLinksCount, readyToDeliverCount);
-            window.renderClientTrackerTable(allClientDocs, activeProjectId);
+
+ 
+
+ 
+
+ 
+
+            if (typeof window.renderClientTrackerTable === "function") {
+
+ 
+
+                window.renderClientTrackerTable(allClientDocs, activeProjectId);
+
+ 
+
+            }
+
+ 
+
             populateOverviewClientQuickPicker();
+
+ 
+
         }, (err) => {
+
+ 
+
             console.error("Error loading client tracker:", err);
+
+ 
+
         });
+
+ 
+
 }
+
+ 
+
+ 
+
+ 
 
 function updateDashboardMetrics(activeLinks, readyToDeliver) {
+
+ 
+
     const activeLinksEl = document.getElementById("activeLinksCount");
+
+ 
+
     const readyToDeliverEl = document.getElementById("readyToDeliverCount");
 
+ 
+
+ 
+
+ 
+
     if (activeLinksEl) activeLinksEl.innerHTML = `${activeLinks} <span class="metric-label">Live</span>`;
+
+ 
+
     if (readyToDeliverEl) readyToDeliverEl.innerHTML = `${readyToDeliver} <span class="metric-label">Pending Galleries</span>`;
+
+ 
+
 }
+
+ 
+
+ 
+
+ 
 
 // search + load-more button listeners moved to DSBstyle.js
 
+ 
+
+ 
+
+ 
+
 // 🆕 STEP C: TABLE ROW ACTIONS
+
+ 
+
 if (clientTrackerTableBodyEl) {
+
+ 
+
     clientTrackerTableBodyEl.addEventListener("click", async (e) => {
+
+ 
+
         
+
+ 
+
         // 1. COPY LINK
+
+ 
+
         const copyBtn = e.target.closest(".copy-project-link-btn");
+
+ 
+
         if (copyBtn) {
+
+ 
+
             const projectId = copyBtn.getAttribute("data-project-id");
+
+ 
+
             const project = allClientDocs.find(item => item.id === projectId)?.data;
+
+ 
+
             if (!project?.shareId || project.workflowState === "draft") {
+
+ 
+
                 return alert("Select this client, then use Generate Client Link before sharing it.");
+
+ 
+
             }
-            const link = `${window.location.href.split('DSB.html')[0]}lookbook.html?gallery=${encodeURIComponent(project.shareId)}`;
-            navigator.clipboard.writeText(link).then(() => alert("📋 Link copied to clipboard!"));
-            return; 
-        }
 
-        // 2. EDIT PROJECT
-        const editBtn = e.target.closest(".edit-project-btn");
-        if (editBtn) {
-            document.getElementById("editClientIdInput").value = editBtn.getAttribute("data-project-id");
-            document.getElementById("editClientNameInput").value = editBtn.getAttribute("data-couple-name");
-            document.getElementById("editEventTypeInput").value = editBtn.getAttribute("data-event-type");
-            document.getElementById("editClientModal").classList.add("active");
-            return; 
-        }
+ 
 
-        // 3. DELETE PROJECT
-        const deleteBtn = e.target.closest(".delete-project-btn");
-        if (deleteBtn) {
-            const projectId = deleteBtn.getAttribute("data-project-id");
-            const coupleName = deleteBtn.getAttribute("data-couple-name");
+            const linkUrl = new URL("lookbook.html", window.location.href);
 
-            const confirmed = confirm(`⚠️ Are you sure you want to permanently delete "${coupleName}"?\n\nThis will delete ALL photos and cannot be undone.`);
-            if (!confirmed) return;
+ 
 
-            // 🌐 FIX: fail fast if offline.
-            if (!navigator.onLine) return alert("⚠️ You're offline. Connect to the internet and try again.");
+            linkUrl.searchParams.set("gallery", project.shareId);
 
-            deleteBtn.innerText = "Deleting...";
-            deleteBtn.disabled = true;
+ 
+
+ 
+
+ 
 
             try {
+
+ 
+
+                await navigator.clipboard.writeText(linkUrl.href);
+
+ 
+
+ 
+
+ 
+
+                const originalHtml = copyBtn.innerHTML;
+
+ 
+
+                copyBtn.innerHTML = '<i class="fas fa-check"></i>';
+
+ 
+
+                copyBtn.title = "Copied";
+
+ 
+
+                copyBtn.disabled = true;
+
+ 
+
+ 
+
+ 
+
+                setTimeout(() => {
+
+ 
+
+                    copyBtn.innerHTML = originalHtml;
+
+ 
+
+                    copyBtn.title = "Copy Client Link";
+
+ 
+
+                    copyBtn.disabled = false;
+
+ 
+
+                }, 1500);
+
+ 
+
+            } catch (err) {
+
+ 
+
+                console.error("Copy client link error:", err);
+
+ 
+
+                alert("Could not copy the link automatically. Please copy it manually.");
+
+ 
+
+            }
+
+ 
+
+            return; 
+
+ 
+
+        }
+
+ 
+
+ 
+
+ 
+
+        // 2. EDIT PROJECT
+
+ 
+
+        const editBtn = e.target.closest(".edit-project-btn");
+
+ 
+
+        if (editBtn) {
+
+ 
+
+            document.getElementById("editClientIdInput").value = editBtn.getAttribute("data-project-id");
+
+ 
+
+            document.getElementById("editClientNameInput").value = editBtn.getAttribute("data-couple-name");
+
+ 
+
+            document.getElementById("editEventTypeInput").value = editBtn.getAttribute("data-event-type");
+
+ 
+
+            document.getElementById("editClientModal").classList.add("active");
+
+ 
+
+            return; 
+
+ 
+
+        }
+
+ 
+
+ 
+
+ 
+
+        // 3. DELETE PROJECT
+
+ 
+
+        const deleteBtn = e.target.closest(".delete-project-btn");
+
+ 
+
+        if (deleteBtn) {
+
+ 
+
+            const projectId = deleteBtn.getAttribute("data-project-id");
+
+ 
+
+            const coupleName = deleteBtn.getAttribute("data-couple-name");
+
+ 
+
+ 
+
+ 
+
+            const confirmed = confirm(`⚠️ Are you sure you want to permanently delete "${coupleName}"?\n\nThis will delete ALL photos and cannot be undone.`);
+
+ 
+
+            if (!confirmed) return;
+
+ 
+
+ 
+
+ 
+
+            // 🌐 FIX: fail fast if offline.
+
+ 
+
+            if (!navigator.onLine) return alert("⚠️ You're offline. Connect to the internet and try again.");
+
+ 
+
+ 
+
+ 
+
+            deleteBtn.innerText = "Deleting...";
+
+ 
+
+            deleteBtn.disabled = true;
+
+ 
+
+ 
+
+ 
+
+            try {
+
+ 
+
                 // 🐞 FIX: this used to do the deletion piece-by-piece directly
+
+ 
+
                 // from the browser — original photos + clientProjects doc
+
+ 
+
                 // deleted fine, but the publicGalleries doc delete silently
+
+ 
+
                 // FAILED every time (firestore.rules blocks browser writes to
+
+ 
+
                 // it) and gallery-previews/ + gallerySecrets/ were never even
+
+ 
+
                 // attempted (also blocked by rules, on purpose). The
+
+ 
+
                 // photographer still saw "✅ deleted" regardless. Now the
+
+ 
+
                 // whole thing runs server-side in one Cloud Function so
+
+ 
+
                 // nothing is left behind — see index.js: deleteClientProject.
+
+ 
+
                 const deleteProject = firebase.app().functions("asia-south1").httpsCallable("deleteClientProject");
+
+ 
+
                 await deleteProject({ projectId });
 
+ 
+
+ 
+
+ 
+
                 if (activeProjectId === projectId) {
-                    activeProjectId = null;
-                    activeProjectName = null;
-                    if (activeClientIndicator) {
-                        activeClientIndicator.innerText = "No client selected — click a row in the table above";
-                        activeClientIndicator.style.color = "var(--text-muted)";
-                    }
+
+ 
+
+                    clearActiveProject({ preserveView: true });
+
+ 
+
                 }
 
+ 
+
+ 
+
+ 
+
+                if (typeof window.removeClientSelection === "function") {
+
+                    window.removeClientSelection(projectId);
+
+                } else if (typeof window.clearClientSelection === "function") {
+
+                    window.clearClientSelection();
+
+                }
+
+ 
+
                 alert(`✅ "${coupleName}" and all their photos have been deleted.`);
+
+ 
+
             } catch (err) {
+
+ 
+
                 console.error("Delete error:", err);
+
+ 
+
                 alert("❌ Failed to delete: " + err.message);
+
+ 
+
                 deleteBtn.innerText = "Delete";
+
+ 
+
                 deleteBtn.disabled = false;
+
+ 
+
             }
+
+ 
+
             return;
+
+ 
+
         }
+
+ 
+
+ 
+
+ 
 
         // 4. MANAGE (mobile expanded-row action, and desktop's direct entry point)
+
+ 
+
         const manageBtn = e.target.closest(".manage-project-btn");
+
+ 
+
         if (manageBtn) {
+
+ 
+
             const projectId = manageBtn.getAttribute("data-project-id");
+
+ 
+
             const coupleName = manageBtn.getAttribute("data-couple-name");
+
+ 
+
             setActiveProject(projectId, coupleName);
+
+ 
+
             document.querySelectorAll("#clientTrackerTableBody tr").forEach(r => r.classList.remove("active-row"));
+
+ 
+
             manageBtn.closest("tr")?.classList.add("active-row");
+
+ 
+
             const overviewTab = document.querySelector('.nav-item[data-target="view-overview"]');
+
+ 
+
             if (overviewTab) overviewTab.click();
+
+ 
+
             return;
+
+ 
+
         }
 
-        // 5. ROW SELECTION (desktop) — selects the client + jumps to Overview.
-        // On mobile, tapping a row only expands/collapses it (pure UI —
-        // handled in DSBstyle.js); use the Manage button above for that.
+ 
+
+ 
+
+ 
+
+        // 5. ROW SELECTION (desktop) — select the active client but stay on
+
+ 
+
+        // Client Projects. Only the explicit Manage action opens Overview.
+
+ 
+
+        // Checkbox interactions belong to the UI selection layer in
+
+        // DSBstyle.js. Never let a checkbox click fall through to the
+
+        // desktop row-selection handler.
+
+        if (e.target.closest(".client-row-checkbox")) return;
+
+ 
+
         const row = e.target.closest("tr[data-project-id]");
+
+ 
+
         if (!row) return;
+
+ 
+
         if (window.innerWidth <= 768) return;
 
+ 
+
+ 
+
+ 
+
         const projectId = row.getAttribute("data-project-id");
+
+ 
+
         const coupleName = row.getAttribute("data-couple-name");
-        setActiveProject(projectId, coupleName);
 
-        document.querySelectorAll("#clientTrackerTableBody tr").forEach(r => r.classList.remove("active-row"));
-        row.classList.add("active-row");
+ 
 
-        const overviewTab = document.querySelector('.nav-item[data-target="view-overview"]');
-        if (overviewTab) {
-            overviewTab.click(); 
+ 
+
+ 
+
+        if (setActiveProject(projectId, coupleName)) {
+
+ 
+
+            document.querySelectorAll("#clientTrackerTableBody tr").forEach(r => r.classList.remove("active-row"));
+
+ 
+
+            row.classList.add("active-row");
+
+ 
+
         }
+
+ 
+
     });
+
+ 
+
 }
 
+ 
+
+ 
+
+ 
+
 // 🆕 STEP D: BULK ACTIONS (backend — calls the same Cloud Function as the
+
+ 
+
 // single-row delete above, once per selected client). Selection state lives
+
+ 
+
 // in DSBstyle.js (window.getSelectedClientIds / window.clearClientSelection)
+
+ 
+
 // — this file never touches the checkboxes directly, only reads the result.
+
+ 
+
 const bulkDeleteBtnEl = document.getElementById("bulkDeleteBtn");
+
+ 
+
 if (bulkDeleteBtnEl) {
+
+ 
+
     bulkDeleteBtnEl.addEventListener("click", async () => {
+
+ 
+
         const selectedIds = typeof window.getSelectedClientIds === "function" ? window.getSelectedClientIds() : [];
+
+ 
+
         if (selectedIds.length === 0) return;
 
+ 
+
+ 
+
+ 
+
         const confirmed = confirm(`⚠️ Permanently delete ${selectedIds.length} client${selectedIds.length > 1 ? "s" : ""} and ALL their photos?\n\nThis cannot be undone.`);
+
+ 
+
         if (!confirmed) return;
+
+ 
+
+ 
+
+ 
 
         if (!navigator.onLine) return alert("⚠️ You're offline. Connect to the internet and try again.");
 
+ 
+
+ 
+
+ 
+
         const originalLabel = bulkDeleteBtnEl.innerHTML;
+
+ 
+
         bulkDeleteBtnEl.disabled = true;
 
+ 
+
+ 
+
+ 
+
         const deleteProject = firebase.app().functions("asia-south1").httpsCallable("deleteClientProject");
+
+ 
+
         let succeeded = 0;
+
+ 
+
         const failedNames = [];
 
+ 
+
+ 
+
+ 
+
         // Sequential on purpose (not Promise.all) — keeps "Deleting 3 of 10..."
+
+ 
+
         // meaningful and avoids hammering the Cloud Function with a burst of
+
+ 
+
         // simultaneous storage-heavy deletes if the photographer selects many.
+
+ 
+
+        // Sequential on purpose (not Promise.all) — keeps "Deleting 3 of 10..."
+
+        // meaningful and avoids hammering the Cloud Function with a burst of
+
+        // simultaneous storage-heavy deletes if the photographer selects many.
+
+        //
+
+        // Remove only successfully deleted IDs from the UI selection. Failed
+
+        // items remain selected so the photographer can see what still needs
+
+        // attention. We also do not blindly clear the whole Set at the end,
+
+        // because the photographer may select another client while deletion is
+
+        // running.
+
         for (let i = 0; i < selectedIds.length; i++) {
+
+ 
+
             const projectId = selectedIds[i];
+
+ 
+
             bulkDeleteBtnEl.innerText = `Deleting ${i + 1} of ${selectedIds.length}...`;
+
+ 
+
             try {
+
+ 
+
                 await deleteProject({ projectId });
+
+ 
+
                 succeeded++;
-                if (activeProjectId === projectId) {
-                    activeProjectId = null;
-                    activeProjectName = null;
-                    if (activeClientIndicator) {
-                        activeClientIndicator.innerText = "No client selected — click a row in the table above";
-                        activeClientIndicator.style.color = "var(--text-muted)";
-                    }
+
+ 
+
+                if (typeof window.removeClientSelection === "function") {
+
+                    window.removeClientSelection(projectId);
+
                 }
+
+ 
+
+                if (activeProjectId === projectId) {
+
+ 
+
+                    clearActiveProject({ preserveView: true });
+
+ 
+
+                }
+
+ 
+
             } catch (err) {
+
+ 
+
                 console.error("Bulk delete error for", projectId, err);
+
+ 
+
                 const item = allClientDocs.find(d => d.id === projectId);
+
+ 
+
                 failedNames.push(item?.data?.coupleName || projectId);
+
+ 
+
             }
+
+ 
+
         }
+
+ 
+
+ 
+
+ 
 
         bulkDeleteBtnEl.disabled = false;
+
+ 
+
         bulkDeleteBtnEl.innerHTML = originalLabel;
-        if (typeof window.clearClientSelection === "function") window.clearClientSelection();
+
+ 
 
         if (failedNames.length === 0) {
+
+ 
+
             alert(`✅ ${succeeded} client${succeeded > 1 ? "s" : ""} deleted.`);
+
+ 
+
         } else {
+
+ 
+
             alert(`✅ ${succeeded} deleted.\n❌ Failed: ${failedNames.join(", ")}`);
+
+ 
+
         }
+
+ 
+
     });
+
+ 
+
 }
 
+ 
+
+ 
+
+ 
+
 // PAGE LOAD
+
+ 
+
 // PAGE LOAD
+
+ 
+
 firebase.auth().onAuthStateChanged((user) => {
+
+ 
+
     if (!user) {
+
+ 
+
+        currentUser = null;
+
+ 
+
+        currentUid = null;
+
+ 
+
+        allClientDocs = [];
+
+ 
+
+ 
+
+ 
+
+        if (unsubscribeClientTrackerTable) {
+
+ 
+
+            unsubscribeClientTrackerTable();
+
+ 
+
+            unsubscribeClientTrackerTable = null;
+
+ 
+
+        }
+
+ 
+
+        if (unsubscribeStudioStorage) {
+
+ 
+
+            unsubscribeStudioStorage();
+
+ 
+
+            unsubscribeStudioStorage = null;
+
+ 
+
+        }
+
+ 
+
+        studioStorageListenerAttached = false;
+
+ 
+
+ 
+
+ 
+
+        clearActiveProject({ preserveView: true });
+
+ 
+
         console.warn("No authenticated user.");
+
+ 
+
         window.location.replace("login.html");
+
+ 
+
         return;
+
+ 
+
     }
 
+ 
+
+ 
+
+ 
+
     currentUser = user;
+
+ 
+
     currentUid = user.uid;
+
+ 
+
+ 
+
+ 
 
     console.log("✅ Dashboard user:", currentUid);
 
-    // Load client projects
+ 
+
+ 
+
+ 
+
     listenClientTrackerTable();
 
-    // Load storage metrics
+ 
+
     calculateCloudStorageMetrics();
+
+ 
+
 });
