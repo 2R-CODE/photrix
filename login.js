@@ -208,12 +208,28 @@ function saveUserProfile(uid, email, role, businessName, websiteUrl, submitBtn) 
 // ==========================================================================
 function loadUserProfileAndRedirect(user) {
     db.collection("users").doc(user.uid).get().then((doc) => {
-        const data = doc.exists ? doc.data() : {};
+        if (!doc.exists) {
+            // No profile yet — treat like a fresh signup instead of guessing defaults.
+            loginSection.style.display = 'none';
+            setupSection.style.display = 'block';
+            if (manualCredentialsGroup) manualCredentialsGroup.style.display = 'none';
+            document.getElementById('signupEmail').required = false;
+            document.getElementById('signupPassword').required = false;
+            localStorage.setItem('tempUid', user.uid);
+            localStorage.setItem('tempEmail', user.email);
+            return;
+        }
+        const data = doc.data();
         localStorage.setItem('isLoggedIn', 'true');
-        localStorage.setItem('clientWorkspace', user.uid);       // 👈 ab UID hi workspace ID hai
+        localStorage.setItem('clientWorkspace', user.uid);
         localStorage.setItem('userRole', data.role || 'photographer');
         localStorage.setItem('loggedInClientName', data.businessName || 'Studio Space');
         window.location.href = 'DSB.html';
+    }).catch((error) => {
+        console.error("Profile load error:", error);
+        alert("⚙️ Could not load your profile: " + error.message);
+        const submitBtn = document.querySelector('.submit-btn');
+        resetBtn(submitBtn, "Log In");
     });
 }
 

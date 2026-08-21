@@ -432,12 +432,12 @@ if (undoBtn) {
     undoBtn.disabled = true;
     undoBtn.textContent = "Undoing...";
     try {
-      const undoSubmission = functionsRegion.httpsCallable("undoSelectionSubmission");
+            const undoSubmission = functionsRegion.httpsCallable("undoSelectionSubmission");
       await undoSubmission({ shareId: galleryId, pin: verifiedPin });
       hideUndoBar();
-      // onSnapshot will flip workflowState back to selection_open and
-      // re-render the grid automatically (selection will reset — client
-      // reselects, which is expected after an explicit undo).
+      galleryData.workflowState = "selection_open";
+      galleryData.selectedPhotoIds = [];
+      await renderPreviews(pendingPreviewFiles);
     } catch (error) {
       console.error("Undo error:", error);
       alert("Could not undo: " + (error.message || "The undo window may have expired."));

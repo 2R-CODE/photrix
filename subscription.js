@@ -24,7 +24,12 @@ function updateSubscriptionUI() {
         const planNameEl = document.getElementById("currentPlanName");
         const statusTextEl = document.getElementById("subscriptionStatusText");
 
-        if (data.subscriptionStatus === "active") {
+                const expiresAtMs = data.subscriptionExpiresAt && typeof data.subscriptionExpiresAt.toMillis === "function"
+            ? data.subscriptionExpiresAt.toMillis() : null;
+        const subscriptionStillActive = data.subscriptionStatus === "active"
+            && (expiresAtMs === null || expiresAtMs > Date.now());
+
+        if (subscriptionStillActive) {
             if (planNameEl) planNameEl.innerText = data.planName || "Active Plan";
             if (statusTextEl) {
                 statusTextEl.innerHTML = "<i class='fas fa-check-circle' style='margin-right:6px;'></i>Your subscription is active and running smoothly.";

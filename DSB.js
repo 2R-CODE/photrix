@@ -470,7 +470,7 @@ function getTrialDaysLeft(data) {
 
  
 
-    if (!startMillis) return TRIAL_DAYS;
+   if (!startMillis) return 0;
 
  
 

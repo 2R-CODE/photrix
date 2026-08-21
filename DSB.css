@@ -764,6 +764,7 @@ h1, h2, h3, h4 { line-height: 1.25; }
 }
 .generated-link-row .form-control {
     flex: 1;
+    min-width: 0;
     background: var(--bg-app);
     color: var(--text-muted);
     border-color: var(--border-soft);
@@ -1029,6 +1030,14 @@ h1, h2, h3, h4 { line-height: 1.25; }
 .client-table tbody tr { transition: background var(--transition); cursor: pointer; }
 .client-table tbody tr:hover { background: var(--bg-card-hover); }
 .client-table tbody tr.selected-row { background: var(--accent-soft); }
+/* Active client is controlled by DSB.js. Keep it visually distinct from bulk-selection state. */
+.client-table tbody tr.active-row {
+    background: var(--accent-soft);
+    box-shadow: inset 3px 0 0 var(--primary-blue);
+}
+.client-table tbody tr.active-row:hover { background: var(--accent-soft); }
+.client-table td.td-checkbox,
+.client-table td.td-action { cursor: default; }
 .row-expand-chevron { display: none; }
 
 .client-info strong { display: block; font-size: 0.9rem; color: var(--text-main); margin-bottom: 2px; }
@@ -1482,7 +1491,7 @@ select.form-control { cursor: pointer; }
 #goToThemesShortcutBtn { color: var(--primary-blue); border-color: var(--primary-blue); }
 
 /* Regenerate link — only shown once a link already exists */
-#regenerateLinkBtn { display: none; }
+#regeneratePinBtn { display: none; }
 
 /* Client gallery PIN — only shown once a link has been generated */
 #clientGalleryPinDisplay {
@@ -1527,7 +1536,7 @@ select.form-control { cursor: pointer; }
     width: 16px;
     height: 16px;
     cursor: pointer;
-    accent-color: var(--primary-blue, #3b82f6);
+    accent-color: var(--primary-blue);
 }
 .bulk-actions-bar {
     display: flex;
@@ -1543,5 +1552,33 @@ select.form-control { cursor: pointer; }
 .bulk-selected-count {
     font-size: 0.85rem;
     font-weight: 600;
-    color: var(--text-color);
+    color: var(--text-main);
+}
+/* Keyboard focus — uses the existing brand palette without introducing new colors. */
+.btn-primary:focus-visible,
+#browseFilesBtn:focus-visible,
+#startCloudUploadBtn:focus-visible,
+.btn-primary-small:focus-visible,
+.action-btn:focus-visible,
+.btn-text:focus-visible,
+.form-control:focus-visible,
+.nav-item:focus-visible,
+.sidebar-toggle-btn:focus-visible,
+.close-modal-btn:focus-visible,
+.lightbox-close-btn:focus-visible,
+.theme-preview-nav:focus-visible {
+    outline: 2px solid var(--primary-blue);
+    outline-offset: 2px;
+}
+
+/* Mobile bulk-action layout: preserve the same palette while keeping touch targets full-width. */
+@media (max-width: 768px) {
+    .bulk-actions-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .bulk-actions-bar .action-btn {
+        width: 100%;
+        justify-content: center;
+    }
 }

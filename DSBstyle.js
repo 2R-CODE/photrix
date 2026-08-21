@@ -595,6 +595,9 @@ navItems.forEach((item) => {
  
 
         document.getElementById(targetId)?.classList.add("active-view");
+                if (targetId === "view-subscription" && typeof updateSubscriptionUI === "function") {
+            updateSubscriptionUI();
+        }
 
  
 

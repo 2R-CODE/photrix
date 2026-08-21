@@ -59,17 +59,11 @@ document.addEventListener("DOMContentLoaded", () => {
             localStorage.setItem('clientWorkspace', user.uid);
             
             updateNavbarUI(true);
-        } else {
-            console.log("ℹ️ Firebase Auth reported: No Active Core Google Session");
-            
-            // Catch Block: Agar manual session login available hai, toh use ignore nahi karenge
-            if (localStorage.getItem('isLoggedIn') === 'true' && localStorage.getItem('clientWorkspace')) {
-                console.log("✅ Keeping current manual/client custom workspace active.");
-                updateNavbarUI(true);
-            } else {
-                // Real Logout detected: Wiping UI completely to safety
-                updateNavbarUI(false);
-            }
+                } else {
+            console.log("ℹ️ Firebase Auth reported: No active session — showing guest state.");
+            localStorage.removeItem('isLoggedIn');
+            localStorage.removeItem('clientWorkspace');
+            updateNavbarUI(false);
         }
     });
 });
