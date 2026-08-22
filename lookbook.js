@@ -438,6 +438,8 @@ if (undoBtn) {
       galleryData.workflowState = "selection_open";
       galleryData.selectedPhotoIds = [];
       await renderPreviews(pendingPreviewFiles);
+            submit.disabled = false;
+      submit.innerHTML = '<svg class="btn-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg><span class="btn-label">Submit Selection</span>';
     } catch (error) {
       console.error("Undo error:", error);
       alert("Could not undo: " + (error.message || "The undo window may have expired."));

@@ -759,6 +759,66 @@ exports.deleteClientProject = onCall({ region: REGION, enforceAppCheck: false },
   return { ok: true };
 });
 
+// ⚠️ ACCOUNT DELETION — deleteClientProject jaisa hi cleanup, lekin har
+// client project ke liye loop me, phir account aur Auth user khud bhi
+// delete karta hai. Admin SDK use karta hai isliye gallerySecrets/
+// publicGalleries (jo client-write se blocked hain) bhi clean ho jate hain.
+exports.deleteMyAccount = onCall({ region: REGION, enforceAppCheck: false }, async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Please sign in.");
+  const uid = request.auth.uid;
+  const bucket = admin.storage().bucket();
+
+  const projectsSnap = await db.collection(`users/${uid}/clientProjects`).get();
+  for (const projectDoc of projectsSnap.docs) {
+    const projectId = projectDoc.id;
+    const data = projectDoc.data();
+    const shareId = data.shareId || null;
+
+    try {
+      const [files] = await bucket.getFiles({ prefix: `client-albums/${uid}/${projectId}/` });
+      await Promise.all(files.map(file => file.delete().catch(err =>
+        logger.warn("Could not delete an original photo", { projectId, file: file.name, error: err.message })
+      )));
+    } catch (err) {
+      logger.warn("Could not list original photos for deletion", { projectId, error: err.message });
+    }
+
+    if (shareId) {
+      try {
+        const [previewFiles] = await bucket.getFiles({ prefix: `gallery-previews/${shareId}/` });
+        await Promise.all(previewFiles.map(file => file.delete().catch(err =>
+          logger.warn("Could not delete a preview photo", { shareId, file: file.name, error: err.message })
+        )));
+      } catch (err) {
+        logger.warn("Could not list preview photos for deletion", { shareId, error: err.message });
+      }
+
+      await db.doc(`gallerySecrets/${shareId}`).delete().catch(err =>
+        logger.warn("Could not delete gallerySecrets", { shareId, error: err.message })
+      );
+      await db.doc(`publicGalleries/${shareId}`).delete().catch(err =>
+        logger.warn("Could not delete publicGalleries", { shareId, error: err.message })
+      );
+    }
+
+    await projectDoc.ref.delete();
+  }
+
+  const reservationsSnap = await db.collection(`users/${uid}/uploadReservations`).get();
+  await Promise.all(reservationsSnap.docs.map(doc => doc.ref.delete().catch(err =>
+    logger.warn("Could not delete an upload reservation", { uid, doc: doc.id, error: err.message })
+  )));
+
+  await db.doc(`users/${uid}`).delete();
+
+  await admin.auth().deleteUser(uid).catch(err =>
+    logger.warn("Could not delete Auth user", { uid, error: err.message })
+  );
+
+  return { ok: true };
+});
+
+
 // 🆕 QUOTA ENFORCEMENT — storage counter
 // These two run automatically on every file added/removed anywhere in the
 // bucket, filtered down to client-albums/{uid}/... (a photographer's own HD

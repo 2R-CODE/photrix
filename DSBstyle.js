@@ -790,18 +790,167 @@ document.addEventListener("DOMContentLoaded", () => {
  
 
     if (openSettingsBtn) {
+                const settingsModal = document.getElementById("settingsModal");
+        const closeSettingsModalBtn = document.getElementById("closeSettingsModalBtn");
+        const cancelSettingsModalBtn = document.getElementById("cancelSettingsModalBtn");
+        const savePasswordBtn = document.getElementById("savePasswordBtn");
+        const changePasswordSection = document.getElementById("changePasswordSection");
+                const profileInfoSection = document.getElementById("profileInfoSection");
+        const settingsBusinessNameInput = document.getElementById("settingsBusinessNameInput");
+        const settingsWebsiteInput = document.getElementById("settingsWebsiteInput");
+        const saveProfileBtn = document.getElementById("saveProfileBtn");
+        const googleOnlyNotice = document.getElementById("googleOnlyNotice");
+        const currentPasswordInput = document.getElementById("currentPasswordInput");
+        const newPasswordInput = document.getElementById("newPasswordInput");
+        const confirmNewPasswordInput = document.getElementById("confirmNewPasswordInput");
+
+        function closeSettingsModal() {
+            if (settingsModal) settingsModal.classList.remove("active");
+            if (currentPasswordInput) currentPasswordInput.value = "";
+            if (newPasswordInput) newPasswordInput.value = "";
+            if (confirmNewPasswordInput) confirmNewPasswordInput.value = "";
+        }
+        if (closeSettingsModalBtn) closeSettingsModalBtn.addEventListener("click", closeSettingsModal);
+        if (cancelSettingsModalBtn) cancelSettingsModalBtn.addEventListener("click", closeSettingsModal);
+
+        if (savePasswordBtn) {
+            savePasswordBtn.addEventListener("click", async () => {
+                const currentPassword = currentPasswordInput?.value || "";
+                const newPassword = newPasswordInput?.value || "";
+                const confirmNewPassword = confirmNewPasswordInput?.value || "";
+
+                if (!currentPassword || !newPassword || !confirmNewPassword) {
+                    return alert("Please fill in all password fields.");
+                }
+                if (newPassword.length < 6) {
+                    return alert("New password must be at least 6 characters.");
+                }
+                if (newPassword !== confirmNewPassword) {
+                    return alert("New password and confirmation do not match.");
+                }
+
+                const user = firebase.auth().currentUser;
+                if (!user) return alert("You're not signed in.");
+
+                savePasswordBtn.disabled = true;
+                savePasswordBtn.innerText = "Updating...";
+
+                try {
+                    const credential = firebase.auth.EmailAuthProvider.credential(user.email, currentPassword);
+                    await user.reauthenticateWithCredential(credential);
+                    await user.updatePassword(newPassword);
+                    alert("✅ Password updated successfully.");
+                    closeSettingsModal();
+                } catch (error) {
+                    console.error("Change password error:", error);
+                    if (error.code === "auth/wrong-password" || error.code === "auth/invalid-credential") {
+                        alert("❌ Current password is incorrect.");
+                    } else if (error.code === "auth/weak-password") {
+                        alert("❌ New password is too weak.");
+                    } else if (error.code === "auth/requires-recent-login") {
+                        alert("⚙️ For security, please log out and log back in, then try again.");
+                    } else {
+                        alert("⚙️ " + error.message);
+                    }
+                } finally {
+                    savePasswordBtn.disabled = false;
+                    savePasswordBtn.innerText = "Update Password";
+                }
+            });
+        }
+        if (saveProfileBtn) {
+            saveProfileBtn.addEventListener("click", async () => {
+                const businessName = settingsBusinessNameInput?.value.trim() || "";
+                const websiteUrl = settingsWebsiteInput?.value.trim() || "";
+
+                if (!businessName) {
+                    return alert("Business / Studio name can't be empty.");
+                }
+
+                saveProfileBtn.disabled = true;
+                saveProfileBtn.innerText = "Saving...";
+
+                try {
+                    const user = firebase.auth().currentUser;
+                    await db.collection("users").doc(user.uid).update({
+                        businessName: businessName,
+                        websiteUrl: websiteUrl
+                    });
+                    localStorage.setItem("loggedInClientName", businessName);
+                    alert("✅ Profile updated.");
+                } catch (error) {
+                    console.error("Profile update error:", error);
+                    alert("⚙️ " + error.message);
+                } finally {
+                    saveProfileBtn.disabled = false;
+                    saveProfileBtn.innerText = "Save Profile";
+                }
+            });
+        }
 
  
 
+                   
+                 const deleteAccountModal = document.getElementById("deleteAccountModal");
+        const openDeleteAccountModalBtn = document.getElementById("openDeleteAccountModalBtn");
+        const closeDeleteAccountModalBtn = document.getElementById("closeDeleteAccountModalBtn");
+        const cancelDeleteAccountModalBtn = document.getElementById("cancelDeleteAccountModalBtn");
+        const confirmDeleteAccountBtn = document.getElementById("confirmDeleteAccountBtn");
+        const deleteConfirmInput = document.getElementById("deleteConfirmInput");
+
+        function closeDeleteAccountModal() {
+            if (deleteAccountModal) deleteAccountModal.classList.remove("active");
+            if (deleteConfirmInput) deleteConfirmInput.value = "";
+        }
+
+        if (openDeleteAccountModalBtn) {
+            openDeleteAccountModalBtn.addEventListener("click", () => {
+                if (settingsModal) settingsModal.classList.remove("active");
+                if (deleteAccountModal) deleteAccountModal.classList.add("active");
+            });
+        }
+        if (closeDeleteAccountModalBtn) closeDeleteAccountModalBtn.addEventListener("click", closeDeleteAccountModal);
+        if (cancelDeleteAccountModalBtn) cancelDeleteAccountModalBtn.addEventListener("click", closeDeleteAccountModal);
+
+        if (confirmDeleteAccountBtn) {
+            confirmDeleteAccountBtn.addEventListener("click", async () => {
+                if ((deleteConfirmInput?.value || "").trim() !== "DELETE") {
+                    return alert("Please type DELETE (in capitals) to confirm.");
+                }
+                confirmDeleteAccountBtn.disabled = true;
+                confirmDeleteAccountBtn.innerText = "Deleting...";
+                try {
+                    const deleteMyAccount = firebase.app().functions("asia-south1").httpsCallable("deleteMyAccount");
+                    await deleteMyAccount();
+                    alert("Your account and all its data have been deleted.");
+                    localStorage.clear();
+                    await firebase.auth().signOut();
+                    window.location.href = "WD.html";
+                } catch (error) {
+                    console.error("Delete account error:", error);
+                    alert("⚙️ " + error.message);
+                    confirmDeleteAccountBtn.disabled = false;
+                    confirmDeleteAccountBtn.innerText = "Delete My Account";
+                }
+            });
+        }               
+        
+        
         openSettingsBtn.addEventListener("click", () => {
-
- 
-
-            alert("⚙️ Settings — coming soon.");
-
- 
-
-        });
+            const user = firebase.auth().currentUser;
+            const isPasswordUser = !!(user && user.providerData.some(p => p.providerId === "password"));
+            if (changePasswordSection) changePasswordSection.style.display = isPasswordUser ? "block" : "none";
+                        if (googleOnlyNotice) googleOnlyNotice.style.display = isPasswordUser ? "none" : "block";
+            if (savePasswordBtn) savePasswordBtn.style.display = isPasswordUser ? "inline-block" : "none";
+                        if (settingsModal) settingsModal.classList.add("active");
+                                        const user2 = firebase.auth().currentUser;
+                db.collection("users").doc(user2.uid).get().then((doc) => {
+                    if (!doc.exists) return;
+                    const data = doc.data();
+                    if (settingsBusinessNameInput) settingsBusinessNameInput.value = data.businessName || "";
+                    if (settingsWebsiteInput) settingsWebsiteInput.value = data.websiteUrl || "";
+                }).catch((err) => console.error("Could not load profile:", err));
+            });
 
  
 

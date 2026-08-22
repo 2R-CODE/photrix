@@ -452,6 +452,79 @@
     </div>
 </div>  
 
+<!-- ================= SETTINGS MODAL ================= -->
+<div class="modal-overlay" id="settingsModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Account Settings</h3>
+            <button class="close-modal-btn" id="closeSettingsModalBtn"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <div id="profileInfoSection">
+    <div class="form-group">
+        <label>Business / Studio Name</label>
+        <input type="text" id="settingsBusinessNameInput" class="form-control">
+    </div>
+    <div class="form-group">
+        <label>Website</label>
+        <input type="text" id="settingsWebsiteInput" class="form-control" placeholder="https://...">
+    </div>
+    <button class="btn-primary-small" id="saveProfileBtn" style="margin-bottom:20px;">Save Profile</button>
+</div>
+<hr style="border-color:#2a2a2a; margin: 20px 0;">
+            
+            <div id="changePasswordSection">
+                <div class="form-group">
+                    <label>Current Password</label>
+                    <input type="password" id="currentPasswordInput" class="form-control" autocomplete="current-password">
+                </div>
+                <div class="form-group">
+                    <label>New Password</label>
+                    <input type="password" id="newPasswordInput" class="form-control" minlength="6" autocomplete="new-password">
+                </div>
+                <div class="form-group">
+                    <label>Confirm New Password</label>
+                    <input type="password" id="confirmNewPasswordInput" class="form-control" minlength="6" autocomplete="new-password">
+                </div>
+            </div>
+            <p id="googleOnlyNotice" style="display:none; color:#94a3b8; font-size:0.85rem;">
+                You signed in with Google, so there's no password to change here.
+            </p>
+                        <hr style="border-color:#2a2a2a; margin: 20px 0;">
+            <div>
+                <label style="color:#f87171; display:block; margin-bottom:8px;">DANGER ZONE</label>
+                <button class="btn-text" id="openDeleteAccountModalBtn" style="color:#f87171;">Delete My Account</button>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-text" id="cancelSettingsModalBtn">Cancel</button>
+            <button class="btn-primary-small" id="savePasswordBtn">Update Password</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="deleteAccountModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Delete Account</h3>
+            <button class="close-modal-btn" id="closeDeleteAccountModalBtn"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <p style="color:#f87171; margin-bottom:16px;">
+                This permanently deletes your account, every client gallery, all uploaded photos, and cannot be undone.
+            </p>
+            <div class="form-group">
+                <label>Type DELETE to confirm</label>
+                <input type="text" id="deleteConfirmInput" class="form-control" autocomplete="off">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-text" id="cancelDeleteAccountModalBtn">Cancel</button>
+            <button class="btn-primary-small" id="confirmDeleteAccountBtn" style="background:#dc2626;">Delete My Account</button>
+        </div>
+    </div>
+</div>
+
 <!-- ================= LIGHTBOX OVERLAY ================= -->
     <div class="lightbox-overlay" id="photoLightbox">
         <button class="lightbox-close-btn" id="closeLightboxBtn"><i class="fas fa-times"></i></button>
