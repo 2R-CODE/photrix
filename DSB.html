@@ -208,7 +208,7 @@
              for 15 min, repeatedly. This lets the photographer instantly
              issue a fresh PIN. Hidden by default — DSB.js shows it only
              when a live client link exists. -->
-        <button class="action-btn text-btn" id="regeneratePinBtn" style="display:none;" title="Generate a new PIN — the old PIN stops working immediately">
+        <button class="action-btn text-btn" id="regeneratePinBtn" title="Generate a new PIN — the old PIN stops working immediately">
             <i class="fas fa-sync"></i> Regenerate PIN
         </button>
     </div>
@@ -259,9 +259,9 @@
                             <button class="btn-primary-small"><i class="fas fa-plus"></i> New Client</button>
                         </div>
 
-                        <div id="bulkActionsBar" class="bulk-actions-bar" style="display:none;">
+                        <div id="bulkActionsBar" class="bulk-actions-bar">
                             <span id="bulkSelectedCount" class="bulk-selected-count">0 selected</span>
-                            <button id="bulkDeleteBtn" class="action-btn text-btn" type="button" style="color:var(--danger-red); border-color:rgba(248,113,113,0.35);">
+                            <button id="bulkDeleteBtn" class="action-btn text-btn" type="button">
                                 <i class="fas fa-trash"></i> Delete Selected
                             </button>
                         </div>
@@ -283,7 +283,7 @@
                         </div>
 
                         <div class="table-load-more-row">
-                            <button id="loadMoreClientsBtn" class="action-btn text-btn" type="button" style="display:none;">
+                            <button id="loadMoreClientsBtn" class="action-btn text-btn" type="button">
                                 Load 10 More Clients
                             </button>
                         </div>
@@ -469,9 +469,9 @@
         <label>Website</label>
         <input type="text" id="settingsWebsiteInput" class="form-control" placeholder="https://...">
     </div>
-    <button class="btn-primary-small" id="saveProfileBtn" style="margin-bottom:20px;">Save Profile</button>
+    <button class="btn-primary-small" id="saveProfileBtn">Save Profile</button>
 </div>
-<hr style="border-color:#2a2a2a; margin: 20px 0;">
+<hr class="settings-divider">
             
             <div id="changePasswordSection">
                 <div class="form-group">
@@ -487,13 +487,13 @@
                     <input type="password" id="confirmNewPasswordInput" class="form-control" minlength="6" autocomplete="new-password">
                 </div>
             </div>
-            <p id="googleOnlyNotice" style="display:none; color:#94a3b8; font-size:0.85rem;">
+            <p id="googleOnlyNotice">
                 You signed in with Google, so there's no password to change here.
             </p>
-                        <hr style="border-color:#2a2a2a; margin: 20px 0;">
+                        <hr class="settings-divider">
             <div>
-                <label style="color:#f87171; display:block; margin-bottom:8px;">DANGER ZONE</label>
-                <button class="btn-text" id="openDeleteAccountModalBtn" style="color:#f87171;">Delete My Account</button>
+                <label class="danger-zone-label">DANGER ZONE</label>
+                <button class="btn-text" id="openDeleteAccountModalBtn">Delete My Account</button>
             </div>
         </div>
         <div class="modal-footer">
@@ -510,9 +510,7 @@
             <button class="close-modal-btn" id="closeDeleteAccountModalBtn"><i class="fas fa-times"></i></button>
         </div>
         <div class="modal-body">
-            <p style="color:#f87171; margin-bottom:16px;">
-                This permanently deletes your account, every client gallery, all uploaded photos, and cannot be undone.
-            </p>
+            <p class="delete-warning-text">This permanently deletes your account, every client gallery, all uploaded photos, and cannot be undone.</p>
             <div class="form-group">
                 <label>Type DELETE to confirm</label>
                 <input type="text" id="deleteConfirmInput" class="form-control" autocomplete="off">
@@ -520,7 +518,7 @@
         </div>
         <div class="modal-footer">
             <button class="btn-text" id="cancelDeleteAccountModalBtn">Cancel</button>
-            <button class="btn-primary-small" id="confirmDeleteAccountBtn" style="background:#dc2626;">Delete My Account</button>
+            <button class="btn-primary-small" id="confirmDeleteAccountBtn">Delete My Account</button>
         </div>
     </div>
 </div>

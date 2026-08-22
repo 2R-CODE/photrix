@@ -1112,8 +1112,11 @@ select.form-control { cursor: pointer; }
     box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
     transform: translateY(16px);
     transition: transform 0.25s ease;
-    overflow: hidden;
+        overflow: hidden;
     margin: 20px;
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 40px);
 }
 .modal-overlay.active .modal-content { transform: translateY(0); }
 .modal-header {
@@ -1134,7 +1137,7 @@ select.form-control { cursor: pointer; }
     padding: 4px;
 }
 .close-modal-btn:hover { color: var(--text-main); }
-.modal-body { padding: var(--space-6); display: flex; flex-direction: column; gap: var(--space-4); }
+.modal-body { padding: var(--space-6); display: flex; flex-direction: column; gap: var(--space-4); overflow-y: auto; min-height: 0; }
 .form-group { display: flex; flex-direction: column; gap: var(--space-2); }
 .form-group label {
     font-size: var(--text-xs);
@@ -1570,6 +1573,37 @@ select.form-control { cursor: pointer; }
     outline: 2px solid var(--primary-blue);
     outline-offset: 2px;
 }
+
+/* Client tracker — bulk-delete button uses the danger palette */
+#bulkDeleteBtn { color: var(--danger-red); border-color: rgba(248, 113, 113, 0.35); }
+
+/* Client tracker — bulk actions bar starts hidden; this higher-specificity
+   ID rule beats .bulk-actions-bar's own display:flex until DSBstyle.js
+   sets count > 0 and overrides via style.display at runtime. */
+#bulkActionsBar { display: none; }
+
+/* Client tracker — load more button starts hidden until DSBstyle.js
+   decides there are more rows than currently visible */
+#loadMoreClientsBtn { display: none; }
+
+/* Settings modal — profile section save button spacing */
+#saveProfileBtn { margin-bottom: 20px; }
+
+/* Settings modal — section dividers, reused between Profile Info and
+   Change Password, and again in the Delete Account modal */
+.settings-divider { border-color: #2a2a2a; margin: 20px 0; }
+
+/* Settings modal — Google-only account notice, hidden by default;
+   DSBstyle.js reveals it for Google-signed-in users */
+#googleOnlyNotice { display: none; color: #94a3b8; font-size: 0.85rem; }
+
+/* Settings modal — Danger Zone label + Delete Account trigger link */
+#openDeleteAccountModalBtn { color: #f87171; }
+.danger-zone-label { color: #f87171; display: block; margin-bottom: 8px; }
+
+/* Delete Account modal — warning copy + destructive confirm button */
+#confirmDeleteAccountBtn { background: #dc2626; }
+.delete-warning-text { color: #f87171; margin-bottom: 16px; }
 
 /* Mobile bulk-action layout: preserve the same palette while keeping touch targets full-width. */
 @media (max-width: 768px) {
