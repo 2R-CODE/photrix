@@ -98,12 +98,7 @@ body.loaded {
     }
 }
 
-/* LOCK GLOBAL CONTAINER WIDTH */
-.section-wrapper, section {
-    max-width: 1400px !important;
-    margin: 0 auto !important;
-    width: 100% !important;
-}
+/* Global container width is defined in .section-wrapper below — no separate override needed */
 
 /* Full bleed sections jinka background black/dark rehna chahiye unke liye wrapper fallback */
 body {
@@ -326,6 +321,7 @@ body {
     .trust-bar {
         flex-direction: column;
         gap: var(--space-2);
+        align-items: flex-start; /* Left-align ke saath match karo */
     }
     .privacy-strip {
         font-size: 0.78rem;
@@ -368,7 +364,7 @@ select:focus-visible {
     display: flex !important;
     align-items: center !important;
     width: 100%;
-    margin-left: 60px;
+    margin-left: 0;
 }
 
 .nav-logo {
@@ -688,14 +684,10 @@ select:focus-visible {
         display: block !important; /* Block karne se mobile par touch-friendly stretch milega */
         width: 100% !important; /* Poori width cover karega dynamic margins ke sath */
         max-width: 320px; /* Ekdum edge-to-edge na chipke isliye safe max limit */
-        margin: 25px auto 0 auto !important; /* 👈 'auto' left/right lagane se button mobile par ekdam CENTER ho jayega */
+        margin: 25px 0 0 0 !important; /* Left-aligned text ke saath button bhi left side se start hoga */
         padding: 14px 0 !important; /* Standard balanced height */
         font-size: 0.95rem !important;
-    }
-
-    .trust-bar {
-        justify-content: center;
-        margin-top: var(--space-4);
+        text-align: center; /* Button ka text centre rahega */
     }
 
     .form-container {
@@ -1451,7 +1443,7 @@ header ~ div svg,
 }
 
 /* 📱 3. MOBILE VIEW ADAPTATION (CRITICAL FIXED) */
-@media (max-width: 991px) {
+@media (max-width: 992px) {
     .process-container {
         grid-template-columns: 1fr !important; /* Screen becomes vertical stack */
         gap: 30px !important;
@@ -1496,7 +1488,7 @@ header ~ div svg,
     text-align: center !important;
     width: 100% !important;
     box-sizing: border-box !important;
-    padding: 100px 24px !important; 
+    padding: var(--space-9) 40px !important; /* Consistent with other sections */
 }
 
 /* 2️⃣ AUTOMATIC SCALING FOR TYPOGRAPHY */
@@ -1877,7 +1869,7 @@ header ~ div svg,
     color: rgba(255, 255, 255, 0.8) !important; /* 🔄 CHANGED: Clean readable soft white links */
     text-decoration: none !important;
     font-size: 0.85rem !important;
-    transition: color 0.25 ease !important;
+    transition: color 0.25s ease !important;
     display: inline-block !important;
 }
 
@@ -1964,5 +1956,116 @@ header ~ div svg,
         margin-top: 30px !important;
         text-align: center !important; /* Centers copyright on mobile */
         border-top: 1px solid rgba(255, 255, 255, 0.1) !important; /* 🔄 CHANGED: Mobile glass separator */
+    }
+}
+
+/* ==========================================================================
+   📱 TABLET RESPONSIVE FIXES (769px – 992px)
+   Missing mid-size breakpoint jo pehle bilkul cover nahi tha — yeh sab
+   elements awkward dikhte the iPad/tablet par.
+   ========================================================================== */
+@media (min-width: 769px) and (max-width: 992px) {
+
+    /* Section wrapper side padding tighten on tablets */
+    .section-wrapper {
+        padding: var(--space-9) 32px;
+    }
+
+    /* Hero — reduce heavy desktop padding to a comfortable tablet value */
+    .hero-content {
+        padding-left: 40px; /* Down from 80px desktop → comfortable tablet */
+        max-width: 680px;
+    }
+
+    .hero-title {
+        font-size: 3.4rem;
+    }
+
+    /* 2-column grid on tablets — 3 columns too narrow, 1 column wastes space */
+    .grid-3 {
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--space-5);
+    }
+
+    /* Product showcase — tighten horizontal padding */
+    .product-showcase-section {
+        padding: var(--space-9) 32px;
+    }
+
+    /* Footer container — switch to single column on tablet, prevents cramping */
+    .footer-container {
+        grid-template-columns: 1fr !important;
+        gap: 40px !important;
+    }
+
+    .footer-links-grid {
+        gap: 40px !important;
+    }
+
+    /* Book section side padding on tablet */
+    #book.section-wrapper {
+        padding: var(--space-9) 32px !important;
+    }
+}
+
+/* ==========================================================================
+   📱 VERY SMALL PHONES (max-width: 400px)
+   360–400px phones — showcase tabs overflow without this
+   ========================================================================== */
+@media (max-width: 400px) {
+
+    /* Showcase tabs — 4 tabs get very cramped on 360px phones */
+    .showcase-tab-btn {
+        padding: 8px 12px !important;
+        font-size: 0.72rem !important;
+        letter-spacing: 0px;
+    }
+
+    /* Trust bar items bhi bahut tight ho jaate hain */
+    .trust-bar li {
+        font-size: 0.78rem;
+    }
+
+    /* Section title on very small phones */
+    .section-title {
+        font-size: 1.9rem;
+    }
+
+    /* Hero title on 360px phones */
+    .hero-title {
+        font-size: calc(1.6rem + 1vw) !important;
+    }
+}
+
+/* ==========================================================================
+   🔄 LANDSCAPE MOBILE — phones rotated horizontally
+   iPhone landscape: ~667px tall — 100vh hero becomes claustrophobic.
+   svh = small viewport height (excludes browser chrome correctly).
+   ========================================================================== */
+@media (max-height: 500px) and (orientation: landscape) {
+
+    .hero-container {
+        height: auto !important;
+        min-height: 100svh;
+        padding: 90px 20px 40px 20px !important;
+    }
+
+    .hero-title {
+        font-size: 2.2rem !important;
+        margin-bottom: 12px;
+    }
+
+    .hero-description {
+        font-size: 0.88rem;
+        margin-bottom: 20px;
+    }
+
+    .hero-action-btn {
+        padding: 11px 28px !important;
+        font-size: 0.85rem !important;
+    }
+
+    .navbar {
+        padding: 12px 24px !important;
     }
 }

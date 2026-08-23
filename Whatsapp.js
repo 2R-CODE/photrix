@@ -49,12 +49,17 @@ document.addEventListener("DOMContentLoaded", function () {
             const myWhatsAppNumber = "919265536548"; 
 
             
-            const textMessage = `*🔥 New Inquiry Received on PHOTRIX!* \n\n` +
-                                `Name: ${name}\n` +
-                                `WhatsApp: ${phone}\n` +
-                                `Role: ${role === "photographer" ? "Professional Studio/Photographer" : "Wedding Couple (Direct Lead)"}\n` +
-                                `Message: ${message}\n\n` +
-                                `_Sent automatically via website platform._`;
+            const roleLabels = {
+    solo: "Solo Wedding Photographer",
+    studio: "Wedding Studio / Team"
+};
+
+const textMessage = `*🔥 New Inquiry Received on PHOTRIX!* \n\n` +
+                    `Name: ${name}\n` +
+                    `WhatsApp: ${phone}\n` +
+                    `Role: ${roleLabels[role] || role}\n` +
+                    `Message: ${message}\n\n` +
+                    `_Sent automatically via website platform._`;
 
             // Message ko URL compatible banao
             const encodedMessage = encodeURIComponent(textMessage);
@@ -69,7 +74,7 @@ document.addEventListener("DOMContentLoaded", function () {
             orderForm.reset();
             if (dropdown) {
                 dropdown.querySelector('.dropdown-selected-val').textContent = "Professional Photographer / Studio";
-                document.getElementById('role').value = "photographer";
+                                document.getElementById('role').value = "solo";
                 dropdown.querySelectorAll('.luxury-option').forEach(opt => opt.classList.remove('active'));
                 dropdown.querySelectorAll('.luxury-option')[0].classList.add('active');
             }
