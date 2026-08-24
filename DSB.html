@@ -149,15 +149,18 @@
                                     <label for="watermarkCheck">Apply Studio Watermark</label>
                                 </div>
 
-                                <div class="category-select-wrapper">
-                                    <label for="photoCategorySelect">Photos belong to:</label>
-                                    <select id="photoCategorySelect" class="form-control">
-                                        <option value="Engagement">💍 Engagement</option>
-                                        <option value="Pre-Wedding">🌸 Pre-Wedding</option>
-                                        <option value="Wedding" selected>💒 Wedding Day</option>
-                                    </select>
+                                                                <div class="category-select-wrapper">
+                                    <label>Photos belong to:</label>
+                                    <div class="custom-luxury-dropdown" id="photoCategoryDropdown">
+                                        <div class="dropdown-selected-val">💒 Wedding Day</div>
+                                        <div class="dropdown-custom-options">
+                                            <div class="luxury-option" data-value="Engagement">💍 Engagement</div>
+                                            <div class="luxury-option" data-value="Pre-Wedding">🌸 Pre-Wedding</div>
+                                            <div class="luxury-option active" data-value="Wedding">💒 Wedding Day</div>
+                                        </div>
+                                        <input type="hidden" id="photoCategorySelect" value="Wedding">
+                                    </div>
                                 </div>
-                            </div>
                             
                             <button class="btn-primary" id="browseFilesBtn">Browse Files</button>
                             <button class="btn-green" id="startCloudUploadBtn">Start Cloud Upload</button>
@@ -406,14 +409,18 @@
                     <label>Client / Couple Name</label>
                     <input type="text" id="clientNameInput" placeholder="e.g., Rohan & Shruti" class="form-control">
                 </div>
-                <div class="form-group">
+                                <div class="form-group">
                     <label>Event Type</label>
-                    <select id="eventTypeInput" class="form-control">
-                        <option value="Wedding">Wedding</option>
-                        <option value="Pre-Wedding">Pre-Wedding</option>
-                        <option value="Engagement">Engagement</option>
-                        <option value="Birthday">Birthday / Portfolio</option>
-                    </select>
+                    <div class="custom-luxury-dropdown" id="eventTypeDropdown">
+                        <div class="dropdown-selected-val">Wedding</div>
+                        <div class="dropdown-custom-options">
+                            <div class="luxury-option active" data-value="Wedding">Wedding</div>
+                            <div class="luxury-option" data-value="Pre-Wedding">Pre-Wedding</div>
+                            <div class="luxury-option" data-value="Engagement">Engagement</div>
+                            <div class="luxury-option" data-value="Birthday">Birthday / Portfolio</div>
+                        </div>
+                        <input type="hidden" id="eventTypeInput" value="Wedding">
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -436,13 +443,17 @@
                 <input type="text" id="editClientNameInput" class="form-control">
             </div>
             <div class="form-group">
-                <label>Event Type</label>
-                <select id="editEventTypeInput" class="form-control">
-                    <option value="Wedding">Wedding</option>
-                    <option value="Pre-Wedding">Pre-Wedding</option>
-                    <option value="Engagement">Engagement</option>
-                    <option value="Birthday">Birthday / Portfolio</option>
-                </select>
+                                <label>Event Type</label>
+                <div class="custom-luxury-dropdown" id="editEventTypeDropdown">
+                    <div class="dropdown-selected-val">Wedding</div>
+                    <div class="dropdown-custom-options">
+                        <div class="luxury-option active" data-value="Wedding">Wedding</div>
+                        <div class="luxury-option" data-value="Pre-Wedding">Pre-Wedding</div>
+                        <div class="luxury-option" data-value="Engagement">Engagement</div>
+                        <div class="luxury-option" data-value="Birthday">Birthday / Portfolio</div>
+                    </div>
+                    <input type="hidden" id="editEventTypeInput" value="Wedding">
+                </div>
             </div>
         </div>
         <div class="modal-footer">

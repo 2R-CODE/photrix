@@ -1043,3 +1043,90 @@ if (loadMoreClientsBtn) {
     });
 
 }
+
+document.addEventListener("DOMContentLoaded", () => {
+    const categoryDropdown = document.getElementById("photoCategoryDropdown");
+    if (categoryDropdown) {
+        const selectedVal = categoryDropdown.querySelector(".dropdown-selected-val");
+        const hiddenInput = document.getElementById("photoCategorySelect");
+        const optionsList = categoryDropdown.querySelectorAll(".luxury-option");
+
+        selectedVal.addEventListener("click", (e) => {
+            e.stopPropagation();
+            categoryDropdown.classList.toggle("open");
+        });
+
+        optionsList.forEach(option => {
+            option.addEventListener("click", (e) => {
+                e.stopPropagation();
+                selectedVal.textContent = option.textContent;
+                hiddenInput.value = option.getAttribute("data-value");
+                optionsList.forEach(opt => opt.classList.remove("active"));
+                option.classList.add("active");
+                categoryDropdown.classList.remove("open");
+            });
+        });
+
+        document.addEventListener("click", () => {
+            categoryDropdown.classList.remove("open");
+        });
+    }
+});
+
+document.addEventListener("DOMContentLoaded", () => {
+    const eventTypeDropdown = document.getElementById("eventTypeDropdown");
+    if (eventTypeDropdown) {
+        const selectedVal = eventTypeDropdown.querySelector(".dropdown-selected-val");
+        const hiddenInput = document.getElementById("eventTypeInput");
+        const optionsList = eventTypeDropdown.querySelectorAll(".luxury-option");
+
+        selectedVal.addEventListener("click", (e) => {
+            e.stopPropagation();
+            eventTypeDropdown.classList.toggle("open");
+        });
+
+        optionsList.forEach(option => {
+            option.addEventListener("click", (e) => {
+                e.stopPropagation();
+                selectedVal.textContent = option.textContent;
+                hiddenInput.value = option.getAttribute("data-value");
+                optionsList.forEach(opt => opt.classList.remove("active"));
+                option.classList.add("active");
+                eventTypeDropdown.classList.remove("open");
+            });
+        });
+
+        document.addEventListener("click", () => {
+            eventTypeDropdown.classList.remove("open");
+        });
+    }
+});
+
+document.addEventListener("DOMContentLoaded", () => {
+    const editEventTypeDropdown = document.getElementById("editEventTypeDropdown");
+    if (editEventTypeDropdown) {
+        const selectedVal = editEventTypeDropdown.querySelector(".dropdown-selected-val");
+        const hiddenInput = document.getElementById("editEventTypeInput");
+        const optionsList = editEventTypeDropdown.querySelectorAll(".luxury-option");
+
+        selectedVal.addEventListener("click", (e) => {
+            e.stopPropagation();
+            editEventTypeDropdown.classList.toggle("open");
+        });
+
+        optionsList.forEach(option => {
+            option.addEventListener("click", (e) => {
+                e.stopPropagation();
+                selectedVal.textContent = option.textContent;
+                hiddenInput.value = option.getAttribute("data-value");
+                optionsList.forEach(opt => opt.classList.remove("active"));
+                option.classList.add("active");
+                editEventTypeDropdown.classList.remove("open");
+            });
+        });
+
+        document.addEventListener("click", () => {
+            editEventTypeDropdown.classList.remove("open");
+        });
+    }
+});

@@ -2210,7 +2210,18 @@ if (clientTrackerTableBodyEl) {
 
             document.getElementById("editClientNameInput").value = editBtn.getAttribute("data-couple-name");
 
-            document.getElementById("editEventTypeInput").value = editBtn.getAttribute("data-event-type");
+                        const editEventTypeDropdown = document.getElementById("editEventTypeDropdown");
+            const clickedEventType = editBtn.getAttribute("data-event-type");
+            document.getElementById("editEventTypeInput").value = clickedEventType;
+            if (editEventTypeDropdown) {
+                const selectedVal = editEventTypeDropdown.querySelector(".dropdown-selected-val");
+                const optionsList = editEventTypeDropdown.querySelectorAll(".luxury-option");
+                optionsList.forEach(opt => {
+                    const isMatch = opt.getAttribute("data-value") === clickedEventType;
+                    opt.classList.toggle("active", isMatch);
+                    if (isMatch && selectedVal) selectedVal.textContent = opt.textContent;
+                });
+            }
 
             document.getElementById("editClientModal").classList.add("active");
 
