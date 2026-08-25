@@ -1711,9 +1711,117 @@ header ~ div svg,
 }
 
 /* ==========================================================================
-   💳 PRICING SECTION — scoped polish (subscription.css is shared with the
-   dashboard, so we don't touch it; the shadow/hover lift lives only here)
+   💳 PRICING SECTION — base card styling + scoped polish (subscription.css
+   is shared with the dashboard, so we don't touch it; the shadow/hover
+   lift lives only here)
    ========================================================================== */
+.plan-toggle-wrap {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-6);
+    max-width: 900px;
+    margin: 0 auto;
+    align-items: stretch;
+}
+.plan-single-card {
+    position: relative;
+    width: 100%;
+    background: var(--bg-card);
+    border: 1px solid var(--border-medium);
+    border-radius: var(--radius-lg);
+    padding: var(--space-7) var(--space-6);
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+}
+.plan-single-card.is-growth {
+    border-color: rgba(59, 110, 246, 0.35);
+}
+.plan-badge-inline {
+    position: absolute;
+    top: -14px;
+    left: var(--space-6);
+    background: var(--primary-blue);
+    color: var(--text-main);
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    padding: 5px 14px;
+    border-radius: 20px;
+}
+.plan-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+.plan-content h3 {
+    font-size: 1.4rem;
+    color: var(--text-main);
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+.plan-tagline {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-bottom: var(--space-5);
+}
+.plan-price {
+    font-size: 2.6rem;
+    font-weight: 800;
+    color: var(--text-main);
+    letter-spacing: -1px;
+    margin-bottom: var(--space-2);
+}
+.plan-price span {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    letter-spacing: 0;
+    margin-left: 4px;
+}
+.plan-price-sub {
+    font-size: 0.85rem;
+    color: var(--text-subtle);
+    margin-bottom: var(--space-5);
+    padding-bottom: var(--space-5);
+    border-bottom: 1px solid var(--border-soft);
+}
+.plan-features {
+    list-style: none;
+    padding: 0;
+    margin-bottom: var(--space-6);
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+.plan-features li {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2);
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+.plan-features li i {
+    color: var(--success-green);
+    font-size: 0.9rem;
+    margin-top: 3px;
+}
+.plan-subscribe-btn {
+    display: block;
+    width: 100%;
+    text-align: center;
+}
+
+@media (max-width: 768px) {
+    .plan-toggle-wrap {
+        grid-template-columns: 1fr;
+        max-width: 420px;
+    }
+}
+
 #pricing .plan-single-card {
     box-shadow: var(--shadow-md);
     transition: box-shadow var(--motion-duration) var(--motion-ease),
