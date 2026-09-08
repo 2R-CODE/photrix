@@ -1637,7 +1637,7 @@ select.form-control { cursor: pointer; }
 #loadMoreClientsBtn { display: none; }
 
 /* Settings modal — profile section save button spacing */
-#saveProfileBtn { margin-bottom: 20px; }
+#saveProfileBtn { margin-top: 4px; }
 
 /* Settings modal — section dividers, reused between Profile Info and
    Change Password, and again in the Delete Account modal */
@@ -1665,4 +1665,27 @@ select.form-control { cursor: pointer; }
         width: 100%;
         justify-content: center;
     }
+}
+
+.settings-account-email {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+.settings-section-label {
+    display: block;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--text-main);
+    font-weight: 700;
+    margin-bottom: 14px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border-soft);
+}
+.danger-zone-box {
+    border: 1px solid rgba(240, 68, 56, 0.25);
+    background: rgba(240, 68, 56, 0.06);
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
 }

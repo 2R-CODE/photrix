@@ -428,7 +428,7 @@ if (undoBtn) {
     // 🌐 FIX: same fail-fast pattern — the undo window is only 30 seconds,
     // so a slow/hanging network call here is especially costly.
     if (!navigator.onLine) return alert("You're not connected to the internet. Please check your connection and try again.");
-
+    if (undoTimer) { clearInterval(undoTimer); undoTimer = null; }
     undoBtn.disabled = true;
     undoBtn.textContent = "Undoing...";
     try {

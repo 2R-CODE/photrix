@@ -2545,6 +2545,8 @@ firebase.auth().onAuthStateChanged((user) => {
 document.getElementById("openSettingsBtn")?.addEventListener("click", () => {
     const user = firebase.auth().currentUser;
     if (!user) return;
+    const emailEl = document.getElementById("settingsAccountEmail");
+    if (emailEl) emailEl.textContent = user.email || "";
     db.collection("users").doc(user.uid).get().then((doc) => {
         if (!doc.exists) return;
         const data = doc.data();

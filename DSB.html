@@ -466,12 +466,16 @@
 <!-- ================= SETTINGS MODAL ================= -->
 <div class="modal-overlay" id="settingsModal">
     <div class="modal-content">
-        <div class="modal-header">
-            <h3>Account Settings</h3>
+                <div class="modal-header">
+            <div>
+                <h3>Account Settings</h3>
+                <p class="settings-account-email" id="settingsAccountEmail"></p>
+            </div>
             <button class="close-modal-btn" id="closeSettingsModalBtn"><i class="fas fa-times"></i></button>
         </div>
         <div class="modal-body">
             <div id="profileInfoSection">
+    <label class="settings-section-label">Profile Information</label>
     <div class="form-group">
         <label>Business / Studio Name</label>
         <input type="text" id="settingsBusinessNameInput" class="form-control">
@@ -484,7 +488,8 @@
 </div>
 <hr class="settings-divider">
             
-            <div id="changePasswordSection">
+                        <div id="changePasswordSection">
+                <label class="settings-section-label">Security</label>
                 <div class="form-group">
                     <label>Current Password</label>
                     <input type="password" id="currentPasswordInput" class="form-control" autocomplete="current-password">
@@ -502,8 +507,8 @@
                 You signed in with Google, so there's no password to change here.
             </p>
                         <hr class="settings-divider">
-            <div>
-                <label class="danger-zone-label">DANGER ZONE</label>
+                <div class="danger-zone-box">
+                <label class="danger-zone-label">Danger Zone</label>
                 <button class="btn-text" id="openDeleteAccountModalBtn">Delete My Account</button>
             </div>
         </div>
